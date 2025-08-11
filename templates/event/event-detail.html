@@ -1,0 +1,414 @@
+{% extends 'layout/base.html' %}
+{% load static %}
+
+{% block content %}
+
+<!-- ===== Tiny, safe CSS just for this page ===== -->
+<style>
+  /* Hero */
+  .event-hero {
+    position: relative;
+    border-radius: 1rem;
+    overflow: hidden;
+    background: #0f172a;
+  }
+  .event-hero__img {
+    width: 100%;
+    height: 320px;
+    object-fit: cover;
+    object-position: center;
+    display: block;
+  }
+  .event-hero__overlay {
+    position: absolute; inset: 0;
+    background: linear-gradient(180deg, rgba(0,0,0,.15) 0%, rgba(0,0,0,.65) 100%);
+  }
+  .event-hero__content {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    color: #fff; padding: 1rem 1rem 1.25rem;
+  }
+  @media (min-width: 992px) {
+    .event-hero__content { padding: 1.25rem 1.5rem 1.5rem; }
+  }
+
+  /* QR flottant */
+  .qr-float {
+    background: #fff; border-radius: 12px; padding: .5rem;
+    width: 110px; box-shadow: 0 6px 24px rgba(0,0,0,.15);
+      position: absolute;
+
+  }
+  @media (min-width: 576px) {
+    .qr-float { margin-top: -55px;
+    margin-left: 40%;}
+  }
+
+  /* Tabs spacing fix inside card */
+  #eventTabsContent .card-inner { padding-top: 1rem; }
+  .nav-tabs .nav-link { border: 0; }
+  .nav-tabs .nav-link.active {
+    background-color: transparent;
+    border-bottom: 2px solid var(--bs-primary);
+    color: var(--bs-primary);
+  }
+
+  /* Subtle text color to match DashLite */
+  .text-soft-600 { color: rgba(15,23,42,.65); }
+  .text-soft-500 { color: rgba(15,23,42,.5); }
+
+  /* Table small tidy */
+  #participantsTable thead th { white-space: nowrap; }
+  #participantsTable td, #participantsTable th { vertical-align: middle; }
+</style>
+
+<div class="nk-content nk-content-fluid">
+  <div class="container-xl wide-xl">
+    <div class="nk-content-inner">
+      <div class="nk-content-body">
+
+        <!-- ===== Header / Toolbar ===== -->
+        <div class="nk-block-head nk-block-head-sm">
+          <div class="nk-block-between">
+            <div class="nk-block-head-content">
+              <h3 class="nk-block-title page-title mb-1">{{ event_detail.titre }}</h3>
+              <div class="nk-block-des text-soft">
+                <p class="mb-0 d-flex flex-wrap align-items-center gap-2">
+                  <span class="d-inline-flex align-items-center gap-1">
+                    <em class="icon ni ni-hash"></em> <span>{{ event_detail.code }}</span>
+                  </span>
+                  <span class="text-soft-500">•</span>
+                  <span class="d-inline-flex align-items-center gap-1">
+                    <em class="icon ni ni-map-pin"></em> <span>{{ event_detail.lieu }}</span>
+                  </span>
+                  <span class="text-soft-500">•</span>
+                  <span class="badge bg-{% if is_future %}info{% elif is_ongoing %}success{% else %}secondary{% endif %}">
+                    {% if is_future %}À venir{% elif is_ongoing %}En cours{% else %}Terminé{% endif %}
+                  </span>
+                </p>
+              </div>
+            </div>
+            <div class="nk-block-head-content">
+              <div class="toggle-wrap nk-block-tools-toggle">
+                <a href="#" class="btn btn-icon btn-trigger toggle-expand me-n1" data-target="pageMenu">
+                  <em class="icon ni ni-menu-alt-r"></em>
+                </a>
+                <div class="toggle-expand-content" data-content="pageMenu">
+                  <ul class="nk-block-tools g-3">
+                    <li>
+                      <a href="{{ actions.download_qr_url }}" class="btn btn-dim btn-outline-primary">
+                        <em class="icon ni ni-download-cloud"></em><span>QR (PDF)</span>
+                      </a>
+                    </li>
+                    <li>
+                      <a href="{{ actions.ics_url }}" class="btn btn-dim btn-outline-secondary">
+                        <em class="icon ni ni-calender-date"></em><span>Calendrier</span>
+                      </a>
+                    </li>
+                    <li>
+                      <button class="btn btn-dim btn-outline-secondary" type="button" onclick="copyCode('{{ event_detail.code }}')">
+                        <em class="icon ni ni-clipboard"></em><span>Copier code</span>
+                      </button>
+                    </li>
+                    <li>
+                      <button class="btn btn-primary" type="button" onclick="shareEvent()">
+                        <em class="icon ni ni-share"></em><span>Partager</span>
+                      </button>
+                    </li>
+                  </ul>
+                </div><!-- .toggle-expand-content -->
+              </div><!-- .toggle-wrap -->
+            </div>
+          </div>
+        </div>
+        <!-- ===== /Header ===== -->
+
+        <!-- ===== HERO ===== -->
+        <div class="event-hero mb-4">
+          {% if event_detail.banner %}
+            <img class="event-hero__img" src="{{ event_detail.banner.url }}" alt="Bannière">
+          {% else %}
+            <div class="event-hero__img" style="background:#0f172a;"></div>
+          {% endif %}
+          <div class="event-hero__overlay"></div>
+
+          <div class="event-hero__content">
+            <div class="d-flex align-items-center flex-wrap gap-9">
+              <div class="me-auto">
+                <h1 class="h4 mb-1 text-warning">{{ event_detail.titre }}</h1>
+                <div class="small text-white-70 d-flex flex-wrap gap-1 align-items-center">
+                  <span class="d-inline-flex align-items-center gap-1">
+                    <em class="icon ni ni-calendar"></em>
+                    {{ event_detail.date_debut|date:"d M Y" }} • {{ event_detail.date_debut|time:"H:i" }}
+                    {% if not event_detail.is_same_date %}
+                      <span class="mx-1">→</span> {{ event_detail.date_fin|date:"d M Y" }} • {{ event_detail.date_fin|time:"H:i" }}
+                    {% endif %}
+                  </span>
+                  <span class="d-inline-flex align-items-center gap-1">
+                    <em class="icon ni ni-map-pin"></em> {{ event_detail.lieu }}
+                  </span>
+                </div>
+              </div>
+            </div>
+           {% if event_detail.qr_code %}
+              <div class="ms-auto align-center">
+                <div class="qr-float">
+                  <img src="{{ event_detail.qr_code.url }}" alt="QR Code" class="w-100 h-100" style="border-radius:10px;">
+                </div>
+              </div>
+              {% endif %}
+
+            <!-- Actions -->
+{#            <div class="d-flex flex-wrap gap-2 mt-3">#}
+{#              <a href="{{ actions.download_qr_url }}" class="btn btn-outline-light btn-sm">#}
+{#                <em class="icon ni ni-download-cloud"></em> Télécharger QR (PDF)#}
+{#              </a>#}
+{#              <a href="{{ actions.ics_url }}" class="btn btn-light btn-sm">#}
+{#                <em class="icon ni ni-calender-date"></em> Ajouter au calendrier#}
+{#              </a>#}
+{#              <button class="btn btn-outline-light btn-sm" type="button" onclick="copyCode('{{ event_detail.code }}')">#}
+{#                <em class="icon ni ni-clipboard"></em> Copier le code#}
+{#              </button>#}
+{#              <button class="btn btn-outline-light btn-sm" type="button" onclick="shareEvent()">#}
+{#                <em class="icon ni ni-share"></em> Partager#}
+{#              </button>#}
+{#            </div>#}
+          </div>
+        </div>
+        <!-- ===== /HERO ===== -->
+
+        <!-- ===== Stats + About ===== -->
+        <div class="row g-gs mb-4">
+          <div class="col-md-8">
+            <div class="card card-bordered h-100">
+              <div class="card-inner">
+                <h6 class="overline-title mb-2">À propos</h6>
+                <p class="text-soft-600 mb-3">{{ event_detail.description|default:"Aucune description" }}</p>
+
+                <div class="nk-block">
+                  <div class="d-flex justify-content-between small text-soft-600">
+                    <span>Taux de participation estimé</span>
+                    <span>{{ taux_participation }}%</span>
+                  </div>
+                  <div class="progress mt-1" style="height:8px;">
+                    <div class="progress-bar {% if taux_participation > 75 %}bg-success{% elif taux_participation > 35 %}bg-info{% else %}bg-secondary{% endif %}" style="width: {{ taux_participation }}%;"></div>
+                  </div>
+                  <div class="small text-soft-500 mt-1">
+                    {{ nb_participants }} participant(s) enregistré(s)
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div><!-- /col -->
+
+          <div class="col-md-4">
+            <div class="row g-3">
+              <div class="col-12">
+                <div class="card card-bordered">
+                  <div class="card-inner">
+                    <div class="d-flex align-items-center">
+                      <div class="me-3 rounded-circle bg-primary text-white d-inline-flex align-items-center justify-content-center" style="width:44px;height:44px;">
+                        <em class="icon ni ni-users"></em>
+                      </div>
+                      <div>
+                        <div class="small text-soft-600">Participants</div>
+                        <div class="h5 mb-0">{{ nb_participants }}</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="col-12">
+                <div class="card card-bordered">
+                  <div class="card-inner">
+                    <div class="d-flex align-items-center">
+                      <div class="me-3 rounded-circle bg-warning text-dark d-inline-flex align-items-center justify-content-center" style="width:44px;height:44px;">
+                        <em class="icon ni ni-activity"></em>
+                      </div>
+                      <div>
+                        <div class="small text-soft-600">Durée</div>
+                        <div class="h5 mb-0">{{ duration_hours }} h</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {% if event_detail.nombre_invite %}
+              <div class="col-12">
+                <div class="card card-bordered">
+                  <div class="card-inner">
+                    <div class="d-flex align-items-center">
+                      <div class="me-3 rounded-circle bg-info text-white d-inline-flex align-items-center justify-content-center" style="width:44px;height:44px;">
+                        <em class="icon ni ni-user-add"></em>
+                      </div>
+                      <div>
+                        <div class="small text-soft-600">Invités potentiels</div>
+                        <div class="h5 mb-0">{{ event_detail.nombre_invite }}</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              {% endif %}
+            </div>
+          </div><!-- /col -->
+        </div>
+        <!-- ===== /Stats + About ===== -->
+
+        <!-- ===== Tabs ===== -->
+        <ul class="nav nav-tabs mt-2" id="eventTabs" role="tablist">
+          <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="resume-tab" data-toggle="tab" data-target="#resume" type="button" role="tab" aria-controls="resume" aria-selected="true">Aperçu</button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" id="participants-tab" data-toggle="tab" data-target="#participants" type="button" role="tab" aria-controls="participants" aria-selected="false">Participants</button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" id="qr-tab" data-toggle="tab" data-target="#qr" type="button" role="tab" aria-controls="qr" aria-selected="false">QR</button>
+          </li>
+        </ul>
+
+        <div class="tab-content card card-bordered" id="eventTabsContent">
+          <!-- Aperçu -->
+          <div class="tab-pane fade show active" id="resume" role="tabpanel" aria-labelledby="resume-tab">
+            <div class="card-inner">
+              <div class="row g-gs">
+                <div class="col-md-6">
+                  <div class="small text-soft-600 mb-1">Type</div>
+                  <div class="lead-text">{{ event_detail.type|default:"—" }}</div>
+                </div>
+                <div class="col-md-6">
+                  <div class="small text-soft-600 mb-1">Église</div>
+                  <div class="lead-text">{{ event_detail.eglise|default:"—" }}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Participants -->
+          <div class="tab-pane fade" id="participants" role="tabpanel" aria-labelledby="participants-tab">
+            <div class="card-inner">
+              <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+                <h6 class="mb-0">Liste des participants</h6>
+                <div class="d-flex gap-2">
+                  <div class="form-control-wrap">
+                    <div class="form-icon form-icon-left"><em class="icon ni ni-search"></em></div>
+                    <input type="text" id="filterInput" class="form-control form-control-sm" placeholder="Rechercher…">
+                  </div>
+                  <button class="btn btn-sm btn-dim btn-outline-secondary" type="button" onclick="exportCSV()">
+                    <em class="icon ni ni-download"></em> Export CSV
+                  </button>
+                </div>
+              </div>
+
+              <div class="table-responsive">
+                <table id="participantsTable" class="table">
+                  <thead class="table-light">
+                    <tr>
+                      <th>Nom & prénom</th>
+                      <th>Contact</th>
+                      <th>Département</th>
+                      <th>Âge</th>
+                      <th>Date d'entrée</th>
+                      <th>Type de membre</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                  {% for p in participants %}
+                    <tr>
+                      <td>
+                        {{ p.fidele.user.first_name }} {{ p.fidele.user.last_name }}
+                        {% if p.fidele.est_nouveau %}<span class="badge bg-info ms-1">Nouveau</span>{% endif %}
+                      </td>
+                      <td>{{ p.fidele.phone|default:"—" }}</td>
+                      <td>{{ p.fidele.departement|default:"—" }}</td>
+                      <td>{{ p.fidele.age|default:"—" }}</td>
+                      <td>{{ p.fidele.date_entree|date:"d/m/Y"|default:"—" }}</td>
+                      <td>{{ p.fidele.type_membre|default:"—" }}</td>
+                    </tr>
+                  {% empty %}
+                    <tr><td colspan="6" class="text-center text-soft-600">Aucun participant pour l’instant</td></tr>
+                  {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- QR -->
+          <div class="tab-pane fade" id="qr" role="tabpanel" aria-labelledby="qr-tab">
+            <div class="card-inner text-center">
+              {% if event_detail.qr_code %}
+                <img src="{{ event_detail.qr_code.url }}" alt="QR" class="img-fluid rounded-2" style="max-width:260px;">
+                <div class="mt-2 small text-soft-600">Code : {{ event_detail.code }}</div>
+                <div class="mt-3">
+                  <a href="{{ actions.download_qr_url }}" class="btn btn-primary">
+                    <em class="icon ni ni-download-cloud"></em> Télécharger le QR (PDF)
+                  </a>
+                </div>
+              {% else %}
+                <div class="text-soft-600">QR non disponible</div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+        <!-- ===== /Tabs ===== -->
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== JS helpers ===== -->
+<script>
+function copyCode(code) {
+  navigator.clipboard.writeText(code);
+  if (window.NioApp && NioApp.Toast) {
+    NioApp.Toast('Code copié : ' + code, 'success', {position:'top-center'});
+  } else {
+    alert('Code copié : ' + code);
+  }
+}
+
+function shareEvent() {
+  const text = "{{ event_detail.titre|escapejs }} · {{ event_detail.lieu|escapejs }} · {{ event_detail.date_debut|date:'d/m/Y H:i' }}";
+  if (navigator.share) {
+    navigator.share({ title: "Événement", text, url: window.location.href }).catch(()=>{});
+  } else {
+    navigator.clipboard.writeText(window.location.href);
+    if (window.NioApp && NioApp.Toast) {
+      NioApp.Toast('Lien copié dans le presse-papier', 'info', {position:'top-center'});
+    } else {
+      alert('Lien copié !');
+    }
+  }
+}
+
+// client-side filtering
+const filterInput = document.getElementById('filterInput');
+if (filterInput) {
+  filterInput.addEventListener('input', function() {
+    const q = this.value.toLowerCase().trim();
+    document.querySelectorAll('#participantsTable tbody tr').forEach(tr => {
+      tr.style.display = tr.innerText.toLowerCase().includes(q) ? '' : 'none';
+    });
+  });
+}
+
+function exportCSV() {
+  const rows = [...document.querySelectorAll('#participantsTable tr')].map(tr =>
+    [...tr.querySelectorAll('th,td')].map(td => {
+      const text = (td.innerText || '').replace(/"/g,'""');
+      return `"${text}"`;
+    }).join(',')
+  ).join('\n');
+  const blob = new Blob([rows], {type:'text/csv;charset=utf-8;'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'participants_{{ event_detail.code }}.csv';
+  a.click();
+}
+</script>
+
+{% endblock %}

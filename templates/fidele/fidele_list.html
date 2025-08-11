@@ -1,0 +1,963 @@
+<!-- fidele_list.html -->
+{% extends 'layout/base.html' %}
+{% load custom_filters %}
+
+{% block content %}
+<div class="nk-content nk-content-fluid">
+    <div class="container-xl wide-xl">
+        <div class="nk-content-inner">
+            <div class="nk-content-body">
+                <!-- Header amélioré avec filtre rapide -->
+                <div class="nk-block-head nk-block-head-sm">
+                    <div class="nk-block-between">
+                        <div class="nk-block-head-content">
+                            <h3 class="nk-block-title page-title">Liste des membres des Églises ABMCI</h3>
+                            <div class="nk-block-des">
+                                <p class="lead-text">
+                                    {% if eglise_selectionnee %}
+                                        L'église <span class="text-primary">{{ eglise_selectionnee.name }}</span> compte
+                                    {% else %}
+                                        Le réseau compte
+                                    {% endif %}
+                                    <strong>{{ nombre_fideles }}</strong> fidèles
+                                </p>
+                            </div>
+                        </div>
+                        <div class="nk-block-head-content">
+                            <div class="toggle-wrap nk-block-tools-toggle">
+                                <a href="#" class="btn btn-icon btn-trigger toggle-expand" data-target="pageMenu">
+                                    <em class="icon ni ni-menu-alt-r"></em>
+                                </a>
+                                <div class="toggle-expand-content" data-content="pageMenu">
+                                    <ul class="nk-block-tools g-3">
+                                        <li>
+                                            <a href="{% url 'fidele_create' %}" class="btn btn-primary">
+                                                <em class="icon ni ni-plus"></em>
+                                                <span>Nouveau fidèle</span>
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <div class="dropdown">
+                                                <a href="#" class="dropdown-toggle btn btn-outline-light" data-toggle="dropdown">
+                                                    <em class="icon ni ni-download-cloud"></em>
+                                                    <span>Exporter</span>
+                                                </a>
+                                                <div class="dropdown-menu dropdown-menu-right">
+                                                    <ul class="link-list-opt no-bdr">
+                                                        <li><a href="#" onclick="exportToPDF()"><em class="icon ni ni-file-pdf"></em><span>PDF</span></a></li>
+                                                        <li><a href="#" onclick="exportToExcel()"><em class="icon ni ni-file-excel"></em><span>Excel</span></a></li>
+                                                        <li><a href="#" onclick="exportToCSV()"><em class="icon ni ni-file-text"></em><span>CSV</span></a></li>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                        </li>
+                                        <li>
+                                            <button type="button" class="btn btn-outline-info" onclick="showStatsModal()">
+                                                <em class="icon ni ni-bar-chart-fill"></em>
+                                                <span>Statistiques</span>
+                                            </button>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Filtres avancés -->
+                <div class="nk-block mb-4">
+                    <div class="card card-bordered">
+                        <div class="card-inner">
+                            <form method="get" action="{% url 'membres' %}" class="row g-3" id="advancedFilterForm">
+                                <div class="col-md-3">
+                                    <select name="eglise_id" class="form-select" data-search="on">
+                                        <option value="">Toutes les églises</option>
+                                        {% for eglise in church %}
+                                            <option value="{{ eglise.id }}" {% if eglise.id == eglise_id|add:0 %}selected{% endif %}>
+                                                {{ eglise.name }}
+                                            </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-md-2">
+                                    <select name="statut" class="form-select">
+                                        <option value="">Tous statuts</option>
+                                        <option value="visiteur" {% if request.GET.statut == 'visiteur' %}selected{% endif %}>Visiteurs</option>
+                                        <option value="actif" {% if request.GET.statut == 'actif' %}selected{% endif %}>Membres actifs</option>
+                                        <option value="fiss" {% if request.GET.statut == 'fiss' %}selected{% endif %}>FISS</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-2">
+                                    <select name="departement_id" class="form-select">
+                                        <option value="">Tous départements</option>
+                                        {% for dept in departments %}
+                                            <option value="{{ dept.id }}" {% if dept.id == request.GET.departement_id|add:0 %}selected{% endif %}>
+                                                {{ dept.name }}
+                                            </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-md-2">
+                                    <select name="type_membre_id" class="form-select">
+                                        <option value="">Tous types</option>
+                                        {% for type in type_membres %}
+                                            <option value="{{ type.id }}" {% if type.id == request.GET.type_membre_id|add:0 %}selected{% endif %}>
+                                                {{ type.name }}
+                                            </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="input-group">
+                                        <input type="text" class="form-control" name="q" placeholder="Rechercher..." value="{{ request.GET.q }}">
+                                        <button class="btn btn-primary" type="submit">
+                                            <em class="icon ni ni-search"></em>
+                                        </button>
+                                        {% if request.GET %}
+                                            <a href="{% url 'membres' %}" class="btn btn-outline-danger" title="Réinitialiser">
+                                                <em class="icon ni ni-reload"></em>
+                                            </a>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Cartes de statistiques -->
+                <div class="nk-block mb-4">
+                    <div class="row g-gs">
+                        <div class="col-md-3">
+                            <div class="card card-stat bg-gradient-primary" onclick="filterByStatus('actif')" style="cursor: pointer;">
+                                <div class="card-body">
+                                    <div class="card-stat-head">
+                                        <h6 class="title">Membres actifs</h6>
+                                        <em class="icon ni ni-user-check"></em>
+                                    </div>
+                                    <div class="card-stat-body">
+                                        <h3 class="amount">{{ stats.membres_actifs }}</h3>
+                                        <span class="change up">+{{ stats.membres_actifs|percentage:nombre_fideles }}%</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card card-stat bg-gradient-warning" onclick="filterByStatus('visiteur')" style="cursor: pointer;">
+                                <div class="card-body">
+                                    <div class="card-stat-head">
+                                        <h6 class="title">Nouveaux fidèles</h6>
+                                        <em class="icon ni ni-user-add"></em>
+                                    </div>
+                                    <div class="card-stat-body">
+                                        <h3 class="amount">{{ stats.nouveaux }}</h3>
+                                        <span class="change up">+{{ stats.nouveaux|percentage:nombre_fideles }}%</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card card-stat bg-gradient-info" onclick="filterByBaptism(true)" style="cursor: pointer;">
+                                <div class="card-body">
+                                    <div class="card-stat-head">
+                                        <h6 class="title">Baptisés</h6>
+                                        <em class="icon ni ni-baptism"></em>
+                                    </div>
+                                    <div class="card-stat-body">
+                                        <h3 class="amount">{{ stats.baptises }}</h3>
+                                        <span class="change up">+{{ stats.baptises|percentage:nombre_fideles }}%</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card card-stat bg-gradient-danger" onclick="filterByStatus('fiss')" style="cursor: pointer;">
+                                <div class="card-body">
+                                    <div class="card-stat-head">
+                                        <h6 class="title">FISS</h6>
+                                        <em class="icon ni ni-heart-fill"></em>
+                                    </div>
+                                    <div class="card-stat-body">
+                                        <h3 class="amount">{{ stats.fiss }}</h3>
+                                        <span class="change down">-{{ stats.fiss|percentage:nombre_fideles }}%</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tableau des membres -->
+                <div class="nk-block">
+                    <div class="card card-bordered card-stretch">
+                        <div class="card-inner-group">
+                            <div class="card-inner position-relative">
+                                <div class="card-title-group">
+                                    <div class="card-tools">
+                                        <div class="form-inline flex-nowrap gx-3">
+                                            <div class="form-wrap">
+                                                <div class="custom-control custom-control-sm custom-checkbox">
+                                                    <input type="checkbox" class="custom-control-input" id="selectAll">
+                                                    <label class="custom-control-label" for="selectAll">Tout sélectionner</label>
+                                                </div>
+                                            </div>
+                                            <div class="btn-wrap">
+                                                <button class="btn btn-outline-light btn-sm" id="batchActionsBtn" disabled>
+                                                    <em class="icon ni ni-tool"></em>
+                                                    <span>Actions groupées</span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="card-tools">
+                                        <div class="dropdown">
+                                            <a href="#" class="btn btn-trigger btn-icon dropdown-toggle" data-toggle="dropdown">
+                                                <em class="icon ni ni-setting"></em>
+                                            </a>
+                                            <div class="dropdown-menu dropdown-menu-right">
+                                                <ul class="link-list-opt no-bdr">
+                                                    <li><a href="#" onclick="exportVisibleToExcel()"><span>Exporter visible</span></a></li>
+                                                    <li><a href="#" onclick="printTable()"><span>Imprimer la liste</span></a></li>
+                                                    <li class="divider"></li>
+                                                    <li><a href="#" data-toggle="modal" data-target="#columnsModal"><span>Colonnes visibles</span></a></li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="card-inner p-0">
+                                <div class="table-responsive">
+                                    <table class="table table-hover nk-tb-list" id="membersTable">
+                                        <thead>
+                                            <tr class="nk-tb-item nk-tb-head">
+                                                <th class="nk-tb-col" width="40px"><span class="sub-text">#</span></th>
+                                                <th class="nk-tb-col"><span class="sub-text">Membre</span></th>
+                                                <th class="nk-tb-col"><span class="sub-text">Église</span></th>
+                                                <th class="nk-tb-col"><span class="sub-text">Contact</span></th>
+                                                <th class="nk-tb-col"><span class="sub-text">Âge</span></th>
+                                                <th class="nk-tb-col"><span class="sub-text">Statut</span></th>
+                                                <th class="nk-tb-col"><span class="sub-text">Département</span></th>
+                                                <th class="nk-tb-col text-end"><span class="sub-text">Actions</span></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for fidele in membres %}
+                                            <tr class="nk-tb-item" data-id="{{ fidele.id }}">
+                                                <td class="nk-tb-col">
+                                                    <div class="custom-control custom-control-sm custom-checkbox">
+                                                        <input type="checkbox" class="custom-control-input member-checkbox" id="cb{{ fidele.id }}">
+                                                        <label class="custom-control-label" for="cb{{ fidele.id }}"></label>
+                                                    </div>
+                                                </td>
+                                                <td class="nk-tb-col">
+                                                    <a href="{% url 'membre' fidele.slug %}" class="user-card">
+                                                        <div class="user-avatar bg-primary">
+                                                            {% if fidele.photo %}
+                                                                <img src="{{ fidele.photo.url }}" alt="{{ fidele }}">
+                                                            {% else %}
+                                                                <span>{{ fidele.user.get_initials }}</span>
+                                                            {% endif %}
+                                                        </div>
+                                                        <div class="user-info">
+                                                            <span class="tb-lead">{{ fidele.user.get_full_name }}</span>
+                                                            <span>{{ fidele.profession|default:"-" }}</span>
+                                                        </div>
+                                                    </a>
+                                                </td>
+                                                <td class="nk-tb-col">
+                                                    <span class="badge badge-dim bg-outline-primary">{{ fidele.eglise|default:"-" }}</span>
+                                                </td>
+                                                <td class="nk-tb-col">
+                                                    <div class="d-flex flex-column">
+                                                        <span>{{ fidele.phone|default:"-" }}</span>
+                                                        <small class="text-soft">{{ fidele.personal_mail|default:"-" }}</small>
+                                                    </div>
+                                                </td>
+                                                <td class="nk-tb-col">
+                                                    <span>{{ fidele.age|default:"-" }} ans</span>
+                                                </td>
+                                                <td class="nk-tb-col">
+                                                    {% if fidele.statut == 'Visiteur' %}
+                                                        <span class="badge badge-dim bg-gray">{{ fidele.statut }}</span>
+                                                    {% elif fidele.statut == 'Membre actif' %}
+                                                        <span class="badge badge-dim bg-primary">{{ fidele.statut }}</span>
+                                                    {% elif fidele.statut == 'FISS' %}
+                                                        <span class="badge badge-dim bg-pink">{{ fidele.statut }}</span>
+                                                    {% else %}
+                                                        <span class="badge badge-dim bg-secondary">{{ fidele.statut }}</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td class="nk-tb-col">
+                                                    <span>{{ fidele.departement|default:"-" }}</span>
+                                                </td>
+                                                <td class="nk-tb-col nk-tb-col-tools text-end">
+                                                    <ul class="nk-tb-actions gx-1">
+                                                        <li>
+                                                            <div class="dropdown">
+                                                                <a href="#" class="dropdown-toggle btn btn-icon btn-trigger" data-toggle="dropdown">
+                                                                    <em class="icon ni ni-more-h"></em>
+                                                                </a>
+                                                                <div class="dropdown-menu dropdown-menu-end">
+                                                                    <ul class="link-list-opt no-bdr">
+                                                                        <li><a href="{% url 'membre' fidele.slug %}"><em class="icon ni ni-eye"></em><span>Voir détails</span></a></li>
+                                                                        <li><a href="{% url 'fidele_update' fidele.id %}"><em class="icon ni ni-edit"></em><span>Modifier</span></a></li>
+                                                                        <li><a href="#" onclick="sendMessage({{ fidele.id }})"><em class="icon ni ni-mail"></em><span>Envoyer message</span></a></li>
+                                                                        <li class="divider"></li>
+                                                                        <li><a href="#" class="text-danger" onclick="confirmDeactivate({{ fidele.id }})"><em class="icon ni ni-user-cross"></em><span>Désactiver</span></a></li>
+                                                                    </ul>
+                                                                </div>
+                                                            </div>
+                                                        </li>
+                                                    </ul>
+                                                </td>
+                                            </tr>
+                                            {% empty %}
+                                            <tr class="nk-tb-item">
+                                                <td class="nk-tb-col text-center" colspan="8">
+                                                    <div class="nk-block-content p-4">
+                                                        <em class="icon ni ni-info text-soft" style="font-size: 2rem;"></em>
+                                                        <h5 class="mt-3">Aucun membre trouvé</h5>
+                                                        <p class="text-soft">Aucun membre ne correspond à vos critères de recherche</p>
+                                                        <a href="{% url 'membres' %}" class="btn btn-outline-primary btn-sm">Réinitialiser les filtres</a>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <!-- Pagination améliorée -->
+                            <div class="card-inner">
+                                <div class="nk-block-between-md g-3">
+                                    <div class="g">
+                                        <div class="pagination-goto d-flex justify-content-center justify-content-md-start gx-3">
+                                            <div>Afficher</div>
+                                            <div>
+                                                <select class="form-select form-select-sm" onchange="updatePerPage(this.value)">
+                                                    <option value="10" {% if paginate_by == 10 %}selected{% endif %}>10</option>
+                                                    <option value="25" {% if paginate_by == 25 %}selected{% endif %}>25</option>
+                                                    <option value="50" {% if paginate_by == 50 %}selected{% endif %}>50</option>
+                                                    <option value="100" {% if paginate_by == 100 %}selected{% endif %}>100</option>
+                                                </select>
+                                            </div>
+                                            <div>sur {{ membres.paginator.count }} membres</div>
+                                        </div>
+                                    </div>
+                                    <div class="g">
+                                        <ul class="pagination justify-content-center justify-content-md-start">
+                                            {% if membres.has_previous %}
+                                                <li class="page-item">
+                                                    <a class="page-link" href="?page=1{% for key,value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                                        <em class="icon ni ni-chevrons-left"></em>
+                                                    </a>
+                                                </li>
+                                                <li class="page-item">
+                                                    <a class="page-link" href="?page={{ membres.previous_page_number }}{% for key,value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                                        <em class="icon ni ni-chevron-left"></em>
+                                                    </a>
+                                                </li>
+                                            {% endif %}
+
+                                            {% for page_num in page_range %}
+                                                <li class="page-item {% if page_num == membres.number %}active{% endif %}">
+                                                    <a class="page-link" href="?page={{ page_num }}{% for key,value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                                        {{ page_num }}
+                                                    </a>
+                                                </li>
+                                            {% endfor %}
+
+                                            {% if membres.has_next %}
+                                                <li class="page-item">
+                                                    <a class="page-link" href="?page={{ membres.next_page_number }}{% for key,value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                                        <em class="icon ni ni-chevron-right"></em>
+                                                    </a>
+                                                </li>
+                                                <li class="page-item">
+                                                    <a class="page-link" href="?page={{ membres.paginator.num_pages }}{% for key,value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                                        <em class="icon ni ni-chevrons-right"></em>
+                                                    </a>
+                                                </li>
+                                            {% endif %}
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal des statistiques -->
+<div class="modal fade" id="statsModal" tabindex="-1" aria-labelledby="statsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Statistiques détaillées</h5>
+                <button type="button" class="close" data-dismiss="modal">
+                    <em class="icon ni ni-cross"></em>
+                </button>
+            </div>
+            <div class="modal-body">
+                <ul class="nav nav-tabs" id="chartTabs" role="tablist">
+                    <li class="nav-item">
+                        <a class="nav-link active" id="gender-tab" data-toggle="tab" href="#gender" role="tab">Genre</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" id="age-tab" data-toggle="tab" href="#age" role="tab">Tranche d'âge</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" id="status-tab" data-toggle="tab" href="#status" role="tab">Statuts</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" id="baptism-tab" data-toggle="tab" href="#baptism" role="tab">Baptêmes</a>
+                    </li>
+                </ul>
+
+                <div class="tab-content mt-3">
+                    <div class="tab-pane fade show active" id="gender" role="tabpanel">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <canvas id="genderChart" height="250"></canvas>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card card-bordered">
+                                    <div class="card-inner">
+                                        <table class="table table-striped">
+                                            <thead>
+                                                <tr>
+                                                    <th>Genre</th>
+                                                    <th>Nombre</th>
+                                                    <th>Pourcentage</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr>
+                                                    <td>Hommes</td>
+                                                    <td>{{ stats.hommes }}</td>
+                                                    <td>{{ stats.hommes|percentage:nombre_fideles }}%</td>
+                                                </tr>
+                                                <tr>
+                                                    <td>Femmes</td>
+                                                    <td>{{ stats.femmes }}</td>
+                                                    <td>{{ stats.femmes|percentage:nombre_fideles }}%</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="tab-pane fade" id="age" role="tabpanel">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <canvas id="ageChart" height="250"></canvas>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card card-bordered">
+                                    <div class="card-inner">
+                                        <table class="table table-striped">
+                                            <thead>
+                                                <tr>
+                                                    <th>Tranche d'âge</th>
+                                                    <th>Nombre</th>
+                                                    <th>Pourcentage</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for age in age_distribution %}
+                                                <tr>
+                                                    <td>{{ age.0 }}</td>
+                                                    <td>{{ age.1 }}</td>
+                                                    <td>{{ age.1|percentage:nombre_fideles }}%</td>
+                                                </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="tab-pane fade" id="status" role="tabpanel">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <canvas id="statusChart" height="250"></canvas>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card card-bordered">
+                                    <div class="card-inner">
+                                        <table class="table table-striped">
+                                            <thead>
+                                                <tr>
+                                                    <th>Statut</th>
+                                                    <th>Nombre</th>
+                                                    <th>Pourcentage</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for status in status_distribution %}
+                                                <tr>
+                                                    <td>{{ status.0 }}</td>
+                                                    <td>{{ status.1 }}</td>
+                                                    <td>{{ status.1|percentage:nombre_fideles }}%</td>
+                                                </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="tab-pane fade" id="baptism" role="tabpanel">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <canvas id="baptismChart" height="250"></canvas>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card card-bordered">
+                                    <div class="card-inner">
+                                        <table class="table table-striped">
+                                            <thead>
+                                                <tr>
+                                                    <th>Type</th>
+                                                    <th>Nombre</th>
+                                                    <th>Pourcentage</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr>
+                                                    <td>Baptisés</td>
+                                                    <td>{{ stats.baptises }}</td>
+                                                    <td>{{ stats.baptises|percentage:nombre_fideles }}%</td>
+                                                </tr>
+                                                <tr>
+                                                    <td>Non baptisés</td>
+                                                    <td>{{ nombre_fideles|subtract:stats.baptises }}</td>
+                                                    <td>{{ nombre_fideles|subtract:stats.baptises|percentage:nombre_fideles }}%</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline-primary" onclick="exportAllChartsToCSV()">
+                    <em class="icon ni ni-download"></em> Export CSV
+                </button>
+                <button class="btn btn-secondary" data-dismiss="modal">Fermer</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de sélection des colonnes -->
+<div class="modal fade" id="columnsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Colonnes visibles</h5>
+                <button type="button" class="close" data-dismiss="modal">
+                    <em class="icon ni ni-cross"></em>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="custom-control custom-checkbox">
+                    <input type="checkbox" class="custom-control-input" id="colPhoto" checked>
+                    <label class="custom-control-label" for="colPhoto">Photo</label>
+                </div>
+                <div class="custom-control custom-checkbox">
+                    <input type="checkbox" class="custom-control-input" id="colEglise" checked>
+                    <label class="custom-control-label" for="colEglise">Église</label>
+                </div>
+                <div class="custom-control custom-checkbox">
+                    <input type="checkbox" class="custom-control-input" id="colContact" checked>
+                    <label class="custom-control-label" for="colContact">Contact</label>
+                </div>
+                <div class="custom-control custom-checkbox">
+                    <input type="checkbox" class="custom-control-input" id="colAge" checked>
+                    <label class="custom-control-label" for="colAge">Âge</label>
+                </div>
+                <div class="custom-control custom-checkbox">
+                    <input type="checkbox" class="custom-control-input" id="colStatus" checked>
+                    <label class="custom-control-label" for="colStatus">Statut</label>
+                </div>
+                <div class="custom-control custom-checkbox">
+                    <input type="checkbox" class="custom-control-input" id="colDept" checked>
+                    <label class="custom-control-label" for="colDept">Département</label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" onclick="applyColumnSettings()">Appliquer</button>
+                <button class="btn btn-secondary" data-dismiss="modal">Annuler</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Styles personnalisés */
+    .card-stat {
+        border: none;
+        border-radius: 10px;
+        color: white;
+        overflow: hidden;
+        transition: transform 0.3s, box-shadow 0.3s;
+    }
+
+    .card-stat:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+    }
+
+    .card-stat .card-body {
+        padding: 20px;
+    }
+
+    .card-stat-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+    }
+
+    .card-stat-head .icon {
+        font-size: 1.5rem;
+        opacity: 0.7;
+    }
+
+    .card-stat-body .amount {
+        font-size: 1.8rem;
+        font-weight: 600;
+        margin-bottom: 5px;
+    }
+
+    .card-stat-body .change {
+        font-size: 0.875rem;
+    }
+
+    .bg-gradient-primary {
+        background: linear-gradient(135deg, #6576ff 0%, #6a11cb 100%);
+    }
+
+    .bg-gradient-warning {
+        background: linear-gradient(135deg, #fbc434 0%, #f76b1c 100%);
+    }
+
+    .bg-gradient-info {
+        background: linear-gradient(135deg, #47c5fb 0%, #47b8f8 100%);
+    }
+
+    .bg-gradient-danger {
+        background: linear-gradient(135deg, #f5365c 0%, #f56036 100%);
+    }
+
+    .user-avatar {
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+    }
+
+    .user-card {
+        display: flex;
+        align-items: center;
+    }
+
+    .user-info {
+        margin-left: 10px;
+    }
+
+    .user-info .tb-lead {
+        display: block;
+        font-weight: 500;
+    }
+
+    .badge-dim {
+        opacity: 0.9;
+    }
+
+    .table-responsive {
+        overflow-x: auto;
+    }
+
+    #membersTable th {
+        white-space: nowrap;
+    }
+
+    .nk-tb-item:hover {
+        background-color: rgba(101, 118, 255, 0.05);
+    }
+
+    .nav-tabs .nav-link.active {
+        font-weight: 500;
+        color: #6576ff;
+        border-bottom: 2px solid #6576ff;
+    }
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+<script>
+    // Initialisation des graphiques
+    document.addEventListener('DOMContentLoaded', function() {
+        // Graphique de répartition par genre
+        const genderCtx = document.getElementById('genderChart').getContext('2d');
+        const genderChart = new Chart(genderCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Hommes', 'Femmes'],
+                datasets: [{
+                    data: [{{ stats.hommes }}, {{ stats.femmes }}],
+                    backgroundColor: ['#6576ff', '#f672a7'],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    },
+                    datalabels: {
+                        formatter: (value, ctx) => {
+                            let sum = ctx.chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
+                            let percentage = (value * 100 / sum).toFixed(1) + "%";
+                            return percentage;
+                        },
+                        color: '#fff',
+                        font: {
+                            weight: 'bold'
+                        }
+                    }
+                }
+            },
+            plugins: [ChartDataLabels]
+        });
+
+        // Graphique de répartition par âge
+        const ageCtx = document.getElementById('ageChart').getContext('2d');
+        const ageChart = new Chart(ageCtx, {
+            type: 'bar',
+            data: {
+                labels: [{% for age in age_distribution %}'{{ age.0 }}',{% endfor %}],
+                datasets: [{
+                    label: 'Membres par tranche d\'âge',
+                    data: [{% for age in age_distribution %}{{ age.1 }},{% endfor %}],
+                    backgroundColor: ['#47c5fb', '#6576ff', '#8e6ffd', '#b56ffd', '#f672a7'],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                }
+            }
+        });
+
+        // Graphique de répartition par statut
+        const statusCtx = document.getElementById('statusChart').getContext('2d');
+        const statusChart = new Chart(statusCtx, {
+            type: 'pie',
+            data: {
+                labels: [{% for status in status_distribution %}'{{ status.0 }}',{% endfor %}],
+                datasets: [{
+                    data: [{% for status in status_distribution %}{{ status.1 }},{% endfor %}],
+                    backgroundColor: ['#7987a1', '#6576ff', '#f672a7', '#47c5fb'],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    },
+                    datalabels: {
+                        formatter: (value, ctx) => {
+                            let sum = ctx.chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
+                            let percentage = (value * 100 / sum).toFixed(1) + "%";
+                            return percentage;
+                        },
+                        color: '#fff',
+                        font: {
+                            weight: 'bold'
+                        }
+                    }
+                }
+            },
+            plugins: [ChartDataLabels]
+        });
+
+        // Graphique de répartition des baptêmes
+        const baptismCtx = document.getElementById('baptismChart').getContext('2d');
+        const baptismChart = new Chart(baptismCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Baptisés', 'Non baptisés'],
+                datasets: [{
+                    data: [{{ stats.baptises }}, {{ nombre_fideles|subtract:stats.baptises }}],
+                    backgroundColor: ['#6576ff', '#7987a1'],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    },
+                    datalabels: {
+                        formatter: (value, ctx) => {
+                            let sum = ctx.chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
+                            let percentage = (value * 100 / sum).toFixed(1) + "%";
+                            return percentage;
+                        },
+                        color: '#fff',
+                        font: {
+                            weight: 'bold'
+                        }
+                    }
+                }
+            },
+            plugins: [ChartDataLabels]
+        });
+
+        // Gestion de la sélection multiple
+        const selectAll = document.getElementById('selectAll');
+        const checkboxes = document.querySelectorAll('.member-checkbox');
+        const batchActionsBtn = document.getElementById('batchActionsBtn');
+
+        selectAll.addEventListener('change', function() {
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = selectAll.checked;
+            });
+            updateBatchActionsBtn();
+        });
+
+        checkboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                updateBatchActionsBtn();
+                selectAll.checked = [...checkboxes].every(cb => cb.checked);
+            });
+        });
+
+        function updateBatchActionsBtn() {
+            const checkedCount = [...checkboxes].filter(cb => cb.checked).length;
+            batchActionsBtn.disabled = checkedCount === 0;
+            if (checkedCount > 0) {
+                batchActionsBtn.innerHTML = `<em class="icon ni ni-tool"></em><span>Actions (${checkedCount})</span>`;
+            } else {
+                batchActionsBtn.innerHTML = `<em class="icon ni ni-tool"></em><span>Actions groupées</span>`;
+            }
+        }
+    });
+
+    // Fonctions utilitaires
+    function showStatsModal() {
+        $('#statsModal').modal('show');
+    }
+
+    function filterByStatus(status) {
+        const form = document.getElementById('advancedFilterForm');
+        form.querySelector('[name="statut"]').value = status;
+        form.submit();
+    }
+
+    function filterByBaptism(isBaptized) {
+        const form = document.getElementById('advancedFilterForm');
+        form.querySelector('[name="baptized"]').value = isBaptized;
+        form.submit();
+    }
+
+    function updatePerPage(value) {
+        const url = new URL(window.location.href);
+        url.searchParams.set('per_page', value);
+        window.location.href = url.toString();
+    }
+
+    function exportToPDF() {
+        // Implémentation de l'export PDF
+        alert('Export PDF en cours de développement');
+    }
+
+    function exportToExcel() {
+        // Implémentation de l'export Excel
+        alert('Export Excel en cours de développement');
+    }
+
+    function exportToCSV() {
+        // Implémentation de l'export CSV
+        alert('Export CSV en cours de développement');
+    }
+
+    function exportVisibleToExcel() {
+        // Implémentation de l'export des données visibles
+        alert('Export des données visibles en cours de développement');
+    }
+
+    function printTable() {
+        window.print();
+    }
+
+    function exportAllChartsToCSV() {
+        // Implémentation de l'export des graphiques
+        alert('Export des graphiques en CSV en cours de développement');
+    }
+
+    function applyColumnSettings() {
+        // Implémentation de la gestion des colonnes
+        alert('Gestion des colonnes en cours de développement');
+        $('#columnsModal').modal('hide');
+    }
+
+    function confirmDeactivate(id) {
+        Swal.fire({
+            title: 'Confirmer la désactivation',
+            text: "Êtes-vous sûr de vouloir désactiver ce membre ?",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#6576ff',
+            cancelButtonColor: '#f5365c',
+            confirmButtonText: 'Oui, désactiver',
+            cancelButtonText: 'Annuler'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // Implémentation de la désactivation
+                Swal.fire(
+                    'Désactivé!',
+                    'Le membre a été désactivé.',
+                    'success'
+                );
+            }
+        });
+    }
+
+    function sendMessage(id) {
+        // Implémentation de l'envoi de message
+        alert('Envoi de message au membre ID: ' + id);
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,444 @@
+{% extends 'layout/base.html' %}
+
+{% block content %}
+<div class="nk-content nk-content-fluid">
+    <div class="container-xl wide-xl">
+        <div class="nk-content-inner">
+            <div class="nk-content-body">
+                <!-- En-tête amélioré -->
+                <div class="nk-block-head nk-block-head-sm">
+                    <div class="nk-block-between g-3">
+                        <div class="nk-block-head-content">
+                            <h3 class="nk-block-title page-title text-primary">Alliance Biblique Missionnaire | <span class="text-soft">{{ user.fidele.eglise }}</span></h3>
+                            <div class="nk-block-des">
+                                <p class="lead-text">Tableau de bord de gestion des membres</p>
+                            </div>
+                        </div>
+                        <div class="nk-block-head-content">
+                            <div class="toggle-wrap nk-block-tools-toggle">
+                                <a href="#" class="btn btn-icon btn-trigger toggle-expand" data-target="pageMenu">
+                                    <em class="icon ni ni-menu-alt"></em>
+                                </a>
+                                <div class="toggle-expand-content" data-content="pageMenu">
+                                    <ul class="nk-block-tools g-3">
+                                        <li>
+                                            <a href="#" class="btn btn-primary">
+                                                <em class="icon ni ni-plus"></em>
+                                                <span>Nouveau membre</span>
+                                            </a>
+                                        </li>
+                                        <li class="nk-block-tools-opt">
+                                            <div class="dropdown">
+                                                <a href="#" class="dropdown-toggle btn btn-icon btn-outline-light" data-toggle="dropdown">
+                                                    <em class="icon ni ni-download-cloud"></em>
+                                                </a>
+                                                <div class="dropdown-menu dropdown-menu-right">
+                                                    <ul class="link-list-opt no-bdr">
+                                                        <li><a href="#"><em class="icon ni ni-file-pdf"></em><span>Exporter PDF</span></a></li>
+                                                        <li><a href="#"><em class="icon ni ni-file-excel"></em><span>Exporter Excel</span></a></li>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Cartes de statistiques -->
+                <div class="nk-block">
+                    <div class="row g-gs">
+                        <!-- Carte Visiteurs -->
+                        <div class="col-md-4">
+                            <div class="card card-bordered card-stretch">
+                                <div class="card-inner bg-gradient-warning rounded-lg">
+                                    <div class="card-title-group align-start mb-3">
+                                        <div class="card-title">
+                                            <h6 class="title text-white">Total Visiteurs</h6>
+                                        </div>
+                                        <div class="card-tools">
+                                            <em class="card-hint icon ni ni-help" data-toggle="tooltip" data-placement="left" title="Visiteurs enregistrés"></em>
+                                        </div>
+                                    </div>
+                                    <div class="card-amount mb-2">
+                                        <span class="amount text-white display-6">{{ nombre_membres }}</span>
+                                    </div>
+                                    <div class="card-progress">
+                                        <div class="progress-label">
+                                            <span class="text-white">Progression ce mois</span>
+                                            <span class="text-white">+12%</span>
+                                        </div>
+                                        <div class="progress progress-md bg-white bg-opacity-10">
+                                            <div class="progress-bar bg-white" data-progress="65"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Carte Membres confirmés -->
+                        <div class="col-md-4">
+                            <div class="card card-bordered card-stretch">
+                                <div class="card-inner bg-gradient-primary rounded-lg">
+                                    <div class="card-title-group align-start mb-3">
+                                        <div class="card-title">
+                                            <h6 class="title text-white">Membres confirmés</h6>
+                                        </div>
+                                        <div class="card-tools">
+                                            <em class="card-hint icon ni ni-help" data-toggle="tooltip" data-placement="left" title="Membres baptisés"></em>
+                                        </div>
+                                    </div>
+                                    <div class="card-amount mb-2">
+                                        <span class="amount text-white display-6">{{ nombre_membres }}</span>
+                                    </div>
+                                    <div class="card-progress">
+                                        <div class="progress-label">
+                                            <span class="text-white">Nouveaux membres</span>
+                                            <span class="text-white">+5%</span>
+                                        </div>
+                                        <div class="progress progress-md bg-white bg-opacity-10">
+                                            <div class="progress-bar bg-white" data-progress="42"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Carte Finances -->
+                        <div class="col-md-4">
+                            <div class="card card-bordered card-stretch">
+                                <div class="card-inner bg-gradient-danger rounded-lg">
+                                    <div class="card-title-group align-start mb-3">
+                                        <div class="card-title">
+                                            <h6 class="title text-white">Finances</h6>
+                                        </div>
+                                        <div class="card-tools">
+                                            <em class="card-hint icon ni ni-help" data-toggle="tooltip" data-placement="left" title="Dons et offrandes"></em>
+                                        </div>
+                                    </div>
+                                    <div class="card-amount mb-2">
+                                        <span class="amount text-white display-6">79,358 <small>CFA</small></span>
+                                    </div>
+                                    <div class="card-progress">
+                                        <div class="progress-label">
+                                            <span class="text-white">Objectif mensuel</span>
+                                            <span class="text-white">85%</span>
+                                        </div>
+                                        <div class="progress progress-md bg-white bg-opacity-10">
+                                            <div class="progress-bar bg-white" data-progress="85"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Section Démographie -->
+                        <div class="col-lg-8">
+                            <div class="card card-bordered h-100">
+                                <div class="card-inner">
+                                    <div class="card-title-group mb-3">
+                                        <div class="card-title">
+                                            <h6 class="title">Démographie de l'église</h6>
+                                            <p>Répartition par genre et tranche d'âge</p>
+                                        </div>
+                                        <div class="card-tools">
+                                            <div class="dropdown">
+                                                <a href="#" class="dropdown-toggle btn btn-sm btn-outline-light" data-toggle="dropdown">Mois en cours</a>
+                                                <div class="dropdown-menu dropdown-menu-right">
+                                                    <ul class="link-list-opt no-bdr">
+                                                        <li><a href="#"><span>Semaine</span></a></li>
+                                                        <li><a href="#"><span>Mois</span></a></li>
+                                                        <li><a href="#"><span>Année</span></a></li>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row g-3">
+                                        <div class="col-md-6">
+                                            <div class="card bg-light">
+                                                <div class="card-inner">
+                                                    <div class="pie-chart-card">
+                                                        <div class="title">Répartition par genre</div>
+                                                        <canvas class="chart-js-pie" id="genreChart"></canvas>
+                                                        <div class="chart-legend">
+                                                            <div class="item">
+                                                                <div class="indicator bg-primary"></div>
+                                                                <div class="label">Hommes (58%)</div>
+                                                            </div>
+                                                            <div class="item">
+                                                                <div class="indicator bg-pink"></div>
+                                                                <div class="label">Femmes (42%)</div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="card bg-light">
+                                                <div class="card-inner">
+                                                    <div class="bar-chart-card">
+                                                        <div class="title">Répartition par âge</div>
+                                                        <canvas class="chart-js-bar" id="ageChart"></canvas>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Section Derniers membres -->
+                        <!-- Section Derniers membres -->
+<div class="col-lg-4">
+    <div class="card card-bordered h-100">
+        <div class="card-inner">
+            <div class="card-title-group mb-3">
+                <div class="card-title">
+                    <h6 class="title">Nouveaux membres</h6>
+                    <p>Dernières inscriptions</p>
+                </div>
+                <div class="card-tools">
+                    <a href="#" class="link">Voir tout</a>
+                </div>
+            </div>
+            <div class="member-list">
+                {% for membre in derniers_membres %}
+                <div class="member-item">
+                    <div class="user-avatar bg-{% cycle 'primary' 'pink' 'teal' 'orange' %}">
+                        {{ membre.prenom|first }}{{ membre.nom|first }}
+                    </div>
+                    <div class="member-info">
+                        <div class="member-name">{{ membre.prenom }} {{ membre.nom }}</div>
+                        <div class="member-meta">
+                            <span class="date">{{ membre.date_inscription}}</span>
+                            <span class="status badge badge-{% cycle 'success' 'info' 'warning' %}">
+                                {% cycle 'Confirmé' 'Visiteur' 'Nouveau' %}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="member-action">
+                        <a href="#" class="btn btn-icon btn-sm btn-outline-light">
+                            <em class="icon ni ni-chevron-right"></em>
+                        </a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+                        <!-- Section Activités récentes -->
+                        <div class="col-12">
+                            <div class="card card-bordered">
+                                <div class="card-inner">
+                                    <div class="card-title-group mb-3">
+                                        <div class="card-title">
+                                            <h6 class="title">Activités récentes</h6>
+                                            <p>Suivi des dernières actions</p>
+                                        </div>
+                                        <div class="card-tools">
+                                            <ul class="nav nav-tabs nav-tabs-card">
+                                                <li class="nav-item">
+                                                    <a class="nav-link active" data-toggle="tab" href="#today">Aujourd'hui</a>
+                                                </li>
+                                                <li class="nav-item">
+                                                    <a class="nav-link" data-toggle="tab" href="#week">Semaine</a>
+                                                </li>
+                                                <li class="nav-item">
+                                                    <a class="nav-link" data-toggle="tab" href="#month">Mois</a>
+                                                </li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                    <div class="tab-content">
+                                        <div class="tab-pane active" id="today">
+                                            <div class="timeline">
+                                                <div class="timeline-item">
+                                                    <div class="timeline-status bg-primary"></div>
+                                                    <div class="timeline-date">10:30 <span class="text-soft">AM</span></div>
+                                                    <div class="timeline-data">
+                                                        <h6 class="timeline-title">Nouveau membre enregistré</h6>
+                                                        <p class="timeline-text">Jean Dupont a complété son inscription</p>
+                                                    </div>
+                                                </div>
+                                                <div class="timeline-item">
+                                                    <div class="timeline-status bg-success"></div>
+                                                    <div class="timeline-date">09:15 <span class="text-soft">AM</span></div>
+                                                    <div class="timeline-data">
+                                                        <h6 class="timeline-title">Don enregistré</h6>
+                                                        <p class="timeline-text">Marie Lambert a fait un don de 15,000 CFA</p>
+                                                    </div>
+                                                </div>
+                                                <div class="timeline-item">
+                                                    <div class="timeline-status bg-info"></div>
+                                                    <div class="timeline-date">Hier <span class="text-soft">16:45</span></div>
+                                                    <div class="timeline-data">
+                                                        <h6 class="timeline-title">Réunion de cellule</h6>
+                                                        <p class="timeline-text">Cellule des jeunes - 12 participants</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Styles supplémentaires -->
+<style>
+    .bg-gradient-primary {
+        background: linear-gradient(135deg, #6576ff 0%, #6a11cb 100%);
+    }
+    .bg-gradient-warning {
+        background: linear-gradient(135deg, #fbc434 0%, #f76b1c 100%);
+    }
+    .bg-gradient-danger {
+        background: linear-gradient(135deg, #f5365c 0%, #f56036 100%);
+    }
+    .rounded-lg {
+        border-radius: 12px !important;
+    }
+    .card-stretch {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+    .member-list {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+    .member-item {
+        display: flex;
+        align-items: center;
+        padding: 12px;
+        background: #f8f9fa;
+        border-radius: 8px;
+        transition: all 0.3s;
+    }
+    .member-item:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    .user-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: 600;
+        margin-right: 12px;
+    }
+    .member-info {
+        flex: 1;
+    }
+    .member-name {
+        font-weight: 500;
+        margin-bottom: 2px;
+    }
+    .member-meta {
+        display: flex;
+        gap: 8px;
+        font-size: 0.85rem;
+        color: #6c757d;
+    }
+    .pie-chart-card, .bar-chart-card {
+        padding: 15px;
+    }
+    .chart-legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-top: 15px;
+    }
+    .chart-legend .item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+    .chart-legend .indicator {
+        width: 12px;
+        height: 12px;
+        border-radius: 2px;
+    }
+    .lead-text {
+        color: #6c757d;
+        font-size: 1rem;
+    }
+</style>
+
+<!-- Scripts pour les graphiques -->
+<script>
+    // Graphique circulaire (genre)
+    const genreCtx = document.getElementById('genreChart').getContext('2d');
+    const genreChart = new Chart(genreCtx, {
+        type: 'pie',
+        data: {
+            labels: ['Hommes', 'Femmes'],
+            datasets: [{
+                data: [58, 42],
+                backgroundColor: ['#6576ff', '#f5365c'],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            cutout: '70%',
+            plugins: {
+                legend: {
+                    display: false
+                }
+            }
+        }
+    });
+
+    // Graphique à barres (âge)
+    const ageCtx = document.getElementById('ageChart').getContext('2d');
+    const ageChart = new Chart(ageCtx, {
+        type: 'bar',
+        data: {
+            labels: ['0-10', '10-17', '18-30', '30+'],
+            datasets: [{
+                label: 'Hommes',
+                data: [15, 20, 25, 40],
+                backgroundColor: '#6576ff',
+                borderRadius: 4
+            }, {
+                label: 'Femmes',
+                data: [18, 22, 20, 35],
+                backgroundColor: '#f5365c',
+                borderRadius: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                x: {
+                    stacked: true,
+                    grid: {
+                        display: false
+                    }
+                },
+                y: {
+                    stacked: true,
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}

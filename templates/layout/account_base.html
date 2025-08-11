@@ -1,0 +1,72 @@
+{% load static %}
+{% load account %}
+<!DOCTYPE html>
+<html lang="zxx" class="js">
+
+<head>
+    <base href="./">
+    <meta charset="utf-8">
+    <meta name="author" content="ABMCI-Serge OGAH">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="description" content="A powerful and conceptual apps base dashboard template that especially build for developers and programmers.">
+    <!-- Fav Icon  -->
+    <link rel="shortcut icon" href="{% static 'images/favicon.png'%}">
+    <!-- Page Title  -->
+    <title>Alliance Connect</title>
+    <!-- StyleSheets  -->
+    <link rel="stylesheet" href="{% static 'assets/css/dashlite.css'%}">
+    <link id="skin-default" rel="stylesheet" href="{% static 'assets/css/theme.css' %}">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.9.0/css/bootstrap-datepicker.min.css">
+
+<!-- Avant la fermeture du body -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.9.0/js/bootstrap-datepicker.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.9.0/locales/bootstrap-datepicker.fr.min.js"></script>
+
+</head>
+
+<body class="nk-body npc-invest bg-lighter ">
+    <div class="nk-app-root">
+        <!-- wrap @s -->
+        <div class="nk-wrap ">
+            <!-- main header @s -->
+  
+            <!-- main header @e -->
+            <!-- content @s -->
+            {% block content %}
+            {% endblock %}
+            <!-- content @e -->
+            <!-- footer @s -->
+            <!-- footer @e -->
+        </div>
+        <!-- wrap @e -->
+    </div>
+    <!-- app-root @e -->
+    <!-- JavaScript -->
+
+{#    <script src="{% static 'assets/js/example-toastr.js'%}"></script>#}
+      {% if messages %}
+        {% for message in messages %}
+            {% if message.tags == 'success'%}
+                <script type=text/javascript>toastr.{{ message.tags }}('{{ message }}')</script>
+            {% elif message.tags == 'info' %}
+                <script type=text/javascript>toastr.{{ message.tags }}('{{ message }}')</script>
+            {% elif message.tags == 'warning' %}
+                <script type=text/javascript>toastr.{{ message.tags }}('{{ message }}')</script>
+            {% elif message.tags == 'error' %}
+                <script type=text/javascript>toastr.{{ message.tags }}('{{ message }}')</script>
+            {% endif %}
+        {% endfor %}
+    {% endif %}
+
+    <script src="{% static 'assets/js/bundle.js'%}"></script>
+    <script src="{% static 'assets/js/scripts.js'%}"></script>
+    <script src="{% static 'assets/js/example-toastr.js'%}"></script>
+    <script src="{% static 'assets/js/charts/gd-invest.js'%}"></script>
+    <script src="{% static 'assets/js/libs/fullcalendar.js'%}"></script>
+    <script src="{% static 'assets/js/apps/calendar.js'%}"></script>
+</body>
+
+</html>

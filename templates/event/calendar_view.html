@@ -1,0 +1,187 @@
+{# templates/event/calendar_view.html #}
+{% extends 'layout/base.html' %}
+{% load static %}
+
+{% block content %}
+
+{# FullCalendar (si non inclus par ton bundle) #}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.css">
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
+
+<style>
+  .fc-toolbar-title { font-size: 1.25rem; font-weight: 600; color: var(--dark); }
+  .fc .fc-button { text-transform: none; }
+  .fc .fc-button-primary { background: var(--bs-light); border: 1px solid var(--bs-border-color); color: var(--bs-body-color); }
+  .fc .fc-button-primary:not(:disabled).fc-button-active,
+  .fc .fc-button-primary:not(:disabled):active { background: var(--bs-primary); color: #fff; }
+
+  .fc-day-today { background-color: rgba(101,118,255, .08) !important; }
+  .fc-event { border: none; border-radius: .375rem; padding: 2px 4px; font-size: .85rem; }
+
+  /* Modal image/qr */
+  .event-modal-image { width: 100%; height: 200px; object-fit: cover; border-radius: .5rem; }
+  .event-modal-qrcode { width: 110px; height: 110px; display: block; margin: .25rem auto 0; }
+</style>
+
+<div class="nk-content nk-content-fluid">
+  <div class="container-xl wide-xl">
+    <div class="nk-content-inner">
+      <div class="nk-content-body">
+
+        <div class="nk-block-head nk-block-head-sm">
+          <div class="nk-block-between">
+            <div class="nk-block-head-content">
+              <h3 class="nk-block-title page-title">Calendrier des Événements</h3>
+              <div class="nk-block-des text-soft"><p class="mb-0">Visualisez et gérez tous vos événements</p></div>
+            </div>
+            <div class="nk-block-head-content">
+              <div class="d-flex gap-2 align-items-center">
+                <button id="todayBtn" class="btn btn-outline-light">Aujourd'hui</button>
+                <div class="btn-group" role="group">
+                  <button id="prevBtn" class="btn btn-icon btn-outline-light" type="button">
+                    <em class="icon ni ni-chevron-left"></em>
+                  </button>
+                  <button id="nextBtn" class="btn btn-icon btn-outline-light" type="button">
+                    <em class="icon ni ni-chevron-right"></em>
+                  </button>
+                </div>
+
+                <div class="dropdown">
+                  <button class="btn btn-outline-light dropdown-toggle" type="button" id="viewDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                    <span id="currentView">Mois</span>
+                  </button>
+                  <ul class="dropdown-menu" aria-labelledby="viewDropdown">
+                    <li><a class="dropdown-item view-change" data-view="dayGridDay" href="#">Jour</a></li>
+                    <li><a class="dropdown-item view-change" data-view="timeGridWeek" href="#">Semaine</a></li>
+                    <li><a class="dropdown-item view-change" data-view="dayGridMonth" href="#">Mois</a></li>
+                    <li><a class="dropdown-item view-change" data-view="listMonth" href="#">Liste</a></li>
+                  </ul>
+                </div>
+
+                <a href="#" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addEventPopup">
+                  <em class="icon ni ni-plus"></em><span>Nouvel Événement</span>
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="nk-block">
+          <div class="card card-bordered">
+            <div class="card-inner p-0">
+              <div id="calendar" class="nk-calendar"></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+{# Modal détails évènement #}
+<div class="modal fade" id="eventModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="eventModalTitle">Détails de l'Événement</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+      </div>
+      <div class="modal-body" id="eventModalBody"></div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary btn-dim" data-bs-dismiss="modal">Fermer</button>
+        <a href="#" class="btn btn-primary" id="eventDetailsLink">Voir Détails</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+{# Données injectées par la vue #}
+<script id="events-json" type="application/json">
+  {{ events_json|safe }}
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const calendarEl = document.getElementById('calendar');
+
+  // Récupère les évènements sérialisés du contexte
+  const events = JSON.parse(document.getElementById('events-json').textContent || "[]");
+
+  const calendar = new FullCalendar.Calendar(calendarEl, {
+    locale: 'fr',
+    initialView: 'dayGridMonth',
+    headerToolbar: false,
+    firstDay: 1,            // Lundi
+    navLinks: true,
+    dayMaxEvents: true,
+    eventTimeFormat: { hour: '2-digit', minute: '2-digit', hour12: false },
+    events,
+
+    eventClick: function (info) {
+      info.jsEvent.preventDefault();
+      const ev = info.event;
+      const p = ev.extendedProps || {};
+
+      const imgBanner = p.banner ? `<img src="${p.banner}" class="event-modal-image" alt="">` : '';
+      const qr = p.qr_code ? `<img src="${p.qr_code}" class="event-modal-qrcode" alt="QR Code">` : '';
+
+      const bodyHtml = `
+        ${imgBanner}
+        <div class="row g-2">
+          <div class="col-md-7">
+            <div class="mb-2"><strong><em class="icon ni ni-calendar"></em> Date :</strong><br>
+              ${formatDate(ev.start)}${ev.end ? ' au ' + formatDate(ev.end) : ''}
+            </div>
+            <div class="mb-2"><strong><em class="icon ni ni-map-pin"></em> Lieu :</strong><br>${p.lieu || '—'}</div>
+            <div class="mb-2"><strong><em class="icon ni ni-users"></em> Participants :</strong><br>${p.participants || 0}</div>
+          </div>
+          <div class="col-md-5 text-center">
+            ${qr}
+          </div>
+        </div>
+        <div class="mt-2">
+          <strong><em class="icon ni ni-info"></em> Description :</strong>
+          <p class="mb-0">${(p.description || 'Aucune description disponible')}</p>
+        </div>
+      `;
+
+      document.getElementById('eventModalTitle').textContent = ev.title;
+      document.getElementById('eventModalBody').innerHTML = bodyHtml;
+      document.getElementById('eventDetailsLink').setAttribute('href', ev.url || '#');
+
+      const modal = new bootstrap.Modal(document.getElementById('eventModal'));
+      modal.show();
+    },
+  });
+
+  calendar.render();
+
+  // Contrôles
+  document.getElementById('todayBtn')?.addEventListener('click', () => calendar.today());
+  document.getElementById('prevBtn')?.addEventListener('click', () => calendar.prev());
+  document.getElementById('nextBtn')?.addEventListener('click', () => calendar.next());
+
+  document.querySelectorAll('.view-change').forEach(a => {
+    a.addEventListener('click', (e) => {
+      e.preventDefault();
+      const view = a.dataset.view;
+      calendar.changeView(view);
+      document.getElementById('currentView').textContent =
+        a.textContent?.trim() || 'Mois';
+    });
+  });
+
+  function formatDate(date) {
+    try {
+      return date.toLocaleString('fr-FR', {
+        weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+        hour: '2-digit', minute: '2-digit',
+      });
+    } catch (_) {
+      return '';
+    }
+  }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,89 @@
+from django.contrib import admin
+from simple_history.admin import SimpleHistoryAdmin
+
+from fidele.models import Department, MembreType, Fidele, Location, TypeLocation, Fonction, OuvrierPermanence, \
+    Permanence, Eglise, Familles, SujetPriere, ProblemeParticulier, UserProfileCompletion
+
+# Register your models here.
+admin.site.site_header = 'BACK-END ABMCI'
+admin.site.site_title = 'ABMCI Admin Pannel'
+admin.site.site_url = 'http://allianceconnect.com/'
+admin.site.index_title = 'ABMCI Connect'
+admin.empty_value_display = '**Empty**'
+
+admin.site.register(Permanence, SimpleHistoryAdmin)
+admin.site.register(OuvrierPermanence, SimpleHistoryAdmin)
+admin.site.register(Department, SimpleHistoryAdmin)
+admin.site.register(Fonction, SimpleHistoryAdmin)
+admin.site.register(MembreType, SimpleHistoryAdmin)
+# admin.site.register(Fidele, SimpleHistoryAdmin)
+admin.site.register(Location, SimpleHistoryAdmin)
+admin.site.register(TypeLocation, SimpleHistoryAdmin)
+# admin.site.register(Eglise, SimpleHistoryAdmin)
+admin.site.register(Familles, SimpleHistoryAdmin)
+admin.site.register(ProblemeParticulier, SimpleHistoryAdmin)
+admin.site.register(SujetPriere, SimpleHistoryAdmin)
+
+
+@admin.register(UserProfileCompletion)
+class UserProfileCompletionAdmin(admin.ModelAdmin):
+    # Configuration de l'affichage de la liste
+    list_display = ('user', 'current_step', 'is_complete', 'last_updated')
+    list_filter = ('is_complete', 'current_step')
+    search_fields = ('user__username', 'user__first_name', 'user__last_name')
+    ordering = ('-last_updated',)
+    date_hierarchy = 'last_updated'
+
+    # Configuration du formulaire d'édition
+    fieldsets = (
+        (None, {
+            'fields': ('user', 'is_complete')
+        }),
+        ('Progression', {
+            'fields': ('current_step', 'last_updated'),
+            'classes': ('collapse',)
+        }),
+    )
+
+    # Champs en lecture seule
+    readonly_fields = ('last_updated',)
+
+    # Configuration des actions personnalisées
+    actions = ['mark_as_complete', 'reset_completion']
+
+    def mark_as_complete(self, request, queryset):
+        queryset.update(is_complete=True, current_step=5)
+        self.message_user(request, f"{queryset.count()} profils marqués comme complets")
+
+    mark_as_complete.short_description = "Marquer comme complet"
+
+    def reset_completion(self, request, queryset):
+        queryset.update(is_complete=False, current_step=1)
+        self.message_user(request, f"{queryset.count()} profils réinitialisés")
+
+    reset_completion.short_description = "Réinitialiser la progression"
+
+    # Amélioration de l'affichage du user
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('user')
+
+    # Optionnel: Ajout d'une méthode pour afficher plus d'infos sur l'utilisateur
+    def user_info(self, obj):
+        return f"{obj.user.get_full_name()} ({obj.user.email})"
+
+    user_info.short_description = "Informations utilisateur"
+
+
+@admin.register(Eglise)
+class EgliseAdmin(SimpleHistoryAdmin):
+    list_display = ("id", "name", "ville")
+    # IMPORTANT: provide search_fields (used by autocomplete)
+    search_fields = ("name", "ville", "pays")
+
+
+@admin.register(Fidele)
+class FideleAdmin(SimpleHistoryAdmin):
+    list_display = ("id", "user", "phone", "eglise", "type_membre","date_entree")
+    # IMPORTANT: provide search_fields (used by autocomplete)
+    search_fields = ("user__first_name", "user__last_name", "phone", "qlook_id")
+    list_filter = ("eglise", "type_membre")

@@ -1,0 +1,54 @@
+{% extends 'layout/base.html' %}
+
+{% block content %}
+<div class="container py-5 my-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-6 text-center">
+            <div class="card border-0 shadow-lg p-5">
+                <div class="card-body">
+                    <div class="mb-4">
+                        <div class="icon-circle bg-primary text-white mx-auto mb-4" style="width: 80px; height: 80px;">
+                            <i class="fas fa-check fa-3x"></i>
+                        </div>
+                        <h1 class="h2 text-primary mb-3">Profil complété avec succès !</h1>
+                        <p class="lead">Merci d'avoir pris le temps de compléter votre profil.</p>
+                        <p>Vous pouvez maintenant accéder à toutes les fonctionnalités de notre plateforme.</p>
+                    </div>
+                    
+                    <div class="d-grid gap-3 d-sm-flex justify-content-sm-center">
+                        <a href="{% url 'home' %}" class="btn btn-primary btn-lg px-4">
+                            <i class="fas fa-tachometer-alt me-2"></i> Tableau de bord
+                        </a>
+                        <a href="{% url 'membre' user.fidele.slug %}" class="btn btn-outline-primary btn-lg px-4">
+                            <i class="fas fa-user me-2"></i> Voir mon profil
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .icon-circle {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+    }
+    
+    .bg-primary {
+        background-color: #2c4a8b !important;
+    }
+    
+    .btn-outline-primary {
+        color: #2c4a8b;
+        border-color: #2c4a8b;
+    }
+    
+    .btn-outline-primary:hover {
+        background-color: #2c4a8b;
+        color: white;
+    }
+</style>
+{% endblock %}

@@ -1,0 +1,92 @@
+{% extends 'layout/base.html' %}
+
+{% block content %}
+<div class="nk-content nk-content-fluid">
+  <div class="container-xl wide-xl">
+    <div class="nk-content-inner">
+      <div class="nk-content-body">
+
+        <div class="nk-block-head nk-block-head-sm">
+          <div class="nk-block-between">
+            <div class="nk-block-head-content">
+              <h3 class="nk-block-title page-title">
+                {% if object %}Modifier mariage{% else %}Nouveau mariage{% endif %}
+              </h3>
+              <div class="nk-block-des text-soft">
+                <p>Saisis les informations de la cérémonie.</p>
+              </div>
+            </div>
+            <div class="nk-block-head-content">
+              <a href="{% url 'mariage-list' %}" class="btn btn-outline-secondary">
+                <em class="icon ni ni-arrow-left"></em> Retour
+              </a>
+            </div>
+          </div>
+        </div>
+
+        {% if form.errors %}
+        <div class="alert alert-danger">Veuillez corriger les erreurs ci-dessous.</div>
+        {% endif %}
+
+        <form method="post" enctype="multipart/form-data" class="form-validate">
+          {% csrf_token %}
+          <div class="card card-bordered">
+            <div class="card-inner">
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <label class="form-label">Date du mariage</label>
+                  {{ form.date_mariage }}
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Lieu du mariage</label>
+                  {{ form.lieu_mariage }}
+                </div>
+
+                <div class="col-md-6">
+                  <label class="form-label">Officiant</label>
+                  {{ form.officiant }}
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Numéro d'acte</label>
+                  {{ form.numero_acte }}
+                </div>
+
+                <div class="col-md-6">
+                  <label class="form-label">Couple (sélectionner 2)</label>
+                  {{ form.couple }}
+                  <div class="form-note text-soft">Maintiens Ctrl/Cmd pour sélection multiple.</div>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Témoins</label>
+                  {{ form.temoins }}
+                </div>
+
+                <div class="col-md-6">
+                  <label class="form-label">Contrat matrimonial</label>
+                  {{ form.contrat_matrimonial }}
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Photos</label>
+                  {{ form.photos }}
+                </div>
+
+                <div class="col-md-12">
+                  <label class="form-label">Notes</label>
+                  {{ form.notes }}
+                </div>
+              </div>
+            </div>
+
+            <div class="card-inner border-top text-end">
+              <button class="btn btn-primary">
+                <em class="icon ni ni-save"></em> Enregistrer
+              </button>
+            </div>
+          </div>
+        </form>
+
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

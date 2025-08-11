@@ -1,0 +1,207 @@
+{% load static %}
+{% load account %}
+{% load custom_filters %}
+
+<div class="nk-header nk-header-fluid is-theme">
+    <div class="container-xl wide-xl">
+        <div class="nk-header-wrap">
+            <!-- Menu mobile -->
+            <div class="nk-menu-trigger mr-sm-2 d-lg-none">
+                <a href="#" class="nk-nav-toggle nk-quick-nav-icon" data-target="headerNav">
+                    <em class="icon ni ni-menu"></em>
+                </a>
+            </div>
+
+            <!-- Logo -->
+            <div class="nk-header-brand">
+                <a href="{% url 'home' %}" class="logo-link">
+                    <img class="logo-light logo-img" src="{% static 'images/logo.png' %}" alt="logo">
+                    <img class="logo-dark logo-img" src="{% static 'images/logo-dark.png' %}" alt="logo-dark">
+                </a>
+            </div>
+
+            <!-- Menu principal -->
+            <div class="nk-header-menu" data-content="headerNav">
+                <div class="nk-header-mobile">
+                    <div class="nk-header-brand">
+                        <a href="{% url 'home' %}" class="logo-link">
+                            <img class="logo-light logo-img" src="{% static 'images/logo.png' %}" alt="logo">
+                            <img class="logo-dark logo-img" src="{% static 'images/logo-dark.png' %}" alt="logo-dark">
+                        </a>
+                    </div>
+                    <div class="nk-menu-trigger mr-n2">
+                        <a href="#" class="nk-nav-toggle nk-quick-nav-icon" data-target="headerNav">
+                            <em class="icon ni ni-arrow-left"></em>
+                        </a>
+                    </div>
+                </div>
+                {% include 'layout/menu.html' %}
+            </div>
+
+            <!-- Outils utilisateur -->
+            {% if user.is_authenticated %}
+            <div class="nk-header-tools">
+                <ul class="nk-quick-nav">
+                    <!-- Notifications -->
+                    <li class="dropdown notification-dropdown">
+                        <a href="#" class="dropdown-toggle nk-quick-nav-icon" data-toggle="dropdown">
+                            <div class="icon-status icon-status-info">
+                                <em class="icon ni ni-bell"></em>
+                                {% unread_notifs_count user as unread_count %}
+                                {% if unread_count > 0 %}
+                                <span class="notification-count">{{ unread_count }}</span>
+                                {% endif %}
+                            </div>
+                        </a>
+                        <div class="dropdown-menu dropdown-menu-xl dropdown-menu-right dropdown-menu-s1">
+                            <div class="dropdown-head">
+                                <span class="sub-title nk-dropdown-title">Notifications</span>
+                                <a href="{% url 'mark_all_read' %}">Tout marquer comme lu</a>
+                            </div>
+                            <div class="dropdown-body">
+                                <div class="nk-notification">
+                                    {% user_notifs user as notifications %}
+                                    {% for notification in notifications|slice:":5" %}
+                                    <div class="nk-notification-item dropdown-inner {% if not notification.read %}unread{% endif %}">
+                                        <div class="nk-notification-icon">
+                                            <em class="icon icon-circle bg-{{ notification.data.color|default:'primary' }}-dim ni ni-{{ notification.data.icon|default:'info' }}"></em>
+                                        </div>
+                                        <div class="nk-notification-content">
+                                            <a href="{% url 'mark_read' notification.id %}{% if notification.data.url %}?next={{ notification.data.url|urlencode }}{% endif %}"
+                                               class="notification-link">
+                                                <div class="nk-notification-text">
+                                                    {{ notification.message }}
+                                                    {% if notification.data.details %}
+                                                    <small class="text-soft">{{ notification.data.details }}</small>
+                                                    {% endif %}
+                                                </div>
+                                                <div class="nk-notification-time">
+                                                    {{ notification.created|timesince }}
+                                                </div>
+                                            </a>
+                                        </div>
+                                    </div>
+                                    {% empty %}
+                                    <div class="nk-notification-item dropdown-inner">
+                                        <div class="nk-notification-content text-center py-3">
+                                            Aucune notification
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            <div class="dropdown-foot center">
+                                <a href="{% url 'all' %}">Voir toutes</a>
+                            </div>
+                        </div>
+                    </li>
+
+                    <!-- Menu utilisateur (reste inchangé) -->
+                    <!-- Menu utilisateur -->
+                    <li class="dropdown user-dropdown order-sm-first">
+                        <a href="#" class="dropdown-toggle" data-toggle="dropdown">
+                            <div class="user-toggle">
+                                <div class="user-avatar sm">
+                                    {% if user.profile.avatar %}
+                                        <img src="{{ user.profile.avatar.url }}" alt="{{ user.get_full_name }}">
+                                    {% else %}
+                                        <span>{{ user.get_initials }}</span>
+                                    {% endif %}
+                                </div>
+                                <div class="user-info d-none d-xl-block">
+                                    <div class="user-status">
+                                        {% if user.is_superuser %}Administrateur{% else %}Utilisateur{% endif %}
+                                    </div>
+                                    <div class="user-name dropdown-indicator">
+                                        {{ user.get_full_name|default:user.username }}
+                                    </div>
+                                </div>
+                            </div>
+                        </a>
+                        <div class="dropdown-menu dropdown-menu-md dropdown-menu-right dropdown-menu-s1 is-light">
+                            <!-- Carte utilisateur -->
+                            <div class="dropdown-inner user-card-wrap bg-lighter d-none d-md-block">
+                                <div class="user-card">
+                                    <div class="user-avatar">
+                                        {% if user.profile.avatar %}
+                                            <img src="{{ user.profile.avatar.url }}" alt="{{ user.get_full_name }}">
+                                        {% else %}
+                                            <span>{{ user.get_initials }}</span>
+                                        {% endif %}
+                                    </div>
+                                    <div class="user-info">
+                                        <span class="lead-text">{{ user.get_full_name }}</span>
+                                        <span class="sub-text">{{ user.email }}</span>
+                                    </div>
+                                    <div class="user-action">
+                                        <a class="btn btn-icon mr-n2" href="#% url 'profile_settings' %}">
+                                            <em class="icon ni ni-setting"></em>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Informations du compte -->
+                            <div class="dropdown-inner user-account-info">
+                                <h6 class="overline-title-alt">Dernière connexion</h6>
+                                <div class="user-balance">
+                                    {{ user.last_login|date:"d/m/Y H:i"|default:"Jamais" }}
+                                </div>
+                                <a href="#% url 'security_log' %}" class="link">
+                                    <span>Voir l'activité</span>
+                                    <em class="icon ni ni-activity-alt"></em>
+                                </a>
+                            </div>
+                            
+                            <!-- Liens rapides -->
+                            <div class="dropdown-inner">
+                                <ul class="link-list">
+                                    <li>
+                                      
+                                        {% if request.user.is_authenticated and not request.user.userprofilecompletion.is_complete %}
+    <a class="nav-link text-warning" href="{% url 'complete_profile' %}">Complétez votre profil</a>
+{% endif %}
+                                    </li>
+                                    
+                                    <li>
+                                        <a href="{% url 'membre' user.fidele.slug %}">
+                                            <em class="icon ni ni-user-alt"></em>
+                                            <span>Mon profil</span>
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a href="#% url 'profile_settings' %}">
+                                            <em class="icon ni ni-setting-alt"></em>
+                                            <span>Paramètres</span>
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a href="#" class="dark-mode-toggle">
+                                            <em class="icon ni ni-moon"></em>
+                                            <span>Mode sombre</span>
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                            
+                            <!-- Déconnexion -->
+                            <div class="dropdown-inner">
+                                <ul class="link-list">
+                                    <li>
+                                        <a href="{% url 'account_logout' %}">
+                                            <em class="icon ni ni-signout"></em>
+                                            <span>Déconnexion</span>
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Ajoutez ceci à votre base.html ou dans un bloc javascript -->

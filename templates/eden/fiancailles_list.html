@@ -1,0 +1,147 @@
+{% extends 'layout/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="nk-content nk-content-fluid">
+  <div class="container-xl wide-xl">
+    <div class="nk-content-inner">
+      <div class="nk-content-body">
+
+        <div class="nk-block-head nk-block-head-sm">
+          <div class="nk-block-between">
+            <div class="nk-block-head-content">
+              <h3 class="nk-block-title page-title">Fiançailles</h3>
+              <div class="nk-block-des text-soft">
+                <p>Suivi des couples en préparation au mariage.</p>
+              </div>
+            </div>
+            <div class="nk-block-head-content">
+              <div class="d-flex gap-2">
+                <form method="get" class="d-flex gap-2">
+                  <select name="statut" class="form-select">
+                    <option value="">— Filtrer par statut —</option>
+                    <option value="En cours" {% if request.GET.statut == "En cours" %}selected{% endif %}>En cours</option>
+                    <option value="Terminé" {% if request.GET.statut == "Terminé" %}selected{% endif %}>Terminé</option>
+                    <option value="Suspendu" {% if request.GET.statut == "Suspendu" %}selected{% endif %}>Suspendu</option>
+                  </select>
+                  <button class="btn btn-outline-primary">Filtrer</button>
+                </form>
+                <a href="{% url 'fiancailles-create' %}" class="btn btn-primary">
+                  <em class="icon ni ni-plus"></em><span> Nouveau dossier</span>
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {% if messages %}
+        <div class="mb-3">
+          {% for m in messages %}
+          <div class="alert alert-{{ m.tags }}">{{ m }}</div>
+          {% endfor %}
+        </div>
+        {% endif %}
+
+        <div class="card card-bordered">
+          <div class="card-inner">
+            <div class="table-responsive">
+              <table class="table">
+                <thead class="thead-light">
+                  <tr>
+                    <th>Couple</th>
+                    <th>Demande</th>
+                    <th>Cérémonie</th>
+                    <th>Conseiller</th>
+                    <th>Progression</th>
+                    <th>Statut</th>
+                    <th class="text-end">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                {% for f in fiancailles_list %}
+                  <tr>
+                    <td>
+                      <div class="d-flex align-items-center">
+                        <div class="user-avatar bg-primary me-2"><span><em class="icon ni ni-heart"></em></span></div>
+                        <div>
+                          <div class="fw-bold">{{ f.homme.user.first_name }} {{ f.homme.user.last_name }}</div>
+                          <div class="text-soft small">et {{ f.femme.user.first_name }} {{ f.femme.user.last_name }}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td>{{ f.date_demande|date:"d/m/Y" }}</td>
+                    <td>{{ f.date_ceremonie|date:"d/m/Y" }}</td>
+                    <td>{{ f.conseiller.get_full_name|default:f.conseiller.username|default:"—" }}</td>
+                    <td style="min-width:180px;">
+  {% with done=f.sessions_terminees total=f.sessions_conseil %}
+    <div class="d-flex justify-content-between small text-soft">
+      <span>{{ done }}/{{ total }} sessions</span>
+      {% widthratio done total 100 as pct %}
+      <span>{{ pct }}%</span>
+    </div>
+    <div class="progress" style="height:8px;">
+      <div
+        class="progress-bar
+          {% if pct|floatformat:0 >= 66 %}bg-success
+          {% elif pct|floatformat:0 >= 33 %}bg-info
+          {% else %}bg-warning{% endif %}"
+        role="progressbar"
+        style="width: {{ pct }}%;"
+        aria-valuenow="{{ pct }}" aria-valuemin="0" aria-valuemax="100">
+      </div>
+    </div>
+  {% endwith %}
+</td>
+                    <td>
+                      <span class="badge 
+                        {% if f.statut == 'En cours' %}badge-dim bg-primary
+                        {% elif f.statut == 'Terminé' %}badge-dim bg-success
+                        {% elif f.statut == 'Suspendu' %}badge-dim bg-warning
+                        {% else %}badge-dim bg-secondary{% endif %}">
+                        {{ f.statut }}
+                      </span>
+                    </td>
+                    <td class="text-end">
+                      <a class="btn btn-sm btn-outline-secondary" href="{% url 'fiancailles-detail' f.pk %}">
+                        <em class="icon ni ni-eye"></em>
+                      </a>
+                      <a class="btn btn-sm btn-outline-primary" href="{% url 'fiancailles-update' f.pk %}">
+                        <em class="icon ni ni-edit"></em>
+                      </a>
+                      <a class="btn btn-sm btn-outline-danger" href="{% url 'fiancailles-delete' f.pk %}">
+                        <em class="icon ni ni-trash"></em>
+                      </a>
+                    </td>
+                  </tr>
+                {% empty %}
+                  <tr><td colspan="7" class="text-center text-soft">Aucun dossier pour le moment.</td></tr>
+                {% endfor %}
+                </tbody>
+              </table>
+            </div>
+
+            {% if is_paginated %}
+            <nav class="mt-3">
+              <ul class="pagination justify-content-end">
+                {% if page_obj.has_previous %}
+                  <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">&laquo;</a></li>
+                {% endif %}
+                {% for i in paginator.page_range %}
+                  <li class="page-item {% if page_obj.number == i %}active{% endif %}">
+                    <a class="page-link" href="?page={{ i }}">{{ i }}</a>
+                  </li>
+                {% endfor %}
+                {% if page_obj.has_next %}
+                  <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">&raquo;</a></li>
+                {% endif %}
+              </ul>
+            </nav>
+            {% endif %}
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,23 @@
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
+
+from api.views import VerifyEmailView, UserDetailView, FideleDetailView, FideleListView, ProfileCompletionView, \
+    FideleCreateView, ParticipationListCreateView, ScanQRCodeAPIView
+
+router = DefaultRouter()
+
+urlpatterns = [
+    path('', include(router.urls)),
+    path('auth/', include('dj_rest_auth.urls')),
+    path('auth/registration/', include('dj_rest_auth.registration.urls')),
+    path('auth/verify-email/<str:key>/', VerifyEmailView.as_view(), name='verify_email'),
+
+    path('user/', UserDetailView.as_view(), name='user-detail'),
+    path('fideles/', FideleListView.as_view(), name='fidele-list'),
+    path('fideles/<int:pk>/', FideleDetailView.as_view(), name='fidele-detail'),
+    path('fideles/create/', FideleCreateView.as_view(), name='fidele-create'),
+    path('profile-completion/', ProfileCompletionView.as_view(), name='profile-completion'),
+
+    path('participations/', ParticipationListCreateView.as_view(), name='participation-list-create'),
+    path('scan-qr/<str:event_code>/', ScanQRCodeAPIView.as_view(), name='scan-qr-code'),
+]

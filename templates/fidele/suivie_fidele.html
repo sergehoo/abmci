@@ -1,0 +1,642 @@
+{% extends 'layout/base.html' %}
+
+{% load static %}
+{% load humanize %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/vendor/select2.min.css' %}">
+<link rel="stylesheet" href="{% static 'css/vendor/flatpickr.min.css' %}">
+<style>
+    .user-avatar img {
+        object-fit: cover;
+        width: 100%;
+        height: 100%;
+    }
+    .badge-nouveau {
+        position: absolute;
+        top: -5px;
+        right: -5px;
+        font-size: 0.6rem;
+    }
+    .progress-sm {
+        height: 5px;
+    }
+    .fidele-card:hover {
+        transform: translateY(-2px);
+        transition: all 0.2s ease;
+    }
+    .statut-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+    .fidele-card {
+        border-left: 3px solid;
+    }
+    .visiteur { border-left-color: #6c757d; }
+    .actif { border-left-color: #6576ff; }
+    .fiss { border-left-color: #f97316; }
+    .sympathisant { border-left-color: #0ea5e9; }
+    .filter-active {
+        background-color: #f8f9fa;
+        font-weight: 500;
+    }
+</style>
+
+<div class="nk-content nk-content-fluid">
+    <div class="container-xl wide-xl">
+        <div class="nk-content-inner">
+            <div class="nk-content-body">
+                <div class="nk-block-head nk-block-head-sm">
+                    <div class="nk-block-between g-3">
+                        <div class="nk-block-head-content">
+                            <h3 class="nk-block-title page-title">Suivi des Visiteurs</h3>
+                            <div class="nk-block-des text-soft">
+                                <p>Gestion des nouveaux visiteurs et membres</p>
+                            </div>
+                        </div>
+                        <div class="nk-block-head-content">
+                            <a href="#% url 'export_visiteurs' %}?{{ request.GET.urlencode }}"
+                               class="btn btn-outline-primary">
+                                <em class="icon ni ni-download"></em>
+                                <span>Exporter</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="nk-block">
+                    <!-- Filtres avancés -->
+                    <div class="card card-bordered mb-4">
+                        <div class="card-inner">
+                            <form id="filterForm" method="get" class="row g-3">
+                                <!-- Filtre rapide par statut -->
+                                <div class="col-auto">
+
+
+                                    <div class="btn-group btn-group-sm mt-5">
+
+                                        <a href="?statut=Visiteur"
+                                           class="btn {% if request.GET.statut == 'Visiteur' %}btn-primary{% else %}btn-outline-light{% endif %}">
+                                            Visiteurs
+                                        </a>
+                                        <a href="?statut=Membre+actif"
+                                           class="btn {% if request.GET.statut == 'Membre actif' %}btn-primary{% else %}btn-outline-light{% endif %}">
+                                            Membres
+                                        </a>
+                                        <a href="?statut=FISS"
+                                           class="btn {% if request.GET.statut == 'FISS' %}btn-primary{% else %}btn-outline-light{% endif %}">
+                                            FISS
+                                        </a>
+                                        <a href="?statut=Sympathisant"
+                                           class="btn {% if request.GET.statut == 'Sympathisant' %}btn-primary{% else %}btn-outline-light{% endif %}">
+                                            Sympathisants
+                                        </a>
+                                        </div>
+                                    </div>
+
+
+                                <!-- Filtres avancés -->
+                                <div class="col-md-2 mt-1">
+                                    <label class="form-label">Période d'entrée</label>
+                                    <div class="form-control-wrap">
+                                        <input type="text"
+                                               class="form-control date-picker-range"
+                                               name="date_range"
+                                               value="{{ request.GET.date_range }}"
+                                               placeholder="Sélectionner une période">
+                                    </div>
+                                </div>
+
+                                <div class="col-md-2 mt-1">
+                                    <label class="form-label">Baptême</label>
+                                    <select class="form-select" name="bapteme">
+                                        <option value="">Tous</option>
+                                        <option value="baptise" {% if request.GET.bapteme == 'baptise' %}selected{% endif %}>Baptisés</option>
+                                        <option value="non_baptise" {% if request.GET.bapteme == 'non_baptise' %}selected{% endif %}>Non baptisés</option>
+                                    </select>
+                                </div>
+
+                                <div class="col-md-2 mt-1">
+                                    <label class="form-label">Recherche</label>
+                                    <div class="form-control-wrap">
+                                        <input type="text"
+                                               class="form-control"
+                                               name="q"
+                                               value="{{ request.GET.q }}"
+                                               placeholder="Nom, téléphone, email...">
+                                    </div>
+                                </div>
+
+                                <div class="col-md-2 d-flex align-items-end">
+                                    <button type="submit" class="btn btn-primary">
+                                        <em class="icon ni ni-filter"></em>
+                                        <span>Filtrer</span>
+                                    </button>
+                                    <a href="{% url 'suivie' %}" class="btn btn-outline-light ml-2">
+                                        <em class="icon ni ni-reload"></em>
+                                    </a>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Cartes de statistiques -->
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-3">
+                            <div class="card card-bordered">
+                                <div class="card-inner">
+                                    <div class="d-flex align-items-center justify-content-between">
+                                        <div>
+                                            <span class="overline-title">Total</span>
+                                            <h3 class="text-dark">{{ total_visiteurs|intcomma }}</h3>
+                                        </div>
+                                        <div class="bg-primary-dim rounded-circle p-3">
+                                            <em class="icon ni ni-users text-primary"></em>
+                                        </div>
+                                    </div>
+                                    <div class="progress progress-sm mt-3">
+                                        <div class="progress-bar bg-primary" style="width: {{ pourcentage_visiteurs }}%"></div>
+                                    </div>
+                                    <span class="text-soft fs-12px">{{ pourcentage_visiteurs|floatformat:1 }}% des fidèles</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-3">
+                            <div class="card card-bordered">
+                                <div class="card-inner">
+                                    <div class="d-flex align-items-center justify-content-between">
+                                        <div>
+                                            <span class="overline-title">Nouveaux (21j)</span>
+                                            <h3 class="text-dark">{{ nouveaux_visiteurs|intcomma }}</h3>
+                                        </div>
+                                        <div class="bg-info-dim rounded-circle p-3">
+                                            <em class="icon ni ni-spark text-info"></em>
+                                        </div>
+                                    </div>
+                                    <div class="progress progress-sm mt-3">
+                                        <div class="progress-bar bg-info" style="width: {{ pourcentage_nouveaux }}%"></div>
+                                    </div>
+                                    <span class="text-soft fs-12px">{{ pourcentage_nouveaux|floatformat:1 }}% des visiteurs</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-3">
+                            <div class="card card-bordered">
+                                <div class="card-inner">
+                                    <div class="d-flex align-items-center justify-content-between">
+                                        <div>
+                                            <span class="overline-title">Baptisés</span>
+                                            <h3 class="text-dark">{{ baptises|intcomma }}</h3>
+                                        </div>
+                                        <div class="bg-success-dim rounded-circle p-3">
+                                            <em class="icon ni ni-baptism text-success"></em>
+                                        </div>
+                                    </div>
+                                    <div class="progress progress-sm mt-3">
+                                        <div class="progress-bar bg-success" style="width: {{ pourcentage_baptises }}%"></div>
+                                    </div>
+                                    <span class="text-soft fs-12px">{{ pourcentage_baptises|floatformat:1 }}% des visiteurs</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-3">
+                            <div class="card card-bordered">
+                                <div class="card-inner">
+                                    <div class="d-flex align-items-center justify-content-between">
+                                        <div>
+                                            <span class="overline-title">Problèmes</span>
+                                            <h3 class="text-dark">{{ total_problemes|intcomma }}</h3>
+                                        </div>
+                                        <div class="bg-warning-dim rounded-circle p-3">
+                                            <em class="icon ni ni-alert text-warning"></em>
+                                        </div>
+                                    </div>
+                                    <div class="progress progress-sm mt-3">
+                                        <div class="progress-bar bg-warning" style="width: {{ pourcentage_avec_problemes }}%"></div>
+                                    </div>
+                                    <span class="text-soft fs-12px">{{ pourcentage_avec_problemes|floatformat:1 }}% des visiteurs</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Liste des visiteurs -->
+                    <div class="card card-bordered">
+                        <div class="card-inner-group">
+                            <div class="card-inner position-relative">
+                                <div class="card-title-group">
+                                    <div class="card-tools">
+                                        <div class="form-inline flex-nowrap gx-3">
+                                            <div class="form-control-wrap">
+                                                <div class="form-icon form-icon-left">
+                                                    <em class="icon ni ni-search"></em>
+                                                </div>
+                                                <input type="text"
+                                                       id="searchInput"
+                                                       class="form-control"
+                                                       placeholder="Rechercher...">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="card-tools mr-n1">
+                                        <div class="dropdown">
+                                            <a href="#" class="btn btn-trigger btn-icon dropdown-toggle" data-toggle="dropdown">
+                                                <em class="icon ni ni-setting"></em>
+                                            </a>
+                                            <div class="dropdown-menu dropdown-menu-right">
+                                                <ul class="link-check">
+                                                    <li><span>Colonnes visibles</span></li>
+                                                    <li><a href="#" class="toggle-col" data-col="contact"><em class="icon ni ni-check"></em> Contact</a></li>
+                                                    <li><a href="#" class="toggle-col" data-col="bapteme"><em class="icon ni ni-check"></em> Baptême</a></li>
+                                                    <li><a href="#" class="toggle-col" data-col="problemes"><em class="icon ni ni-check"></em> Problèmes</a></li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="card-inner p-0">
+                                <div class="nk-tb-list nk-tb-ulist" id="visiteursTable">
+                                    <div class="nk-tb-item nk-tb-head">
+                                        <div class="nk-tb-col"><span>Nom & Prénom</span></div>
+                                        <div class="nk-tb-col tb-col-contact"><span>Contact</span></div>
+                                        <div class="nk-tb-col"><span>Date entrée</span></div>
+                                        <div class="nk-tb-col tb-col-bapteme"><span>Baptême</span></div>
+                                        <div class="nk-tb-col tb-col-problemes"><span>Problèmes</span></div>
+                                        <div class="nk-tb-col"><span>Statut</span></div>
+                                        <div class="nk-tb-col nk-tb-col-tools text-right"></div>
+                                    </div>
+
+                                    {% for fidele in membres %}
+                                    <div class="nk-tb-item fidele-card {{ fidele.statut|slugify }}">
+                                        <div class="nk-tb-col">
+                                            <div class="user-card">
+                                                <div class="user-avatar bg-primary position-relative">
+                                                    {% if fidele.photo %}
+                                                    <img src="{{ fidele.photo.url }}" alt="{{ fidele.user.get_full_name }}">
+                                                    {% else %}
+                                                    <span>{{ fidele.user.first_name|first }}</span>
+                                                    {% endif %}
+                                                    {% if fidele.est_recent %}
+                                                    <span class="badge badge-nouveau badge-pill bg-info">Nouveau</span>
+                                                    {% endif %}
+                                                </div>
+                                                <div class="user-info">
+                                                    <span class="tb-lead">
+                                                        <a href="{% url 'membre' slug=fidele.slug %}">
+                                                            {{ fidele.user.get_full_name }}
+                                                        </a>
+                                                    </span>
+                                                    <span>{{ fidele.fonction.nom|default:"-" }}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="nk-tb-col tb-col-contact">
+                                            <span class="tb-contact">
+                                                <em class="icon ni ni-call"></em> {{ fidele.phone|default:"-" }}
+                                            </span>
+                                            <span class="tb-contact">
+                                                <em class="icon ni ni-mail"></em> {{ fidele.personal_mail|truncatechars:20 }}
+                                            </span>
+                                        </div>
+
+                                        <div class="nk-tb-col">
+                                            <span>{{ fidele.date_entree|date:"d/m/Y" }}</span>
+                                            <span class="text-soft fs-12px">{{ fidele.date_entree|timesince }}</span>
+                                        </div>
+
+                                        <div class="nk-tb-col tb-col-bapteme">
+                                            {% if fidele.date_bapteme %}
+                                            <div class="d-flex align-items-center">
+                                                <em class="icon ni ni-check-circle-fill text-success mr-1"></em>
+                                                <div>
+                                                    <span>{{ fidele.date_bapteme|date:"d/m/Y" }}</span>
+                                                    <span class="text-soft fs-12px d-block">{{ fidele.type_bapteme|default:"" }}</span>
+                                                </div>
+                                            </div>
+                                            {% else %}
+                                            <span class="badge badge-outline-light">Non baptisé</span>
+                                            {% endif %}
+                                        </div>
+
+                                        <div class="nk-tb-col tb-col-problemes">
+                                            {% with problemes=fidele.problemes.all %}
+                                            {% if problemes %}
+                                            <div class="dropdown">
+                                                <a href="#" class="badge badge-dot bg-warning dropdown-toggle" data-toggle="dropdown">
+                                                    {{ problemes|length }} problème{{ problemes|length|pluralize }}
+                                                </a>
+                                                <div class="dropdown-menu dropdown-menu-right">
+                                                    <div class="dropdown-head">
+                                                        <span class="sub-title">Problèmes signalés</span>
+                                                    </div>
+                                                    <div class="dropdown-body">
+                                                        {% for probleme in problemes|slice:":3" %}
+                                                        <div class="notification-item">
+                                                            <div class="notification-text">
+                                                                <span class="text-dark">{{ probleme.type_probleme }}</span>
+                                                                <small class="text-soft">{{ probleme.date_decouverte|date:"d/m/Y" }}</small>
+                                                            </div>
+                                                        </div>
+                                                        {% endfor %}
+                                                        {% if problemes|length > 3 %}
+                                                        <div class="text-center">
+                                                            <small class="text-soft">+{{ problemes|length|add:"-3" }} autres</small>
+                                                        </div>
+                                                        {% endif %}
+                                                    </div>
+                                                    <div class="dropdown-foot">
+                                                        <a href="{% url 'membre' slug=fidele.slug %}#problemes">Voir tous</a>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            {% else %}
+                                            <span class="badge badge-dot bg-success">Aucun problème</span>
+                                            {% endif %}
+                                            {% endwith %}
+                                        </div>
+
+                                        <div class="nk-tb-col">
+                                            <span class="statut-badge">
+                                                {% if fidele.statut == 'Visiteur' %}
+                                                <em class="icon ni ni-user text-gray"></em>
+                                                <span class="badge badge-gray">{{ fidele.statut }}</span>
+                                                {% elif fidele.statut == 'Membre actif' %}
+                                                <em class="icon ni ni-user-check text-primary"></em>
+                                                <span class="badge badge-primary">{{ fidele.statut }}</span>
+                                                {% elif fidele.statut == 'FISS' %}
+                                                <em class="icon ni ni-heart text-danger"></em>
+                                                <span class="badge badge-warning">{{ fidele.statut }}</span>
+                                                {% elif fidele.statut == 'Sympathisant' %}
+                                                <em class="icon ni ni-star text-info"></em>
+                                                <span class="badge badge-info">{{ fidele.statut }}</span>
+                                                {% endif %}
+                                            </span>
+                                        </div>
+
+                                        <div class="nk-tb-col nk-tb-col-tools">
+                                            <ul class="nk-tb-actions gx-1">
+                                                <li>
+                                                    <div class="drodown">
+                                                        <a href="#" class="dropdown-toggle btn btn-icon btn-trigger" data-toggle="dropdown">
+                                                            <em class="icon ni ni-more-h"></em>
+                                                        </a>
+                                                        <div class="dropdown-menu dropdown-menu-right">
+                                                            <ul class="link-list-opt no-bdr">
+                                                                <li>
+                                                                    <a href="{% url 'membre' slug=fidele.slug %}">
+                                                                        <em class="icon ni ni-eye"></em>
+                                                                        <span>Voir détails</span>
+                                                                    </a>
+                                                                </li>
+                                                                <li>
+                                                                    <a href="#" data-toggle="modal" data-target="#modalEnvoyerMessage" data-fidele-id="{{ fidele.id }}">
+                                                                        <em class="icon ni ni-mail"></em>
+                                                                        <span>Envoyer message</span>
+                                                                    </a>
+                                                                </li>
+                                                                <li>
+                                                                    <a href="#" data-toggle="modal" data-target="#modalAjouterProbleme" data-fidele-id="{{ fidele.id }}">
+                                                                        <em class="icon ni ni-report"></em>
+                                                                        <span>Signaler problème</span>
+                                                                    </a>
+                                                                </li>
+                                                                <li class="divider"></li>
+                                                                <li>
+                                                                    <a href="#" class="change-status" data-fidele-id="{{ fidele.id }}">
+                                                                        <em class="icon ni ni-user-check"></em>
+                                                                        <span>Changer statut</span>
+                                                                    </a>
+                                                                </li>
+                                                            </ul>
+                                                        </div>
+                                                    </div>
+                                                </li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                    {% empty %}
+                                    <div class="nk-tb-item">
+                                        <div class="nk-tb-col text-center py-5" colspan="7">
+                                            <em class="icon ni ni-info text-soft mb-2" style="font-size: 2rem;"></em>
+                                            <p class="lead">Aucun visiteur trouvé</p>
+                                            <p class="text-soft">Essayez d'ajuster vos filtres de recherche</p>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+
+                            <!-- Pagination -->
+                            {% if membres.has_other_pages %}
+                            <div class="card-inner">
+                                <div class="nk-block-between-md g-3">
+                                    <div class="g">
+                                        <ul class="pagination justify-content-center justify-content-md-start">
+                                            {% if membres.has_previous %}
+                                            <li class="page-item">
+                                                <a class="page-link" href="?page={{ membres.previous_page_number }}&{{ request.GET.urlencode }}">
+                                                    <em class="icon ni ni-chevron-left"></em>
+                                                </a>
+                                            </li>
+                                            {% endif %}
+
+                                            {% for i in page_range %}
+                                            <li class="page-item {% if i == membres.number %}active{% endif %}">
+                                                <a class="page-link" href="?page={{ i }}&{{ request.GET.urlencode }}">{{ i }}</a>
+                                            </li>
+                                            {% endfor %}
+
+                                            {% if membres.has_next %}
+                                            <li class="page-item">
+                                                <a class="page-link" href="?page={{ membres.next_page_number }}&{{ request.GET.urlencode }}">
+                                                    <em class="icon ni ni-chevron-right"></em>
+                                                </a>
+                                            </li>
+                                            {% endif %}
+                                        </ul>
+                                    </div>
+                                    <div class="g">
+                                        <div class="pagination-goto d-flex justify-content-center justify-content-md-start gx-3">
+                                            <div>Page</div>
+                                            <div>
+                                                <select class="form-select form-select-sm page-selector">
+                                                    {% for i in page_range %}
+                                                    <option value="{{ i }}" {% if i == membres.number %}selected{% endif %}>{{ i }}</option>
+                                                    {% endfor %}
+                                                </select>
+                                            </div>
+                                            <div>sur {{ membres.paginator.num_pages }}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modals -->
+<div class="modal fade" id="modalAjouterProbleme">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Signaler un problème</h5>
+                <button type="button" class="close" data-dismiss="modal">
+                    <em class="icon ni ni-cross"></em>
+                </button>
+            </div>
+            <form id="problemeForm" method="post" action="#% url 'ajouter_probleme' %}">
+                {% csrf_token %}
+                <input type="hidden" name="fidele_id">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label class="form-label">Type de problème</label>
+                        <select class="form-select" name="type_probleme" required>
+                            <option value="">Sélectionner un type</option>
+                            <option value="Discipline">Problème de discipline</option>
+                            <option value="Spirituel">Besoin spirituel</option>
+                            <option value="Materiel">Besoin matériel</option>
+                            <option value="Familial">Problème familial</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Description</label>
+                        <textarea class="form-control" name="description" rows="3" required></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Priorité</label>
+                        <div class="custom-control custom-radio">
+                            <input type="radio" id="prioriteNormal" name="priorite" class="custom-control-input" value="normal" checked>
+                            <label class="custom-control-label" for="prioriteNormal">Normal</label>
+                        </div>
+                        <div class="custom-control custom-radio">
+                            <input type="radio" id="prioriteUrgent" name="priorite" class="custom-control-input" value="urgent">
+                            <label class="custom-control-label" for="prioriteUrgent">Urgent</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-light" data-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-primary">Enregistrer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<div class="modal fade" id="modalEnvoyerMessage">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Envoyer un message</h5>
+                <button type="button" class="close" data-dismiss="modal">
+                    <em class="icon ni ni-cross"></em>
+                </button>
+            </div>
+            <form id="messageForm" method="post" action="#% url 'envoyer_message' %}">
+                {% csrf_token %}
+                <input type="hidden" name="fidele_id">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label class="form-label">Destinataires</label>
+                        <select class="form-select js-select2" name="destinataires" multiple data-placeholder="Sélectionner des destinataires">
+                            {% for fidele in membres %}
+                            <option value="{{ fidele.id }}">{{ fidele.user.get_full_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Sujet</label>
+                        <input type="text" class="form-control" name="sujet" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Message</label>
+                        <textarea class="form-control" name="contenu" rows="5" required></textarea>
+                    </div>
+                    <div class="form-group">
+                        <div class="custom-control custom-switch">
+                            <input type="checkbox" class="custom-control-input" id="envoyerSMS" name="envoyer_sms">
+                            <label class="custom-control-label" for="envoyerSMS">Envoyer également par SMS</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-light" data-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-primary">Envoyer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{#{% include 'partials/modals/modal_probleme.html' %}#}
+{#{% include 'partials/modals/modal_message.html' %}#}
+{#{% include 'partials/modals/modal_statut.html' %}#}
+
+
+<script src="{% static 'js/libs/select2.min.js' %}"></script>
+<script src="{% static 'js/libs/flatpickr.min.js' %}"></script>
+<script src="{% static 'js/libs/flatpickr.fr.js' %}"></script>
+<script>
+$(document).ready(function() {
+    // Initialisation des plugins
+    $('.js-select2').select2();
+    $('.date-picker-range').flatpickr({
+        mode: "range",
+        locale: "fr",
+        dateFormat: "d/m/Y",
+        defaultDate: ["{{ date_debut|date:'d/m/Y' }}", "{{ date_fin|date:'d/m/Y' }}"]
+    });
+
+    // Recherche en temps réel
+    $('#searchInput').on('keyup', function() {
+        const value = $(this).val().toLowerCase();
+        $('#visiteursTable .nk-tb-item:not(.nk-tb-head)').filter(function() {
+            $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1)
+        });
+    });
+
+    // Gestion des colonnes visibles
+    $('.toggle-col').on('click', function(e) {
+        e.preventDefault();
+        const col = $(this).data('col');
+        $(`.tb-col-${col}`).toggleClass('d-none');
+        $(this).find('em').toggleClass('ni-check ni-cross');
+    });
+
+    // Changement de page via le selecteur
+    $('.page-selector').on('change', function() {
+        const params = new URLSearchParams(window.location.search);
+        params.set('page', $(this).val());
+        window.location.search = params.toString();
+    });
+
+    // Initialisation des modals avec données du fidèle
+    $('#modalAjouterProbleme, #modalEnvoyerMessage').on('show.bs.modal', function(e) {
+        const button = $(e.relatedTarget);
+        const fideleId = button.data('fidele-id');
+        if (fideleId) {
+            $(this).find('input[name="fidele_id"]').val(fideleId);
+        }
+    });
+
+    // Changement de statut
+    $('.change-status').on('click', function(e) {
+        e.preventDefault();
+        const fideleId = $(this).data('fidele-id');
+        $('#modalChangerStatut input[name="fidele_id"]').val(fideleId);
+        $('#modalChangerStatut').modal('show');
+    });
+});
+</script>
+{% endblock %}
+

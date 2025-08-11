@@ -1,0 +1,189 @@
+{% extends 'layout/base.html' %}
+{% load static %}
+
+{% block content %}
+<!-- content @s -->
+            <div class="nk-content nk-content-fluid">
+                <div class="container-xl wide-xl">
+                    <div class="nk-content-inner">
+                        <div class="nk-content-body">
+                            <div class="nk-block-head nk-block-head-sm">
+                                <div class="nk-block-between">
+                                    <div class="nk-block-head-content">
+                                        <h3 class="nk-block-title page-title">Liste des evenements</h3>
+                                        <div class="nk-block-des text-soft">
+                                            <p>{{ nombre_event }} évènements disponibles </p>
+                                        </div>
+                                    </div><!-- .nk-block-head-content -->
+                                    <div class="nk-block-head-content">
+                                        <div class="toggle-wrap nk-block-tools-toggle">
+                                            <a href="#" class="btn btn-icon btn-trigger toggle-expand mr-n1" data-target="pageMenu"><em class="icon ni ni-menu-alt-r"></em></a>
+                                            <div class="toggle-expand-content" data-content="pageMenu">
+                                                <ul class="nk-block-tools g-3">
+                                                    <li><a href="#" class="btn btn-white btn-outline-light"><em class="icon ni ni-download-cloud"></em><span>Export</span></a></li>
+                                                    <li class="nk-block-tools-opt">
+                                                        <div class="drodown">
+                                                            <a href="#" class="dropdown-toggle btn btn-icon btn-primary" data-toggle="dropdown"><em class="icon ni ni-plus"></em></a>
+                                                            <div class="dropdown-menu dropdown-menu-right">
+                                                                <ul class="link-list-opt no-bdr">
+                                                                    <li><a href="#"><span>Add User</span></a></li>
+                                                                    <li><a href="#"><span>Add Team</span></a></li>
+                                                                    <li><a href="#"><span>Import User</span></a></li>
+                                                                </ul>
+                                                            </div>
+                                                        </div>
+                                                    </li>
+                                                </ul>
+                                            </div>
+                                        </div><!-- .toggle-wrap -->
+                                    </div><!-- .nk-block-head-content -->
+                                </div><!-- .nk-block-between -->
+                            </div><!-- .nk-block-head -->
+                            <div class="nk-block">
+                                <div class="row g-gs">
+                                    {% for event in ivent %}
+                                    <div class="col-sm-6 col-lg-4 col-xxl-3">
+                                        <div class="card card-bordered">
+                                        <div class="card-header"><div class="user-card user-card-s2">
+                                                       <div style="position: relative;">
+                                                           <img src="{{ event.banner.url }}" class="card-img-top" alt="">
+                                                         <div class="user-avatar user-avatar sq xl bg-primary "  style="position: absolute; top: 70%; left: 30%;">
+                                                            <span><img src="{{ event.qr_code.url }}" alt=""></span>
+                                                         </div>
+                                                       </div>
+                                                        <div class="user-info pt-5">
+                                                            <h6 class="pt-2">{{ event.titre }}</h6>
+
+                                                                {% if event.is_same_date %}
+                                                                    {{ event.date_debut|date:"d F Y" }}<br>
+                                                                    <span class="badge badge-outline-secondary">{{ event.date_debut|time:"G:i A" }}</span>
+                                                                    <span class="badge badge-outline-secondary">{{ event.date_fin|time:"G:i A" }}</span>
+                                                                {% else %}
+                                                                    {{ event.date_debut }} <br> {{ event.date_fin }}
+                                                                {% endif %}
+
+
+
+
+                                                        </div>
+                                                    </div></div>
+                                            <div class="card-inner">
+                                                
+                                                    <ul class="team-statistics">
+                                                        <li><span>{{ event.nombre_participants }}</span><span>Participants</span></li>
+                                                        <li><span>{{ event.taux_participation }}%</span><span>Taux d'interet</span></li>
+                                                        <li><span>{{ event.nombre_invite }}</span><span>Invités </span></li>
+                                                    </ul>
+                                                    <div class="team-view">
+                                                        <a href="{% url 'event-detail' event.pk %}" class="btn btn-round btn-outline-light w-150px"><span>Voir détail</span></a>
+                                                    </div>
+                                              
+                                            </div><!-- .card-inner -->
+                                        </div><!-- .card -->
+                                    </div><!-- .col -->
+                                        {% empty %}
+                                        aucun evenement disponible
+                                    {% endfor %}
+
+                                </div>
+                            </div><!-- .nk-block -->
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- content @e -->
+<style>
+    /* Event Card Styles */
+    .event-card {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+    }
+
+    .banner-image-container {
+        position: relative;
+        height: 160px;
+        overflow: hidden;
+    }
+
+    .banner-image {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: transform 0.3s ease;
+    }
+
+    .card:hover .banner-image {
+        transform: scale(1.05);
+    }
+
+    .qr-code-container {
+        position: absolute;
+        bottom: -20px;
+        right: 20px;
+        width: 80px;
+        height: 80px;
+        background: white;
+        border-radius: 8px;
+        padding: 5px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        border: 1px solid #eee;
+    }
+
+    .qr-code {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+    }
+
+    .event-title {
+        font-weight: 600;
+        color: var(--dark);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+    }
+
+    .event-date {
+        color: var(--secondary);
+        font-size: 0.9rem;
+    }
+
+    .date-single, .date-range {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 5px;
+    }
+
+    .time-range {
+        margin-top: 5px;
+    }
+
+    .stat-item {
+        text-align: center;
+        padding: 5px;
+    }
+
+    .stat-value {
+        font-weight: 700;
+        font-size: 1.2rem;
+        color: var(--primary);
+    }
+
+    .stat-label {
+        font-size: 0.75rem;
+        color: var(--secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .event-footer {
+        border-top: 1px solid var(--light);
+        margin-top: auto;
+    }
+</style>
+{% endblock %}

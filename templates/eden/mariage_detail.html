@@ -1,0 +1,134 @@
+{% extends 'layout/base.html' %}
+
+{% block content %}
+<div class="nk-content nk-content-fluid">
+  <div class="container-xl wide-xl">
+    <div class="nk-content-inner">
+      <div class="nk-content-body">
+
+        <div class="nk-block-head nk-block-head-sm">
+          <div class="nk-block-between">
+            <div class="nk-block-head-content">
+              <h3 class="nk-block-title page-title">Détails du mariage</h3>
+              <div class="nk-block-des text-soft">
+                <p>Acte n° {{ mariage.numero_acte|default:"—" }}</p>
+              </div>
+            </div>
+            <div class="nk-block-head-content">
+              <div class="d-flex gap-2">
+                <a href="{% url 'mariage-update' mariage.pk %}" class="btn btn-outline-primary">
+                  <em class="icon ni ni-edit"></em> Modifier
+                </a>
+                <a href="{% url 'mariage-delete' mariage.pk %}" class="btn btn-outline-danger">
+                  <em class="icon ni ni-trash"></em> Supprimer
+                </a>
+                <a href="{% url 'mariage-list' %}" class="btn btn-primary">
+                  <em class="icon ni ni-arrow-left"></em> Retour
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="row g-gs">
+          <div class="col-lg-8">
+            <div class="card card-bordered">
+              <div class="card-inner">
+                <div class="row g-3">
+                  <div class="col-md-6">
+                    <div class="small text-soft mb-1">Date</div>
+                    <div class="fw-bold">{{ mariage.date_mariage|date:"d/m/Y" }}</div>
+                  </div>
+                  <div class="col-md-6">
+                    <div class="small text-soft mb-1">Lieu</div>
+                    <div class="fw-bold">{{ mariage.lieu_mariage }}</div>
+                  </div>
+                  <div class="col-md-6">
+                    <div class="small text-soft mb-1">Officiant</div>
+                    <div class="fw-bold">{{ mariage.officiant.get_full_name|default:mariage.officiant.username|default:"—" }}</div>
+                  </div>
+                  <div class="col-md-6">
+                    <div class="small text-soft mb-1">Numéro acte</div>
+                    <div class="fw-bold">{{ mariage.numero_acte|default:"—" }}</div>
+                  </div>
+                </div>
+
+                <hr class="my-4">
+
+                <h6 class="mb-2">Couple</h6>
+                <div class="d-flex flex-wrap gap-2">
+                  {% for f in mariage.couple.all %}
+                  <span class="badge badge-dim bg-outline-primary">{{ f.user.get_full_name }}</span>
+                  {% endfor %}
+                </div>
+
+                <hr class="my-4">
+
+                <h6 class="mb-2">Témoins</h6>
+                {% if mariage.temoins.all %}
+                  <div class="d-flex flex-wrap gap-2">
+                    {% for t in mariage.temoins.all %}
+                      <span class="badge badge-dim bg-outline-secondary">{{ t.user.get_full_name }}</span>
+                    {% endfor %}
+                  </div>
+                {% else %}
+                  <div class="text-soft">Aucun témoin renseigné.</div>
+                {% endif %}
+
+                <hr class="my-4">
+
+                <h6 class="mb-2">Documents</h6>
+                <div class="d-flex flex-wrap gap-2">
+                  {% if mariage.contrat_matrimonial %}
+                    <a class="btn btn-sm btn-outline-primary" href="{{ mariage.contrat_matrimonial.url }}" target="_blank">
+                      <em class="icon ni ni-file-docs"></em> Contrat
+                    </a>
+                  {% endif %}
+                  {% if mariage.photos %}
+                    <a class="btn btn-sm btn-outline-secondary" href="{{ mariage.photos.url }}" target="_blank">
+                      <em class="icon ni ni-img"></em> Photos
+                    </a>
+                  {% endif %}
+                  {% if not mariage.contrat_matrimonial and not mariage.photos %}
+                    <div class="text-soft">Aucun document joint.</div>
+                  {% endif %}
+                </div>
+
+                {% if mariage.notes %}
+                <hr class="my-4">
+                <h6 class="mb-2">Notes</h6>
+                <p class="text-soft">{{ mariage.notes }}</p>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+
+          <div class="col-lg-4">
+            <div class="card card-bordered h-100">
+              <div class="card-inner">
+                <h6 class="mb-2">Récapitulatif</h6>
+                <ul class="list-unstyled gy-2">
+                  <li class="d-flex justify-content-between">
+                    <span class="text-soft">Participants</span>
+                    <span class="fw-bold">{{ mariage.couple.count }} + {{ mariage.temoins.count }}</span>
+                  </li>
+                  <li class="d-flex justify-content-between">
+                    <span class="text-soft">Fichiers</span>
+                    <span class="fw-bold">
+                      {% with c=mariage.contrat_matrimonial|yesno:"1,0,0" p=mariage.photos|yesno:"1,0,0" %}
+                        {{ c|add:p }}
+                      {% endwith %}
+                    </span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+        </div> <!-- row -->
+
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

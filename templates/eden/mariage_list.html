@@ -1,0 +1,105 @@
+{% extends 'layout/base.html' %}
+
+{% block content %}
+<div class="nk-content nk-content-fluid">
+  <div class="container-xl wide-xl">
+    <div class="nk-content-inner">
+      <div class="nk-content-body">
+
+        <div class="nk-block-head nk-block-head-sm">
+          <div class="nk-block-between">
+            <div class="nk-block-head-content">
+              <h3 class="nk-block-title page-title">Mariages</h3>
+              <div class="nk-block-des text-soft">
+                <p>Registre des mariages célébrés ou programmés.</p>
+              </div>
+            </div>
+            <div class="nk-block-head-content">
+              <form method="get" class="d-flex gap-2">
+                <input type="text" class="form-control" name="q" value="{{ request.GET.q }}" placeholder="Rechercher (lieu, N° acte)">
+                <a href="{% url 'mariage-create' %}" class="btn btn-primary">
+                  <em class="icon ni ni-plus"></em><span> Nouveau mariage</span>
+                </a>
+              </form>
+            </div>
+          </div>
+        </div>
+
+        {% if messages %}
+        <div class="mb-3">
+          {% for m in messages %}
+          <div class="alert alert-{{ m.tags }}">{{ m }}</div>
+          {% endfor %}
+        </div>
+        {% endif %}
+
+        <div class="card card-bordered">
+          <div class="card-inner">
+            <div class="table-responsive">
+              <table class="table">
+                <thead class="thead-light">
+                  <tr>
+                    <th>Couple</th>
+                    <th>Date</th>
+                    <th>Lieu</th>
+                    <th>Officiant</th>
+                    <th>N° acte</th>
+                    <th class="text-end">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                {% for m in mariage_list %}
+                  <tr>
+                    <td>
+                      {% for f in m.couple.all %}
+                        <span class="badge badge-dim bg-outline-primary me-1">{{ f.user.get_full_name }}</span>
+                      {% endfor %}
+                    </td>
+                    <td>{{ m.date_mariage|date:"d/m/Y" }}</td>
+                    <td>{{ m.lieu_mariage }}</td>
+                    <td>{{ m.officiant.get_full_name|default:m.officiant.username|default:"—" }}</td>
+                    <td>{{ m.numero_acte|default:"—" }}</td>
+                    <td class="text-end">
+                      <a class="btn btn-sm btn-outline-secondary" href="{% url 'mariage-detail' m.pk %}">
+                        <em class="icon ni ni-eye"></em>
+                      </a>
+                      <a class="btn btn-sm btn-outline-primary" href="{% url 'mariage-update' m.pk %}">
+                        <em class="icon ni ni-edit"></em>
+                      </a>
+                      <a class="btn btn-sm btn-outline-danger" href="{% url 'mariage-delete' m.pk %}">
+                        <em class="icon ni ni-trash"></em>
+                      </a>
+                    </td>
+                  </tr>
+                {% empty %}
+                  <tr><td colspan="6" class="text-center text-soft">Aucun mariage enregistré.</td></tr>
+                {% endfor %}
+                </tbody>
+              </table>
+            </div>
+
+            {% if is_paginated %}
+            <nav class="mt-3">
+              <ul class="pagination justify-content-end">
+                {% if page_obj.has_previous %}
+                  <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">&laquo;</a></li>
+                {% endif %}
+                {% for i in paginator.page_range %}
+                  <li class="page-item {% if page_obj.number == i %}active{% endif %}">
+                    <a class="page-link" href="?page={{ i }}">{{ i }}</a>
+                  </li>
+                {% endfor %}
+                {% if page_obj.has_next %}
+                  <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">&raquo;</a></li>
+                {% endif %}
+              </ul>
+            </nav>
+            {% endif %}
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

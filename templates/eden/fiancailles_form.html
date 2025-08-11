@@ -1,0 +1,94 @@
+{% extends 'layout/base.html' %}
+
+{% block content %}
+<div class="nk-content nk-content-fluid">
+  <div class="container-xl wide-xl">
+    <div class="nk-content-inner">
+      <div class="nk-content-body">
+
+        <div class="nk-block-head nk-block-head-sm">
+          <div class="nk-block-between">
+            <div class="nk-block-head-content">
+              <h3 class="nk-block-title page-title">
+                {% if object %}Modifier fiançailles{% else %}Nouveau dossier de fiançailles{% endif %}
+              </h3>
+              <div class="nk-block-des text-soft">
+                <p>Renseigne les informations du couple et la planification.</p>
+              </div>
+            </div>
+            <div class="nk-block-head-content">
+              <a href="{% url 'fiancailles-list' %}" class="btn btn-outline-secondary">
+                <em class="icon ni ni-arrow-left"></em> Retour
+              </a>
+            </div>
+          </div>
+        </div>
+
+        {% if form.errors %}
+        <div class="alert alert-danger">Veuillez corriger les erreurs ci-dessous.</div>
+        {% endif %}
+
+        <form method="post" enctype="multipart/form-data" class="form-validate">
+          {% csrf_token %}
+          <div class="card card-bordered">
+            <div class="card-inner">
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <label class="form-label">Fiancé (Homme)</label>
+                  {{ form.homme }}
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Fiancée (Femme)</label>
+                  {{ form.femme }}
+                </div>
+
+                <div class="col-md-6">
+                  <label class="form-label">Date de demande</label>
+                  {{ form.date_demande }}
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Date de cérémonie</label>
+                  {{ form.date_ceremonie }}
+                </div>
+
+                <div class="col-md-8">
+                  <label class="form-label">Lieu de la cérémonie</label>
+                  {{ form.lieu_ceremonie }}
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label">Conseiller</label>
+                  {{ form.conseiller }}
+                </div>
+
+                <div class="col-md-4">
+                  <label class="form-label">Sessions prévues</label>
+                  {{ form.sessions_conseil }}
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label">Sessions terminées</label>
+                  {{ form.sessions_terminees }}
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label">Statut</label>
+                  {{ form.statut }}
+                </div>
+
+                <div class="col-md-12">
+                  <label class="form-label">Documents (PDF/Images)</label>
+                  {{ form.documents }}
+                </div>
+              </div>
+            </div>
+            <div class="card-inner border-top text-end">
+              <button class="btn btn-primary">
+                <em class="icon ni ni-save"></em> Enregistrer
+              </button>
+            </div>
+          </div>
+        </form>
+
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

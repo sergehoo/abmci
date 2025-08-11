@@ -1,0 +1,215 @@
+{% extends 'layout/base.html' %}
+
+{% block content %}
+  <!-- content @s -->
+            <div class="nk-content nk-content-fluid">
+                <div class="container-xl wide-xl">
+                <div class="d-flex justify-content-between w-100" style="justify-content: space-between">
+                    <div></div>
+                    <a  href="{% url 'membres' %}" class="" ><em class="icon ni ni-arrow-left-circle"></em><span>Retour</span></a>
+                </div>
+                    <div class="nk-content-inner">
+                        <div class="nk-content-body">
+                            <div class="nk-block">
+                                <div class="card card-bordered">
+                                    <div class="card-aside-wrap">
+                                        <div class="card-inner card-inner-lg">
+                                            <div class="nk-block-head nk-block-head-lg">
+                                                <div class="nk-block-between">
+                                                    <div class="nk-block-head-content">
+                                                        <h4 class="nk-block-title">Vie de l'eglise</h4>
+                                                        <div class="nk-block-des">
+                                                            <p>{{ fidele_detail.signe }}</p>
+                                                        </div>
+                                                    </div>
+                                                    <div class="nk-block-head-content align-self-start d-lg-none">
+                                                        <a href="#" class="toggle btn btn-icon btn-trigger mt-n1" data-target="userAside"><em class="icon ni ni-menu-alt-r"></em></a>
+                                                    </div>
+                                                </div>
+                                            </div><!-- .nk-block-head -->
+
+                                            <div class="nk-block">
+                                                <div class="nk-data data-list">
+                                                    <div class="data-head">
+                                                        <h6 class="overline-title">liste des événements auxquels le
+                                                            fidèle a participé </h6>
+                                                    </div>
+                                                    <div class="card">
+                                                        <div class="card-inner">
+                                                            <table class="datatable-init table">
+                                                                <thead>
+                                                                <tr>
+                                                                    <th>Evenement</th>
+                                                                    <th>Date début</th>
+                                                                    <th>Date Fin</th>
+                                                                    <th>Statut</th>
+                                                                </tr>
+                                                                </thead>
+                                                                <tbody>
+                                                                {% for evenement in object_list %}
+                                                                    <tr>
+                                                                        <td>{{ evenement.titre }}</td>
+                                                                        <td>{{ evenement.date_debut }}</td>
+                                                                        <td>{{ evenement.date_fin }}</td>
+                                                                        <td>
+                                                                            <em class="icon ni ni-check-round-fill text-success"></em>
+                                                                        </td>
+                                                                    </tr>
+                                                                {% endfor %}
+                                                                </tbody>
+                                                                <tfoot>
+                                                                <tr class="small text-gray">
+                                                                    <th>Evenement</th>
+                                                                    <th>Date début</th>
+                                                                    <th>Date Fin</th>
+                                                                    <th>Statut</th>
+                                                                </tr>
+                                                                </tfoot>
+                                                            </table>
+                                                        </div>
+                                                    </div>
+                                                </div><!-- data-list -->
+
+                                            </div><!-- .nk-block -->
+                                            {% if fidele_detail.departement == None %}
+                                            {% else %}
+                                                <div class="nk-block">
+                                                    <div class="nk-data data-list">
+                                                        <div class="data-head">
+                                                            <h6 class="overline-title">Activités
+                                                                Direction {{ fidele_detail.departement }} </h6>
+                                                        </div>
+                                                        <div class="card">
+                                                            <div class="card-inner">
+                                                                <table class="datatable-init table">
+                                                                    <thead>
+                                                                    <tr>
+                                                                        <th>Type d'activité</th>
+                                                                        <th>Date début</th>
+                                                                        <th>Date Fin</th>
+                                                                        <th>Statut</th>
+                                                                    </tr>
+                                                                    </thead>
+                                                                    <tbody>
+
+                                                                    <tr>
+                                                                        <td>Réunion</td>
+                                                                        <td>03/02/2024 18:00</td>
+                                                                        <td>03/02/2024 20:00</td>
+
+                                                                        <td>
+                                                                            <em class="icon ni ni-check-round-fill text-success"></em>
+                                                                        </td>
+                                                                    </tr>
+
+                                                                    </tbody>
+                                                                    <tfoot>
+                                                                    <tr class="small text-gray">
+                                                                        <th>Evenement</th>
+                                                                        <th>Date début</th>
+                                                                        <th>Date Fin</th>
+                                                                        <th>Statut</th>
+                                                                    </tr>
+                                                                    </tfoot>
+                                                                </table>
+                                                            </div>
+                                                        </div>
+                                                    </div><!-- data-list -->
+
+                                                </div><!-- .nk-block -->
+                                            {% endif %}
+
+                                            {% if fidele_detail.famille_alliance == None %}
+                                                {% else %}
+                                            <div class="nk-block">
+                                                <div class="nk-data data-list">
+                                                    <div class="data-head">
+                                                        <h6 class="overline-title">Activités dans la {{ fidele_detail.famille_alliance }} </h6>
+                                                    </div>
+                                                    <div class="card">
+                                                        <div class="card-inner">
+                                                            <table class="datatable-init table">
+                                                                <thead>
+                                                                <tr>
+                                                                    <th>Evenement</th>
+                                                                    <th>Date début</th>
+                                                                    <th>Date Fin</th>
+                                                                    <th>Statut</th>
+                                                                </tr>
+                                                                </thead>
+                                                                <tbody>
+                                                                {% for evenement in object_list %}
+                                                                    <tr>
+                                                                        <td>{{ evenement.titre }}</td>
+                                                                        <td>{{ evenement.date_debut }}</td>
+                                                                        <td>{{ evenement.date_fin }}</td>
+                                                                        <td><em class="icon ni ni-check-round-fill text-success"></em></td>
+                                                                    </tr>
+                                                                {% endfor %}
+                                                                </tbody>
+                                                            <tfoot><tr class="small text-gray">
+                                                                    <th>Evenement</th>
+                                                                    <th>Date début</th>
+                                                                    <th>Date Fin</th>
+                                                                    <th>Statut</th>
+                                                                </tr></tfoot>
+                                                            </table>
+                                                        </div>
+                                                    </div>
+                                                </div><!-- data-list -->
+
+                                            </div><!-- .nk-block -->
+                                            {% endif %}
+                                        </div>
+                                        <div class="card-aside card-aside-left user-aside toggle-slide toggle-slide-left toggle-break-lg" data-content="userAside" data-toggle-screen="lg" data-toggle-overlay="true">
+                                            <div class="card-inner-group" data-simplebar>
+                                                <div class="card-inner">
+                                                    <div class="user-card">
+                                                        <div class="user-avatar bg-primary">
+                                                            <span><img src="{{ fidele_detail.photo.url }}"></span>
+                                                        </div>
+                                                        <div class="user-info">
+                                                            <span class="lead-text">{{ fidele_detail }}</span>
+                                                            <span class="sub-text">{{ fidele_detail.email }}</span>
+                                                        </div>
+                                                        <div class="user-action">
+                                                            <div class="dropdown">
+                                                                <a class="btn btn-icon btn-trigger mr-n2" data-toggle="dropdown" href="#"><em class="icon ni ni-more-v"></em></a>
+                                                                <div class="dropdown-menu dropdown-menu-right">
+                                                                    <ul class="link-list-opt no-bdr">
+                                                                        <li><a href="#"><em class="icon ni ni-camera-fill"></em><span>Change Photo</span></a></li>
+                                                                        <li><a href="{% url 'update' fidele_detail.pk  %}"><em class="icon ni ni-edit-fill"></em><span>Update Profile</span></a></li>
+                                                                    </ul>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="card-inner">
+                                                    <div class="user-account-info py-0">
+                                                        <h6 class="overline-title-alt text-success">{{  fidele_detail.type_membre }}</h6>
+                                                        <h6 class="overline-title-alt">a Intégré l'église dépuis</h6>
+                                                        <div class="user-balance">{{  fidele_detail.anciennete }}<small class="currency currency-btc"></small></div>
+                                                        <div class="user-balance-sub"><span>{{ fidele_detail.profession }} | <span class="currency currency-btc text-warning">{{ fidele_detail.entreprise }}</span></span></div>
+                                                    </div>
+                                                </div><!-- .card-inner -->
+                                                <div class="card-inner p-0">
+                                                    <ul class="link-list-menu">
+                                                        <li><a href="{%  url 'infos_generale' fidele_detail.id  %} "><em class="icon ni ni-user-fill-c"></em><span>Infomation Générale</span></a></li>
+                                                        <li><a class="active" href="{% url 'vie_de_leglise' fidele_detail.id %}"><em class="icon ni ni-bell-fill"></em><span>Vie de l'Eglise</span></a></li>
+                                                        <li><a href="{% url 'engagement' fidele_detail.id%}"><em class="icon ni ni-activity-round-fill"></em><span>Engagement</span></a></li>
+                                                        <li><a href="{% url 'statut_social' fidele_detail.id %}"><em class="icon ni ni-lock-alt-fill"></em><span>Statut Social</span></a></li>
+                                                        <li><a href="{% url 'messagerie' fidele_detail.id %}"><em class="icon ni ni-grid-add-fill-c"></em><span>Messagérie</span></a></li>
+                                                    </ul>
+                                                </div><!-- .card-inner -->
+                                            </div><!-- .card-inner-group -->
+                                        </div><!-- card-aside -->
+                                    </div><!-- .card-aside-wrap -->
+                                </div><!-- .card -->
+                            </div><!-- .nk-block -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- content @e -->
+{% endblock %}

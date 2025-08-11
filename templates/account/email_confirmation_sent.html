@@ -1,0 +1,88 @@
+{#{% extends "base.html" %}#}
+{#{% load static %}#}
+{% block content %}
+<div class="container">
+  <div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+      <div class="card shadow-lg border-0 my-5">
+        <div class="card-header bg-gradient-primary text-white text-center py-4">
+          <h2 class="mb-0">
+            <i class="fas fa-envelope-open-text mr-2"></i>
+            Vérification d'e-mail requise
+          </h2>
+        </div>
+        
+        <div class="card-body px-5 py-4">
+          <div class="text-center mb-4">
+            <img src="{% static 'images/email-sent.svg' %}" alt="Email envoyé" class="img-fluid" style="max-height: 150px;">
+          </div>
+
+          <div class="alert alert-primary" role="alert">
+            <h4 class="alert-heading">Presque terminé !</h4>
+            <p>
+              Nous avons envoyé un e-mail de confirmation à <strong class="text-primary">{{ email }}</strong>.
+            </p>
+            <hr>
+            <p class="mb-0">
+              Cliquez sur le lien dans l'e-mail pour activer votre compte.
+            </p>
+          </div>
+
+          <div class="mt-4">
+            <h5 class="text-center mb-3">Vous ne trouvez pas l'e-mail ?</h5>
+            <ul class="list-group list-group-flush mb-4">
+              <li class="list-group-item d-flex align-items-center">
+                <i class="fas fa-search mr-3 text-secondary"></i>
+                Vérifiez votre dossier <strong>spam</strong> ou <strong>courriers indésirables</strong>
+              </li>
+              <li class="list-group-item d-flex align-items-center">
+                <i class="fas fa-clock mr-3 text-secondary"></i>
+                Attendez quelques minutes (les délais d'envoi peuvent varier)
+              </li>
+              <li class="list-group-item d-flex align-items-center">
+                <i class="fas fa-redo mr-3 text-secondary"></i>
+                <a href="{% url 'account_email' %}" class="text-primary">Renvoyer l'e-mail de confirmation</a>
+              </li>
+            </ul>
+          </div>
+
+          <div class="d-flex justify-content-between mt-5">
+            <a href="{% url 'account_login' %}" class="btn btn-outline-primary">
+              <i class="fas fa-arrow-left mr-2"></i> Retour à la connexion
+            </a>
+            <a href="{% url 'core:home' %}" class="btn btn-light">
+              <i class="fas fa-home mr-2"></i> Page d'accueil
+            </a>
+          </div>
+        </div>
+
+        <div class="card-footer text-muted text-center py-3">
+          <small>
+            Problème persistant ? <a href="mailto:support@abmci.org" class="text-primary">Contactez notre support</a>
+          </small>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .bg-gradient-primary {
+    background: linear-gradient(135deg, #5D2C8B 0%, #3A1B5B 100%);
+  }
+  
+  .card {
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  
+  .list-group-item {
+    border-left: 0;
+    border-right: 0;
+  }
+  
+  .list-group-item:first-child {
+    border-top: 0;
+  }
+</style>
+{% endblock %}

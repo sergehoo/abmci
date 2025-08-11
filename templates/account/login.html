@@ -1,0 +1,20 @@
+{% extends 'registration/auth-base.html' %}
+{% load allauth i18n %}
+{% block head_title %}
+    {% trans "Login" %}
+{% endblock head_title %}
+
+
+{% block content %}
+   <form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+       <div class="form-group">
+           <button class="btn btn-lg btn-primary btn-block">Connection</button>
+       </div>
+     <p>
+        {% blocktrans %}If you have not created an account yet, then please
+    <a href="{{ signup_url }}">sign up</a> first.{% endblocktrans %}
+    </p>
+   </form><!-- form -->
+{% endblock %}

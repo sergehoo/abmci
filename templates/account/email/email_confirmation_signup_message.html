@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Confirmation de votre compte - Église ABMCI</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap');
+        
+        body {
+            font-family: 'Poppins', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333333;
+            background-color: #f7f9fc;
+            margin: 0;
+            padding: 0;
+        }
+        
+        .container {
+            max-width: 600px;
+            margin: 20px auto;
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #5D2C8B 0%, #3A1B5B 100%);
+            padding: 30px 20px;
+            text-align: center;
+        }
+        
+        .logo {
+            max-width: 120px;
+            height: auto;
+        }
+        
+        h1 {
+            color: white;
+            margin: 15px 0 0;
+            font-size: 24px;
+            font-weight: 600;
+        }
+        
+        .content {
+            padding: 30px;
+        }
+        
+        .greeting {
+            font-size: 18px;
+            margin-bottom: 25px;
+            color: #444444;
+        }
+        
+        .message {
+            margin-bottom: 30px;
+            font-size: 16px;
+        }
+        
+        .button-container {
+            text-align: center;
+            margin: 35px 0;
+        }
+        
+        .confirm-button {
+            display: inline-block;
+            background: linear-gradient(135deg, #5D2C8B 0%, #3A1B5B 100%);
+            color: white !important;
+            padding: 14px 28px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 8px rgba(93, 44, 139, 0.2);
+        }
+        
+        .confirm-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(93, 44, 139, 0.25);
+        }
+        
+        .footer {
+            text-align: center;
+            padding: 20px;
+            background: #f5f5f5;
+            color: #777777;
+            font-size: 14px;
+        }
+        
+        .signature {
+            margin-top: 30px;
+            font-style: italic;
+            color: #555555;
+        }
+        
+        .disclaimer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #eeeeee;
+            font-size: 13px;
+            color: #999999;
+        }
+        
+        @media only screen and (max-width: 600px) {
+            .container {
+                margin: 0;
+                border-radius: 0;
+            }
+            
+            .content {
+                padding: 25px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <!-- Remplacez par votre logo -->
+            <img src="https://via.placeholder.com/120x60?text=ABMCI" alt="Église ABMCI" class="logo">
+            <h1>Confirmation de votre compte</h1>
+        </div>
+        
+        <div class="content">
+            <p class="greeting">Bonjour <strong>{{ user.get_full_name|default:user.username }}</strong>,</p>
+            
+            <p class="message">
+                Nous vous remercions d'avoir rejoint la communauté de l'Église ABMCI. 
+                Pour finaliser votre inscription et accéder à toutes les fonctionnalités, 
+                veuillez confirmer votre adresse email en cliquant sur le bouton ci-dessous.
+            </p>
+            
+            <div class="button-container">
+                <a href="{{ activate_url }}" class="confirm-button">
+                    Confirmer mon email
+                </a>
+            </div>
+            
+            <p class="message">
+                Si vous ne parvenez pas à cliquer sur le bouton, copiez et collez le lien suivant 
+                dans votre navigateur :<br>
+                <span style="word-break: break-all; color: #5D2C8B; font-size: 14px;">
+                    {{ activate_url }}
+                </span>
+            </p>
+            
+            <p class="signature">
+                À très bientôt,<br>
+                <strong>L'équipe de l'Église ABMCI</strong>
+            </p>
+            
+            <div class="disclaimer">
+                <p>
+                    Si vous n'avez pas créé de compte sur notre plateforme, veuillez ignorer ce message. 
+                    Ce lien de confirmation expirera dans 3 jours pour des raisons de sécurité.
+                </p>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>
+                © {% now "Y" %} Église ABMCI. Tous droits réservés.<br>
+                Adresse : 123 Rue de la Foi, Ville, Pays
+            </p>
+        </div>
+    </div>
+</body>
+</html>

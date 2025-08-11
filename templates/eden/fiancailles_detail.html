@@ -1,0 +1,141 @@
+{% extends 'layout/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="nk-content nk-content-fluid">
+  <div class="container-xl wide-xl">
+    <div class="nk-content-inner">
+      <div class="nk-content-body">
+
+        <div class="nk-block-head nk-block-head-sm">
+          <div class="nk-block-between">
+            <div class="nk-block-head-content">
+              <h3 class="nk-block-title page-title">
+                Dossier de fiançailles
+              </h3>
+              <div class="nk-block-des text-soft">
+                <p>{{ fiancailles.homme.user.get_full_name }} &amp; {{ fiancailles.femme.user.get_full_name }}</p>
+              </div>
+            </div>
+            <div class="nk-block-head-content">
+              <div class="d-flex gap-2">
+                <a href="{% url 'fiancailles-update' fiancailles.pk %}" class="btn btn-outline-primary">
+                  <em class="icon ni ni-edit"></em> Modifier
+                </a>
+                <a href="{% url 'fiancailles-delete' fiancailles.pk %}" class="btn btn-outline-danger">
+                  <em class="icon ni ni-trash"></em> Supprimer
+                </a>
+                <a href="{% url 'fiancailles-list' %}" class="btn btn-primary">
+                  <em class="icon ni ni-arrow-left"></em> Retour
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="row g-gs">
+          <div class="col-lg-8">
+            <div class="card card-bordered">
+              <div class="card-inner">
+                <div class="row g-3">
+                  <div class="col-md-6">
+                    <div class="small text-soft mb-1">Demande</div>
+                    <div class="fw-bold">{{ fiancailles.date_demande|date:"d/m/Y" }}</div>
+                  </div>
+                  <div class="col-md-6">
+                    <div class="small text-soft mb-1">Cérémonie</div>
+                    <div class="fw-bold">{{ fiancailles.date_ceremonie|date:"d/m/Y" }}</div>
+                  </div>
+                  <div class="col-md-6">
+                    <div class="small text-soft mb-1">Lieu</div>
+                    <div class="fw-bold">{{ fiancailles.lieu_ceremonie }}</div>
+                  </div>
+                  <div class="col-md-6">
+                    <div class="small text-soft mb-1">Conseiller</div>
+                    <div class="fw-bold">{{ fiancailles.conseiller.get_full_name|default:fiancailles.conseiller.username|default:"—" }}</div>
+                  </div>
+                  <div class="col-md-12">
+                    <div class="small text-soft mb-1">Statut</div>
+                    <span class="badge 
+                      {% if fiancailles.statut == 'En cours' %}badge-dim bg-primary
+                      {% elif fiancailles.statut == 'Terminé' %}badge-dim bg-success
+                      {% elif fiancailles.statut == 'Suspendu' %}badge-dim bg-warning
+                      {% else %}badge-dim bg-secondary{% endif %}">
+                      {{ fiancailles.statut }}
+                    </span>
+                  </div>
+                </div>
+
+                <hr class="my-4">
+
+                <div>
+                  <div class="d-flex justify-content-between small text-soft mb-1">
+                    <span>Progression des sessions</span>
+                    <span>{{ fiancailles.sessions_terminees }}/{{ fiancailles.sessions_conseil }}</span>
+                  </div>
+                  <div>
+  {% with done=fiancailles.sessions_terminees total=fiancailles.sessions_conseil %}
+    <div class="d-flex justify-content-between small text-soft mb-1">
+      <span>Progression des sessions</span>
+      <span>{{ done }}/{{ total }}</span>
+    </div>
+    {% widthratio done total 100 as pct %}
+    <div class="progress" style="height:8px;">
+      <div
+        class="progress-bar
+          {% if pct|floatformat:0 >= 66 %}bg-success
+          {% elif pct|floatformat:0 >= 33 %}bg-info
+          {% else %}bg-warning{% endif %}"
+        role="progressbar"
+        style="width: {{ pct }}%;"
+        aria-valuenow="{{ pct }}" aria-valuemin="0" aria-valuemax="100">
+      </div>
+    </div>
+  {% endwith %}
+</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="card card-bordered mt-3">
+              <div class="card-inner">
+                <h6 class="mb-2">Documents</h6>
+                {% if fiancailles.documents %}
+                  <a class="btn btn-sm btn-outline-primary" href="{{ fiancailles.documents.url }}" target="_blank">
+                    <em class="icon ni ni-download"></em> Télécharger le fichier
+                  </a>
+                {% else %}
+                  <div class="text-soft">Aucun document joint.</div>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+
+          <div class="col-lg-4">
+            <div class="card card-bordered h-100">
+              <div class="card-inner">
+                <h6 class="mb-2">Couple</h6>
+                <div class="d-flex align-items-center mb-3">
+                  <div class="user-avatar bg-primary me-3"><span>{{ fiancailles.homme.user.first_name|first|default:"H" }}</span></div>
+                  <div>
+                    <div class="fw-bold">{{ fiancailles.homme.user.get_full_name }}</div>
+                    <div class="small text-soft">{{ fiancailles.homme.phone|default:"—" }}</div>
+                  </div>
+                </div>
+                <div class="d-flex align-items-center">
+                  <div class="user-avatar bg-pink me-3"><span>{{ fiancailles.femme.user.first_name|first|default:"F" }}</span></div>
+                  <div>
+                    <div class="fw-bold">{{ fiancailles.femme.user.get_full_name }}</div>
+                    <div class="small text-soft">{{ fiancailles.femme.phone|default:"—" }}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div> <!-- row -->
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

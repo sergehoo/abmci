@@ -1,0 +1,207 @@
+{% load static %}
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Confirmation de votre compte - Église ABMCI</title>
+    <style type="text/css">
+        /* Client-specific styles */
+        body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+        table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+        img { -ms-interpolation-mode: bicubic; border: 0; height: auto; line-height: 100%; outline: none; text-decoration: none; }
+        
+        /* General styles */
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.4;
+            color: #333333;
+            margin: 0;
+            padding: 0;
+            background-color: #f7f9fc;
+        }
+        
+        .container {
+            max-width: 600px;
+            width: 100%;
+            margin: 0 auto;
+        }
+        
+        .header {
+            background: #2c4a8b;
+            padding: 25px 20px;
+            text-align: center;
+        }
+        
+        .logo {
+            max-width: 120px;
+            height: auto;
+        }
+        
+        h1 {
+            color: #ffffff;
+            margin: 15px 0 0;
+            font-size: 24px;
+            font-weight: bold;
+        }
+        
+        .content {
+            padding: 25px;
+            background: #ffffff;
+        }
+        
+        .greeting {
+            font-size: 16px;
+            margin-bottom: 20px;
+            color: #444444;
+        }
+        
+        .message {
+            margin-bottom: 20px;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        
+        .button-container {
+            text-align: center;
+            margin: 25px 0;
+        }
+        
+        .confirm-button {
+            background: #0027ff;
+            color: #ffffff !important;
+            padding: 12px 24px;
+            border-radius: 4px;
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 16px;
+            display: inline-block;
+        }
+        
+        .footer {
+            text-align: center;
+            padding: 15px;
+            background: #f5f5f5;
+            color: #777777;
+            font-size: 12px;
+        }
+        
+        .signature {
+            margin-top: 25px;
+            font-style: italic;
+            color: #555555;
+        }
+        
+        .disclaimer {
+            margin-top: 30px;
+            padding-top: 15px;
+            border-top: 1px solid #eeeeee;
+            font-size: 12px;
+            color: #999999;
+        }
+        
+        /* Responsive styles */
+        @media screen and (max-width: 600px) {
+            .container {
+                width: 100% !important;
+            }
+            .content {
+                padding: 15px !important;
+            }
+        }
+    </style>
+</head>
+<body style="margin: 0; padding: 0;">
+    <!-- Preheader text for email clients -->
+    <div style="display: none; max-height: 0px; overflow: hidden;">
+        Confirmation de votre compte Église ABMCI - Cliquez sur le lien pour activer votre compte
+    </div>
+    
+    <!--[if (gte mso 9)|(IE)]>
+    <table width="600" align="center" cellpadding="0" cellspacing="0" border="0">
+    <tr>
+    <td>
+    <![endif]-->
+    
+    <div class="container">
+        <table width="100%" cellpadding="0" cellspacing="0" border="0">
+            <tr>
+                <td class="header">
+                    <center>
+                        <!--[if (gte mso 9)|(IE)]>
+                        <table width="100%" align="center" cellpadding="0" cellspacing="0" border="0">
+                        <tr>
+                        <td width="120" align="center">
+                        <img src="{% static 'images/logo-abmci-min.png' %}" alt="Église ABMCI" width="120" style="display: block;" />
+                        </td>
+                        </tr>
+                        </table>
+                        <![endif]-->
+                        <!--[if !(gte mso 9)|!(IE)]><!-->
+                        <img src="{% static 'images/logo-abmci-min.png' %}" alt="Église ABMCI" class="logo" style="display: block; margin: 0 auto;" />
+                        <!--<![endif]-->
+                        <h1 style="margin: 15px 0 0; font-size: 24px; font-weight: bold; color: #ffffff;">Confirmation de votre compte</h1>
+                    </center>
+                </td>
+            </tr>
+            <tr>
+                <td class="content">
+                    <p class="greeting" style="font-size: 16px; margin-bottom: 20px; color: #444444;">Bonjour <strong>{{ user.get_full_name|default:user.username }}</strong>,</p>
+                    
+                    <p class="message" style="margin-bottom: 20px; font-size: 14px; line-height: 1.5;">
+                        Nous vous remercions d'avoir rejoint la communauté de l'Église ABMCI. 
+                        Pour finaliser votre inscription et accéder à toutes les fonctionnalités, 
+                        veuillez confirmer votre adresse email en cliquant sur le bouton ci-dessous.
+                    </p>
+                    
+                    <div class="button-container" style="text-align: center; margin: 25px 0;">
+                        <!--[if mso]>
+                        <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="{{ activate_url }}" style="height:44px;v-text-anchor:middle;width:200px;" arcsize="8%" stroke="f" fillcolor="#0027ff">
+                        <w:anchorlock/>
+                        <center style="color:#ffffff;font-family:Arial,sans-serif;font-size:16px;font-weight:bold;">Confirmer mon email</center>
+                        </v:roundrect>
+                        <![endif]-->
+                        <a href="{{ activate_url }}" class="confirm-button" style="background: #0027ff; color: #ffffff !important; padding: 12px 24px; border-radius: 4px; text-decoration: none; font-weight: bold; font-size: 16px; display: inline-block;">
+                            Confirmer mon email
+                        </a>
+                    </div>
+                    
+                    <p class="message" style="margin-bottom: 20px; font-size: 14px; line-height: 1.5;">
+                        Si vous ne parvenez pas à cliquer sur le bouton, copiez et collez le lien suivant 
+                        dans votre navigateur :<br>
+                        <span style="word-break: break-all; color: #2c4a8b; font-size: 12px;">
+                            {{ activate_url }}
+                        </span>
+                    </p>
+                    
+                    <p class="signature" style="margin-top: 25px; font-style: italic; color: #555555;">
+                        À très bientôt,<br>
+                        <strong>L'équipe de l'Église ABMCI</strong>
+                    </p>
+                    
+                    <div class="disclaimer" style="margin-top: 30px; padding-top: 15px; border-top: 1px solid #eeeeee; font-size: 12px; color: #999999;">
+                        <p>
+                            Si vous n'avez pas créé de compte sur notre plateforme, veuillez ignorer ce message. 
+                            Ce lien de confirmation expirera dans 3 jours pour des raisons de sécurité.
+                        </p>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td class="footer" style="text-align: center; padding: 15px; background: #f5f5f5; color: #777777; font-size: 12px;">
+                    <p>
+                        © {% now "Y" %} Église ABMCI. Tous droits réservés.<br>
+                        Adresse : 123 Rue de la Foi, Ville, Pays
+                    </p>
+                </td>
+            </tr>
+        </table>
+    </div>
+    
+    <!--[if (gte mso 9)|(IE)]>
+    </td>
+    </tr>
+    </table>
+    <![endif]-->
+</body>
+</html>

@@ -1,0 +1,216 @@
+{% extends 'layout/base.html' %}
+
+{% block content %}
+  <!-- content @s -->
+            <div class="nk-content nk-content-fluid">
+                <div class="container-xl wide-xl">
+                <div class="d-flex justify-content-between w-100" style="justify-content: space-between">
+                    <div></div>
+                    <a  href="{% url 'membres' %}" class="" ><em class="icon ni ni-arrow-left-circle"></em><span>Retour</span></a>
+                </div>
+                    <div class="nk-content-inner">
+
+
+                        <div class="nk-content-body">
+                            <div class="nk-block">
+                                <div class="card card-bordered">
+                                    <div class="card-aside-wrap">
+
+                                        <div class="card-inner card-inner-lg">
+ <div class="d-flex flex-row-reverse bg-lighter">
+     <div class="p-2 bg-warning"><h4>14</h4></div>
+
+</div>
+                                            <div class="nk-block-head nk-block-head-lg">
+
+
+                                                <div class="nk-block-between">
+                                                    <div class="nk-block-head-content">
+
+
+
+                                                        <div class="nk-block-des">
+
+                  <div class="row d-flex justify-content-center">
+                    <div class="col-md-11 col-lg-9 col-xl-11">
+                      <div class="d-flex">
+                        <div class="flex-shrink-0">
+                          <img src="{{ fidele_detail.departement.responsable.photo.url }}"
+                            class="rounded-circle mb-4 mb-lg-0 shadow-2" alt="woman avatar" width="60"
+                            height="60">
+                        </div>
+                        <div class="flex-grow-1 ms-4 ps-3">
+                          <figure>
+                            <blockquote class="blockquote mb-4">
+                              <p>
+
+                                  <em class="icon ni ni-quote-left ni-lg text-warning me-2 "></em>
+                                <span class="font-italic">{{ fidele_detail.signe }}</span>
+                              </p>
+                            </blockquote>
+                            <figcaption class="blockquote-footer">
+                              Dernier commentaire ajouter par <cite title="Source Title">{{ fidele_detail.departement.responsable }}</cite> le 24/12/2023
+                            </figcaption>
+                          </figure>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                                         </div>
+                                                    </div>
+                                                    <div class="nk-block-head-content align-self-start d-lg-none">
+                                                        <a href="#" class="toggle btn btn-icon btn-trigger mt-n1" data-target="userAside"><em class="icon ni ni-menu-alt-r"></em></a>
+                                                    </div>
+                                                </div>
+                                            </div><!-- .nk-block-head -->
+                                            <div class="nk-block">
+                                                <div class="nk-data data-list">
+                                                    <div class="data-head">
+                                                        <h6 class="overline-title">Infos Générale</h6>
+                                                    </div>
+                                                    <div class="data-item" data-toggle="modal" data-target="#profile-edit">
+                                                        <div class="data-col">
+                                                            <span class="data-label">Nom</span>
+                                                            <span class="data-value">{{  fidele_detail.user.first_name }}</span>
+                                                        </div>
+                                                        <div class="data-col data-col-end"><span class="data-more"><em class="icon ni ni-forward-ios"></em></span></div>
+                                                    </div><!-- data-item -->
+                                                    <div class="data-item" data-toggle="modal" data-target="#profile-edit">
+                                                        <div class="data-col">
+                                                            <span class="data-label">Prenom</span>
+                                                            <span class="data-value">{{  fidele_detail.user.last_name }}</span>
+                                                        </div>
+                                                        <div class="data-col data-col-end"><span class="data-more"><em class="icon ni ni-forward-ios"></em></span></div>
+                                                    </div><!-- data-item -->
+                                                    <div class="data-item">
+                                                        <div class="data-col">
+                                                            <span class="data-label">Email</span>
+                                                            <span class="data-value">{{  fidele_detail.user.email }}</span>
+                                                        </div>
+                                                        <div class="data-col data-col-end"><span class="data-more disable"><em class="icon ni ni-lock-alt"></em></span></div>
+                                                    </div><!-- data-item -->
+                                                    <div class="data-item" data-toggle="modal" data-target="#profile-edit">
+                                                        <div class="data-col">
+                                                            <span class="data-label">Contact</span>
+                                                            <span class="data-value text-soft">{{  fidele_detail.phone}}</span>
+                                                        </div>
+                                                        <div class="data-col data-col-end"><span class="data-more"><em class="icon ni ni-forward-ios"></em></span></div>
+                                                    </div><!-- data-item -->
+                                                    <div class="data-item" data-toggle="modal" data-target="#profile-edit">
+                                                        <div class="data-col">
+                                                            <span class="data-label">Date de Naissance</span>
+                                                            <span class="data-value">{{  fidele_detail.birthdate }}</span>
+                                                        </div>
+                                                        <div class="data-col data-col-end"><span class="data-more"><em class="icon ni ni-forward-ios"></em></span></div>
+                                                    </div><!-- data-item -->
+                                                    <div class="data-item" data-toggle="modal" data-target="#profile-edit" data-tab-target="#address">
+                                                        <div class="data-col">
+                                                            <span class="data-label">Adresse</span>{{ fidele_detail.location }}
+                                                             {% for parent in fidele_detail.location.get_all_parents %}
+                                                                 <span class="data-value"> - {{ parent.name }}<br></span>
+
+                                                             {% endfor %}
+                                                        </div>
+                                                        <div class="data-col data-col-end"><span class="data-more"><em class="icon ni ni-forward-ios"></em></span></div>
+                                                    </div><!-- data-item -->
+                                                </div><!-- data-list -->
+                                            </div><!-- .nk-block -->
+
+                                        <div class="nk-block">
+                                                <div class="nk-data data-list">
+                                                    <div class="data-head">
+                                                        <h6 class="overline-title">Points Particulier</h6>
+                                                    </div>
+
+                                                    {% for probleme in problemes %}
+                                                        {% if probleme.fidele_detail == membre %}
+                                                            <div class="card card-preview"> <div class="card-inner bg-light">
+                                                            <blockquote class="blockquote text-justify">
+                                                                <p class="mb-0">{{ probleme.descriptif }}</p>
+                                                                <footer class="blockquote-footer"> Enrégistré le :
+                                                                    <cite title="Source Title">{{ probleme.date }}</cite>
+                                                                </footer>
+                                                            </blockquote>
+                                                            </div></div>
+                                                        {% endif %}
+                                                    {% endfor %}
+
+
+
+
+                                                </div><!-- data-list -->
+                                            </div><!-- .nk-block -->
+                                        </div>
+                                        <div class="card-aside card-aside-left user-aside toggle-slide toggle-slide-left toggle-break-lg" data-content="userAside" data-toggle-screen="lg" data-toggle-overlay="true">
+                                            <div class="card-inner-group" data-simplebar>
+                                                <div class="card-inner">
+                                                    <div class="user-card">
+                                                        <div class="user-avatar bg-primary">
+                                                            <span><img src="{{ fidele_detail.photo.url }}"></span>
+                                                        </div>
+                                                        <div class="user-info">
+                                                            <span class="lead-text">{{ fidele_detail }}</span>
+                                                            <span class="sub-text">{{ fidele_detail.user.email }}</span>
+                                                        </div>
+                                                        <div class="user-action">
+                                                            <div class="dropdown">
+                                                                <a class="btn btn-icon btn-trigger mr-n2" data-toggle="dropdown" href="#"><em class="icon ni ni-more-v"></em></a>
+                                                                <div class="dropdown-menu dropdown-menu-right">
+                                                                    <ul class="link-list-opt no-bdr">
+                                                                        <li><a href="#"><em class="icon ni ni-camera-fill"></em><span>Change Photo</span></a></li>
+                                                                        <li><a href="{% url 'update' fidele_detail.pk  %}"><em class="icon ni ni-edit-fill"></em><span>Update Profile</span></a></li>
+                                                                    </ul>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div><!-- .user-card -->
+                                                </div><!-- .card-inner -->
+                                                <div class="card-inner">
+                                                    <div class="user-account-info py-0">
+                                                        <h6 class="overline-title-alt text-primary">
+                                                            {% if fidele_detail.statut == 'Visiteur' %}
+                                                        <span class="badge badge-gray">{{ fidele_detail.statut }}</span>
+                                                           {% elif fidele_detail.statut == 'Membre actif' %}
+                                                           <span class="badge badge-primary"><em class="icon ni ni-user-check-fill mr-2"></em> {{ fidele_detail.statut }}</span>
+                                                               {% elif fidele_detail.statut == 'FISS' %}
+                                                               <span class="badge badge-warning"><em class="icon ni ni-heart-fill text-danger mr-2"></em> {{ fidele_detail.statut }}</span>
+
+                                                           {% elif fidele_detail.statut == 'Sympathisant' %}
+                                                               <span class="badge badge-info">{{ fidele_detail.statut }}</span>
+                                                           {% endif %}
+                                                        </h6>
+                                                        <h6 class="overline-title-alt">a Intégré l'église dépuis</h6>
+                                                        <div class="user-balance">{{  fidele_detail.anciennete }}<small class="currency currency-btc"></small></div>
+                                                        <div class="user-balance-sub"><span>{{ fidele_detail.profession }} | <span class="currency currency-btc text-warning">{{ fidele_detail.entreprise }}</span></span></div>
+                                                    </div>
+                                                </div><!-- .card-inner -->
+                                                <div class="card-inner p-0">
+                                                    <ul class="link-list-menu">
+                                                        <li><a class="active" href="{%  url 'infos_generale' fidele_detail.id  %} "><em class="icon ni ni-user-fill-c"></em><span>Infomation Générale</span></a></li>
+                                                        <li><a href="{% url 'vie_de_leglise' fidele_detail.id %}"><em class="icon ni ni-bell-fill"></em><span>Vie de l'Eglise</span></a></li>
+                                                        <li><a href="{% url 'engagement' fidele_detail.id%}"><em class="icon ni ni-activity-round-fill"></em><span>Engagement</span></a></li>
+                                                        <li><a href="{% url 'statut_social' fidele_detail.id %}"><em class="icon ni ni-lock-alt-fill"></em><span>Statut Social</span></a></li>
+                                                        <li><a href="{% url 'messagerie' fidele_detail.id %}"><em class="icon ni ni-grid-add-fill-c"></em><span>Messagérie</span></a></li>
+                                                    </ul>
+                                                </div><!-- .card-inner -->
+                                                <div class="card-inner p-0">
+                                                        <ul class="link-list">
+                                                        <li class="p-lg-4"><em class="icon ni ni-edit-alt-fill"></em> <span> Dernierer présence à l'eglise :</span> <span class="text-primary">Dimanche 22 Janvier 2024</span> </li>
+                                                            <li class="p-lg-4"><em class="icon ni ni-edit-alt-fill"></em>  Dernierer note Obtenue :
+                                                                <span class="text-primary">14</span> <button class="btn btn-icon btn-sm btn-primary "><em class="icon ni ni-plus-circle-fill"></em></button>
+                                                            </li>
+
+                                                    </ul>
+                                                </div>
+                                            </div><!-- .card-inner-group -->
+                                        </div><!-- card-aside -->
+                                    </div><!-- .card-aside-wrap -->
+                                </div><!-- .card -->
+                            </div><!-- .nk-block -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- content @e -->
+{% endblock %}

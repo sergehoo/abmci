@@ -1,0 +1,27 @@
+{% extends 'layout/base.html' %}
+
+{% block content %}
+<div class="nk-content nk-content-fluid">
+  <div class="container-xl wide-xl">
+    <div class="nk-content-inner">
+      <div class="nk-content-body">
+        <div class="card card-bordered">
+          <div class="card-inner">
+            <h5 class="mb-3">Confirmation</h5>
+            <p>Voulez-vous vraiment supprimer <strong>{{ object }}</strong> ? Cette action est irréversible.</p>
+            <form method="post">
+              {% csrf_token %}
+              <div class="d-flex gap-2">
+                <a href="{{ request.META.HTTP_REFERER|default:'/' }}" class="btn btn-outline-secondary">
+                  Annuler
+                </a>
+                <button type="submit" class="btn btn-danger">Supprimer</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

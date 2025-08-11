@@ -1,0 +1,203 @@
+{% load static %}
+
+<ul class="nk-menu nk-menu-main ui-s2">
+    <li class="nk-menu-item">
+        <a class="nk-menu" href="{% url 'home' %}">
+            <span class="nk-menu-text">Dashboard</span>
+        </a>
+    </li><!-- .nk-menu-item -->
+    <li class="nk-menu-item has-sub">
+        <a class="nk-menu-link nk-menu-toggle" href="#">
+            <span class="nk-menu-text">L'Eglise</span>
+        </a>
+        <ul class="nk-menu-sub">
+            <li class="nk-menu-item">
+                <a class="nk-menu-link" href="{% url 'membres' %}"><span class="nk-menu-text">Membres</span></a>
+            </li>
+            <li class="nk-menu-item">
+                <a class="nk-menu-link" href="#"><span class="nk-menu-text">Pastorale</span></a>
+            </li>
+            <li class="nk-menu-item has-sub">
+                <a class="nk-menu-link nk-menu-toggle" href="#"><span class="nk-menu-text">Directions</span></a>
+                <ul class="nk-menu-sub">
+                    {% for direction in department %}
+            <li class="nk-menu-item">
+                <a class="nk-menu-link" href="{% url 'direction' direction.pk %}">
+                    <span class="nk-menu-icon"><em class="icon ni ni-tile-thumb"></em></span>
+                    <span class="nk-menu-text">{{ direction.name }}</span>
+                </a>
+            </li><!-- .nk-menu-item -->
+                    {% endfor %}
+
+        </ul>
+            </li>
+
+            <li class="nk-menu-item has-sub">
+                <a class="nk-menu-link nk-menu-toggle" href="#"><span class="nk-menu-text">Familles d'Alliance</span></a>
+                <ul class="nk-menu-sub">
+                    {% for famille in famille %}
+            <li class="nk-menu-item">
+                <a class="nk-menu-link" href="">
+                    <span class="nk-menu-icon"><em class="icon ni ni-tile-thumb"></em></span>
+                    <span class="nk-menu-text">{{ famille.name }}</span>
+                </a>
+            </li><!-- .nk-menu-item -->
+                    {% endfor %}
+
+        </ul>
+            </li>
+
+        </ul><!-- .nk-menu-sub -->
+    </li><!-- .nk-menu-item -->
+
+
+    <li class="nk-menu-item has-sub">
+        <a class="nk-menu-link nk-menu-toggle" href="#">
+            <span class="nk-menu-text">Suivie</span>
+        </a>
+        <ul class="nk-menu-sub">
+            <li class="nk-menu-item has-sub">
+                <a class="nk-menu-link nk-menu-toggle" href="#">
+                    <span class="nk-menu-icon"><em class="icon ni ni-tile-thumb"></em></span>
+                    <span class="nk-menu-text">Nouvels âmes</span>
+                </a>
+                <ul class="nk-menu-sub">
+                    <li class="nk-menu-item">
+                        <a class="nk-menu-link" href="{% url 'suivie' %}"><span
+                                class="nk-menu-text">Visiteurs</span></a>
+                    </li>
+                    <li class="nk-menu-item">
+                        <a class="nk-menu-link" href="#"><span
+                                class="nk-menu-text">Membre Ponctuel</span></a>
+                    </li>
+                </ul><!-- .nk-menu-sub -->
+            </li><!-- .nk-menu-item -->
+
+
+            <li class="nk-menu-item">
+                <a class="nk-menu-link" href="#"><span
+                        class="nk-menu-text">Visites</span></a>
+            </li><!-- .nk-menu-item -->
+        </ul><!-- .nk-menu-sub -->
+    </li><!-- .nk-menu-item -->
+
+    <li class="nk-menu-item has-sub">
+        <a class="nk-menu-link nk-menu-toggle" href="#">
+            <span class="nk-menu-text">Eden</span>
+        </a>
+        <ul class="nk-menu-sub">
+            <li class="nk-menu-item has-sub">
+                <a class="nk-menu-link nk-menu-toggle" href="#">
+                    <span class="nk-menu-text">Couples</span>
+                </a>
+                <ul class="nk-menu-sub">
+                    <li class="nk-menu-item">
+                        <a class="nk-menu-link" href="{% url 'fiancailles-list' %}" ><span
+                                class="nk-menu-text">Fiancailles</span></a>
+                    </li>
+                    <li class="nk-menu-item">
+                        <a class="nk-menu-link" href="{% url 'mariage-list' %}" ><span
+                                class="nk-menu-text">Liste mariés</span></a>
+                    </li>
+                    <li class="nk-menu-item">
+                        <a class="nk-menu-link" href="#" ><span
+                                class="nk-menu-text">Chéminants / aspirants </span></a>
+                    </li>
+                    <li class="nk-menu-item has-sub">
+                        <a class="nk-menu-link nk-menu-toggle" href="#"><span
+                                class="nk-menu-text">Inconnue</span></a>
+                        <ul class="nk-menu-sub">
+                            <li class="nk-menu-item">
+                                <a class="nk-menu-link" href="#" ><span
+                                        class="nk-menu-text">Concubin</span></a>
+                            </li>
+                            <li class="nk-menu-item">
+                                <a class="nk-menu-link" href="#"
+                                   ><span class="nk-menu-text">Cilibataire</span></a>
+                            </li>
+                        </ul>
+                    </li>
+                </ul><!-- .nk-menu-sub -->
+            </li><!-- .nk-menu-item -->
+
+            <li class="nk-menu-item">
+                <a class="nk-menu-link" href="#"><span class="nk-menu-text">Anniversaires</span></a>
+            </li>
+
+        </ul><!-- .nk-menu-sub -->
+    </li><!-- .nk-menu-item -->
+
+    <li class="nk-menu-item has-sub">
+        <a class="nk-menu-link nk-menu-toggle" href="#">
+            <span class="nk-menu-text">Evenements</span>
+        </a>
+        <ul class="nk-menu-sub">
+            <li class="nk-menu-item has-sub">
+                <a class="nk-menu-link nk-menu-toggle" href="#">
+                    <span class="nk-menu-text">Programme</span>
+                </a>
+                <ul class="nk-menu-sub">
+                    <li class="nk-menu-item">
+                        <a class="nk-menu-link" href="{% url 'event-calend' %}" ><span
+                                class="nk-menu-text">Calendrier</span></a>
+                    </li>
+                    <li class="nk-menu-item">
+                        <a class="nk-menu-link" href="{% url 'event-list' %}" ><span
+                                class="nk-menu-text">Liste des Evenements</span></a>
+                </ul><!-- .nk-menu-sub -->
+            </li><!-- .nk-menu-item -->
+            <li class="nk-menu-item ">
+                <a class="nk-menu-link " href="#">
+                    <span class="nk-menu-text">Programme Spécial</span>
+                </a>
+            </li><!-- .nk-menu-item -->
+
+
+
+        </ul><!-- .nk-menu-sub -->
+    </li><!-- .nk-menu-item -->
+
+    <li class="nk-menu-item has-sub">
+        <a class="nk-menu-link nk-menu-toggle" href="#">
+            <span class="nk-menu-text">Formations</span>
+        </a>
+        <ul class="nk-menu-sub">
+            <li class="nk-menu-item has-sub">
+                <a class="nk-menu-link nk-menu-toggle" href="#">
+                    <span class="nk-menu-text">Pastorale</span>
+                </a>
+                <ul class="nk-menu-sub">
+                    <li class="nk-menu-item">
+                        <a class="nk-menu-link" href="html/pages/auths/auth-login.html" ><span
+                                class="nk-menu-text">Assistant de Pasteur</span></a>
+                    </li>
+                    <li class="nk-menu-item">
+                        <a class="nk-menu-link" href="html/pages/auths/auth-register.html" ><span
+                                class="nk-menu-text">Pasteur</span></a>
+                    </li>
+                    <li class="nk-menu-item">
+                        <a class="nk-menu-link" href="html/pages/auths/auth-reset.html" ><span
+                                class="nk-menu-text">Diaconat</span></a>
+                    </li>
+
+
+
+                </ul><!-- .nk-menu-sub -->
+            </li><!-- .nk-menu-item -->
+            <li class="nk-menu-item has-sub">
+                <a class="nk-menu-link" href="#">
+                    <span class="nk-menu-text">Bapteme</span>
+                </a>
+
+            </li><!-- .nk-menu-item -->
+            <li class="nk-menu-item">
+                <a class="nk-menu-link" href="html/_blank.html"><span class="nk-menu-text">Mariage</span></a>
+            </li>
+            <li class="nk-menu-item">
+                <a class="nk-menu-link" href="html/pages/terms-policy.html"><span
+                        class="nk-menu-text">Fils</span></a>
+            </li>
+        </ul><!-- .nk-menu-sub -->
+    </li><!-- .nk-menu-item -->
+
+</ul><!-- .nk-menu -->

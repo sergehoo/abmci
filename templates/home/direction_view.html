@@ -1,0 +1,344 @@
+{% extends 'layout/base.html' %}
+
+{% block content %}
+     <!-- content @s -->
+            <div class="nk-content nk-content-fluid">
+                <div class="container-xl wide-xl">
+                    <div class="nk-content-inner">
+                        <div class="nk-content-body">
+                            <div class="nk-block-head nk-block-head-sm">
+                                <div class="nk-block-between">
+                                    <div class="nk-block-head-content">
+                                        <h3 class="nk-block-title page-title">Direction {{ directions.name }}</h3>
+                                        <div class="nk-block-des text-soft">
+                                            <p> Cette direction compte au total {{ nombre_membres }} membres.</p>
+                                        </div>
+                                    </div><!-- .nk-block-head-content -->
+                                    <div class="nk-block-head-content">
+                                        <div class="toggle-wrap nk-block-tools-toggle">
+                                            <a href="#" class="btn btn-icon btn-trigger toggle-expand mr-n1" data-target="pageMenu"><em class="icon ni ni-menu-alt-r"></em></a>
+                                            <div class="toggle-expand-content" data-content="pageMenu">
+                                                <ul class="nk-block-tools g-3">
+                                                    <li><a href="#" class="btn btn-white btn-outline-light"><em class="icon ni ni-download-cloud"></em><span>Export</span></a></li>
+                                                    <li class="nk-block-tools-opt">
+                                                        <div class="drodown">
+                                                            <a href="#" class="dropdown-toggle btn btn-icon btn-primary" data-toggle="dropdown"><em class="icon ni ni-plus"></em></a>
+                                                            <div class="dropdown-menu dropdown-menu-right">
+                                                                <ul class="link-list-opt no-bdr">
+                                                                    <li><a href="#"><span>Nouveau fidèle</span></a></li>
+                                                                    <li><a href="#"><span>Creer un Group</span></a></li>
+                                                                </ul>
+                                                            </div>
+                                                        </div>
+                                                    </li>
+                                                </ul>
+                                            </div>
+                                        </div><!-- .toggle-wrap -->
+                                    </div><!-- .nk-block-head-content -->
+                                </div><!-- .nk-block-between -->
+                            </div><!-- .nk-block-head -->
+                            <div class="nk-block">
+                                <div class="card card-bordered card-stretch">
+                                    <div class="card-inner-group">
+                                        <div class="card-inner position-relative card-tools-toggle">
+                                            <div class="card-title-group">
+                                                <div class="card-tools">
+                                                    <div class="form-inline flex-nowrap gx-3">
+                                                        <div class="form-wrap w-150px">
+                                                            <select class="form-select form-select-sm" data-search="off" data-placeholder="Bulk Action">
+                                                                <option value="">Lister par Departements</option>
+                                                                <option value="email">Communication</option>
+                                                                <option value="group">Musique</option>
+                                                                <option value="suspend">Hotesse</option>
+                                                                <option value="delete">Protocole</option>
+                                                            </select>
+                                                        </div>
+                                                        <div class="btn-wrap">
+                                                            <span class="d-none d-md-block"><button class="btn btn-dim btn-outline-light disabled">Apply</button></span>
+                                                            <span class="d-md-none"><button class="btn btn-dim btn-outline-light btn-icon disabled"><em class="icon ni ni-arrow-right"></em></button></span>
+                                                        </div>
+                                                    </div><!-- .form-inline -->
+                                                </div><!-- .card-tools -->
+                                                <div class="card-tools mr-n1">
+                                                    <ul class="btn-toolbar gx-1">
+                                                        <li>
+                                                            <a href="#" class="btn btn-icon search-toggle toggle-search" data-target="search"><em class="icon ni ni-search"></em></a>
+                                                        </li><!-- li -->
+                                                        <li class="btn-toolbar-sep"></li><!-- li -->
+                                                        <li>
+                                                            <div class="toggle-wrap">
+                                                                <a href="#" class="btn btn-icon btn-trigger toggle" data-target="cardTools"><em class="icon ni ni-menu-right"></em></a>
+                                                                <div class="toggle-content" data-content="cardTools">
+                                                                    <ul class="btn-toolbar gx-1">
+                                                                        <li class="toggle-close">
+                                                                            <a href="#" class="btn btn-icon btn-trigger toggle" data-target="cardTools"><em class="icon ni ni-arrow-left"></em></a>
+                                                                        </li><!-- li -->
+                                                                        <li>
+                                                                            <div class="dropdown">
+                                                                                <a href="#" class="btn btn-trigger btn-icon dropdown-toggle" data-toggle="dropdown">
+                                                                                    <div class="dot dot-primary"></div>
+                                                                                    <em class="icon ni ni-filter-alt"></em>
+                                                                                </a>
+                                                                                <div class="filter-wg dropdown-menu dropdown-menu-xl dropdown-menu-right">
+                                                                                    <div class="dropdown-head">
+                                                                                        <span class="sub-title dropdown-title">Filtrer les Fidele</span>
+                                                                                        <div class="dropdown">
+                                                                                            <a href="#" class="btn btn-sm btn-icon">
+                                                                                                <em class="icon ni ni-more-h"></em>
+                                                                                            </a>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                    <div class="dropdown-body dropdown-body-rg">
+                                                                                        <div class="row gx-6 gy-3">
+                                                                                            <div class="col-6">
+                                                                                                <div class="custom-control custom-control-sm custom-checkbox">
+                                                                                                    <input type="checkbox" class="custom-control-input" id="hasBalance">
+                                                                                                    <label class="custom-control-label" for="hasBalance"> Actif </label>
+                                                                                                </div>
+                                                                                            </div>
+                                                                                            <div class="col-6">
+                                                                                                <div class="custom-control custom-control-sm custom-checkbox">
+                                                                                                    <input type="checkbox" class="custom-control-input" id="hasKYC">
+                                                                                                    <label class="custom-control-label" for="hasKYC"> Sans Department </label>
+                                                                                                </div>
+                                                                                            </div>
+                                                                                            <div class="col-6">
+                                                                                                <div class="form-group">
+                                                                                                    <label class="overline-title overline-title-alt">Role</label>
+                                                                                                    <select class="form-select form-select-sm">
+                                                                                                        <option value="any">Pasteur</option>
+                                                                                                        <option value="investor">Fidèle</option>
+                                                                                                        <option value="seller">Responsable</option>
+                                                                                                        <option value="buyer">Femme</option>
+                                                                                                        <option value="buyer">Homme</option>
+                                                                                                    </select>
+                                                                                                </div>
+                                                                                            </div>
+                                                                                            <div class="col-6">
+                                                                                                <div class="form-group">
+                                                                                                    <label class="overline-title overline-title-alt">Statut</label>
+                                                                                                    <select class="form-select form-select-sm">
+                                                                                                        <option value="any">Any Status</option>
+                                                                                                        <option value="active">Actif</option>
+                                                                                                        <option value="pending">Sous discipline</option>
+                                                                                                        <option value="suspend">Blocker</option>
+                                                                                                        <option value="deleted">Supprimer</option>
+                                                                                                    </select>
+                                                                                                </div>
+                                                                                            </div>
+                                                                                            <div class="col-12">
+                                                                                                <div class="form-group">
+                                                                                                    <button type="button" class="btn btn-secondary">Filter</button>
+                                                                                                </div>
+                                                                                            </div>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                    <div class="dropdown-foot between">
+                                                                                        <a class="clickable" href="#">Reinitialiser le Filter</a>
+                                                                                        <a href="#">Save Filter</a>
+                                                                                    </div>
+                                                                                </div><!-- .filter-wg -->
+                                                                            </div><!-- .dropdown -->
+                                                                        </li><!-- li -->
+                                                                        <li>
+                                                                            <div class="dropdown">
+                                                                                <a href="#" class="btn btn-trigger btn-icon dropdown-toggle" data-toggle="dropdown">
+                                                                                    <em class="icon ni ni-setting"></em>
+                                                                                </a>
+                                                                                <div class="dropdown-menu dropdown-menu-xs dropdown-menu-right">
+                                                                                    <ul class="link-check">
+                                                                                        <li><span>Show</span></li>
+                                                                                        <li class="active"><a href="#">10</a></li>
+                                                                                        <li><a href="#">20</a></li>
+                                                                                        <li><a href="#">50</a></li>
+                                                                                    </ul>
+                                                                                    <ul class="link-check">
+                                                                                        <li><span>Order</span></li>
+                                                                                        <li class="active"><a href="#">DESC</a></li>
+                                                                                        <li><a href="#">ASC</a></li>
+                                                                                    </ul>
+                                                                                </div>
+                                                                            </div><!-- .dropdown -->
+                                                                        </li><!-- li -->
+                                                                    </ul><!-- .btn-toolbar -->
+                                                                </div><!-- .toggle-content -->
+                                                            </div><!-- .toggle-wrap -->
+                                                        </li><!-- li -->
+                                                    </ul><!-- .btn-toolbar -->
+                                                </div><!-- .card-tools -->
+                                            </div><!-- .card-title-group -->
+                                            <div class="card-search search-wrap" data-search="search">
+                                                <div class="card-body">
+                                                    <div class="search-content">
+                                                        <a href="#" class="search-back btn btn-icon toggle-search" data-target="search"><em class="icon ni ni-arrow-left"></em></a>
+                                                        <input type="text" class="form-control border-transparent form-focus-none" placeholder="Search by user or email">
+                                                        <button class="search-submit btn btn-icon"><em class="icon ni ni-search"></em></button>
+                                                    </div>
+                                                </div>
+                                            </div><!-- .card-search -->
+                                        </div><!-- .card-inner -->
+                                       <div class="card-inner">
+                                            <table class="datatable-init table">
+                                                <thead class="bg-gray-300">
+                                                    <tr>
+                                                        <th>Nom et prenom </th>
+                                                        <th>Contact</th>
+                                                        <th>Age </th>
+                                                        <th>Fonction</th>
+                                                        <th>Type de membre</th>
+                                                        <th>Note Service</th>
+
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {% for membre in directions.members %}
+                                                    <tr>
+                                                        <td>{{ membre.user.first_name }} {{ membre.user.last_name }} {% if membre.est_nouveau == True %}<span class="badge badge-dot badge-info">Nouvel âme</span> {% endif %}</td>
+                                                        <td>{{ membre.phone }}</td>
+                                                        <td>{{ membre.age }}</td>
+                                                        <td>{{ membre.fonction }}</td>
+                                                        <td>{{ membre.type_membre }}</td>
+                                                        <td><span class="badge badge-warning">14</span></td>
+
+                                                    </tr>
+                                                        {% empty %}
+                                                        <tr style="text-align: center"  ><td style="text-align: center">Aucun participant enrégistré pour l'heure </td></tr>
+ {% endfor %}
+
+                                                </tbody>
+                                            </table>
+                                        </div>
+
+                                    </div><!-- .card-inner-group -->
+                                </div><!-- .card -->
+                            </div><!-- .nk-block -->
+
+
+                        <div class="nk-block-head nk-block-head-sm">
+                                <div class="nk-block-between">
+                                    <div class="nk-block-head-content">
+                                        <h3 class="nk-block-title page-title">Programme de Permanence</h3>
+                                        <div class="nk-block-des text-soft">
+                                            <p> Cette direction compte au total {{ nombre_membres }} membres.</p>
+                                        </div>
+                                    </div><!-- .nk-block-head-content -->
+                                    <div class="nk-block-head-content">
+                                        <div class="toggle-wrap nk-block-tools-toggle">
+                                            <a href="#" class="btn btn-icon btn-trigger toggle-expand mr-n1" data-target="pageMenu"><em class="icon ni ni-menu-alt-r"></em></a>
+                                            <div class="toggle-expand-content" data-content="pageMenu">
+                                                <ul class="nk-block-tools g-3">
+                                                    <li class="nk-block-tools-opt">
+                                                        <div class="drodown">
+                                                            <a href="#" class="btn btn-icon btn-primary" data-toggle="modal" data-target="#permanence"><em class="icon ni ni-plus"></em></a>
+                                                        </div>
+                                                    </li>
+                                                </ul>
+                                            </div>
+                                        </div><!-- .toggle-wrap -->
+                                    </div><!-- .nk-block-head-content -->
+                                </div><!-- .nk-block-between -->
+                            </div>
+
+  <!-- Modal Trigger Code -->
+<!-- Modal Content Code -->
+<div class="modal fade" tabindex="-1" id="permanence">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <a href="#" class="close" data-dismiss="modal" aria-label="Close">
+                <em class="icon ni ni-cross"></em>
+            </a>
+            <div class="modal-header">
+                <h5 class="modal-title">Ajouter une Permanence  </h5>
+            </div>
+            <div class="modal-body">
+               <form action="{% url 'createpermanence' directions.pk %}" method="post" enctype="multipart/form-data">
+                   {% csrf_token %}
+                   {{ permanence_form.as_p }}
+                   <button type="submit" class="btn btn-outline-primary">Enregistrer</button>
+               </form>
+            </div>
+            <div class="modal-footer bg-light">
+                <span class="sub-text"> Programme de permanence </span>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+                        <div class="nk-block">
+                                <div class="card card-bordered card-stretch">
+
+                                    <div class="card-inner-group">
+
+                                        <div class="card-inner">
+
+<div id="accordion-2" class="accordion accordion-s3">
+    {% for ouvrier in permanence %}
+
+        <div class="accordion-item">
+            <a href="#" class="accordion-head bg-light" data-toggle="collapse"
+               data-target="#accordion-item-{{ forloop.counter }}">
+                <h6 class="title">
+                    {% if ouvrier.event.is_same_date %}
+                        {{ ouvrier.event.date_debut|date:"d F Y" }}
+                        <span class="badge">{{ ouvrier.event.date_debut|time:"G:i A" }}</span>-
+                        <span class="badge">{{ ouvrier.event.date_fin|time:"G:i A" }}</span>
+                    {% else %}
+                        {{ ouvrier.event.date_debut|date:"d F Y"  }}<span class="badge">{{ ouvrier.event.date_debut|time:"G:i A" }}</span> --  {{ ouvrier.event.date_fin|date:"d F Y"  }} <span class="badge">{{ ouvrier.event.date_fin|time:"G:i A" }}</span>
+                    {% endif %}
+                </h6>
+                <span class="accordion-icon"></span>
+            </a>
+            <div class="accordion-body collapse show" id="accordion-item-{{ forloop.counter }}"
+                 data-parent="#accordion-2">
+                <div class="accordion-inner">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Nom et prénom</th>
+                                <th>Poste</th>
+                                <th>Position</th>
+                                <th>Culte</th>
+                                <th>Activités</th>
+                                <th>Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for ouvrier_permanence in ouvrier.ouvrierpermanence_set.all %}
+                                <tr>
+                                    <td>{{ ouvrier_permanence.ouvrier.user.first_name }} {{ ouvrier_permanence.ouvrier.user.last_name }}</td>
+                                    <td>{{ ouvrier_permanence.poste }}</td>
+                                    <td>{{ ouvrier_permanence.position }}</td>
+                                    <td>{{ ouvrier.event.titre }}</td>
+                                    <td>{{ ouvrier_permanence.activites }}</td>
+                                    <td>
+                                        {% if ouvrier_permanence.date == None  %}
+                                            {{ ouvrier.event.date_debut|date:"d F Y" }}
+                                        {% else %}
+                                        {{ ouvrier_permanence.date }}
+                                        {% endif %}
+
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    {% endfor %}
+</div>
+
+
+                                        </div>
+
+                                    </div><!-- .card-inner-group -->
+                                </div><!-- .card -->
+                            </div><!-- .nk-block -->
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- content @e -->
+{% endblock %}
