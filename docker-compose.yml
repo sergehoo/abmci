@@ -28,9 +28,9 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: abmciweb
-    env_file: .env.prod
+    env_file: .env
     environment:
-      DJANGO_SETTINGS_MODULE: abmci.settings.prod
+      DJANGO_SETTINGS_MODULE: abmci.settings
       # Channels en prod: configure Redis layer côté settings PROD !
       # CHANNEL_LAYERS__default__BACKEND: channels_redis.core.RedisChannelLayer
       # CHANNEL_LAYERS__default__CONFIG__hosts__0: redis://redis:6379/0
