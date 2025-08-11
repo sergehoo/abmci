@@ -38,8 +38,8 @@ RUN pip install --no-cache /wheels/*
 COPY . /app
 
 # Entrypoint
-#COPY docker/entrypoint.sh /entrypoint.sh
-#RUN chmod +x /entrypoint.sh
+COPY docker/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 
 # Create static/media dirs (mounted by volumes anyway)
 RUN mkdir -p /app/staticfiles /app/media
