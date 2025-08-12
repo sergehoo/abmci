@@ -1,5 +1,6 @@
 # abmci/settings/base.py
 import os
+import re
 from pathlib import Path
 from datetime import timedelta
 
@@ -12,6 +13,20 @@ def env_int(key: str, default: int) -> int:
         return int(val) if val is not None else default
     except (TypeError, ValueError):
         return default
+
+def _split_csv_env(name: str) -> list[str]:
+    raw = os.getenv(name, "")
+    return [x.strip() for x in raw.split(",") if x.strip()]
+
+def _with_scheme(origin: str) -> str:
+    # si déjà un schéma → OK
+    if origin.startswith(("http://", "https://")):
+        return origin
+    # localhost + IP → http par défaut (dev)
+    if origin in ("localhost",) or re.match(r"^\d{1,3}(\.\d{1,3}){3}$", origin):
+        return f"http://{origin}"
+    # par défaut pour un domaine → https
+    return f"https://{origin}"
 
 
 # SECRET_KEY = os.environ.get("SECRET_KEY")
@@ -139,10 +154,14 @@ SIMPLE_JWT = {
 
 CORS_ALLOW_CREDENTIALS = True
 
-CORS_ALLOWED_ORIGINS = os.environ.get("CORS_ALLOWED_ORIGINS", "").split(",") if os.environ.get(
-    "CORS_ALLOWED_ORIGINS") else []
-CSRF_TRUSTED_ORIGINS = os.environ.get("CSRF_TRUSTED_ORIGINS", "").split(",") if os.environ.get(
-    "CSRF_TRUSTED_ORIGINS") else []
+
+# ALLOWED_HOSTS: pas de schéma ici !
+# ALLOWED_HOSTS = _split_csv_env("ALLOWED_HOSTS")
+# ex .env : ALLOWED_HOSTS=administration.abmci.com,abmci.com,127.0.0.1,localhost
+
+# CORS/CSRF: schéma requis
+CORS_ALLOWED_ORIGINS = [_with_scheme(o) for o in _split_csv_env("CORS_ALLOWED_ORIGINS")]
+CSRF_TRUSTED_ORIGINS = [_with_scheme(o) for o in _split_csv_env("CSRF_TRUSTED_ORIGINS")]
 
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
