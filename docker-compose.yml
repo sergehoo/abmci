@@ -13,6 +13,7 @@ services:
       - .env
     environment:
       # Facultatif mais utile pour GeoDjango (amd64)
+      RUN_MIGRATIONS: "1"
       GDAL_LIBRARY_PATH: /usr/lib/x86_64-linux-gnu/libgdal.so
       GEOS_LIBRARY_PATH: /usr/lib/x86_64-linux-gnu/libgeos_c.so
     depends_on:

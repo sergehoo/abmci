@@ -89,7 +89,7 @@ run_migrations() {
     python manage.py migrate --noinput
     ok "Migrations OK."
   else
-    warn "RUN_MIGRATIONS=0 → skip migrations."
+    echo "Skip migrate (RUN_MIGRATIONS != 1)"
   fi
 }
 
