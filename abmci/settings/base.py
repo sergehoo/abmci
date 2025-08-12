@@ -3,8 +3,16 @@ import os
 from pathlib import Path
 from datetime import timedelta
 
-
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
+
+
+def env_int(key: str, default: int) -> int:
+    val = os.getenv(key)
+    try:
+        return int(val) if val is not None else default
+    except (TypeError, ValueError):
+        return default
+
 
 SECRET_KEY = os.environ.get("SECRET_KEY")
 DEBUG = os.environ.get("DEBUG")
@@ -117,8 +125,8 @@ REST_AUTH = {
     "USER_DETAILS_SERIALIZER": "api.serializers.CustomUserDetailsSerializer",
 }
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=os.environ.get("JWT_ACCESS_MIN")),
-    "REFRESH_TOKEN_LIFETIME": timedelta(days=os.environ.get("JWT_REFRESH_DAYS")),
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=env_int("JWT_ACCESS_MIN", 60)),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=env_int("JWT_REFRESH_DAYS", 7)),
     "AUTH_HEADER_TYPES": ("Bearer",),
 }
 
@@ -145,7 +153,7 @@ EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", default="")
 EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", default="")
 DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", default="")
 
-SESSION_COOKIE_AGE = os.environ.get("SESSION_COOKIE_AGE", cast=int, default=60*60*24*30)
+SESSION_COOKIE_AGE = os.environ.get("SESSION_COOKIE_AGE", cast=int, default=60 * 60 * 24 * 30)
 
 AUTHENTICATION_BACKENDS = [
     "django.contrib.auth.backends.ModelBackend",
