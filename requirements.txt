@@ -55,3 +55,4 @@ gunicorn
 celery
 redis
 django-celery-beat
+pytest
