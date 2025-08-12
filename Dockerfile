@@ -7,10 +7,13 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-# OS deps
+
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    gdal-bin libgdal-dev \
+    libgeos-dev \
     build-essential libpq-dev curl ca-certificates \
-  && rm -rf /var/lib/apt/lists/*
+    proj-bin libproj-dev \
+    && rm -rf /var/lib/apt/lists/*
 
 # Requirements
 COPY requirements.txt /app/requirements.txt
