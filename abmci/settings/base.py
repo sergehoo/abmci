@@ -134,8 +134,10 @@ SIMPLE_JWT = {
 
 CORS_ALLOW_CREDENTIALS = True
 
-CORS_ALLOWED_ORIGINS = os.environ.get("CORS_ALLOWED_ORIGINS", "").split(",") if os.environ.get("CORS_ALLOWED_ORIGINS") else []
-CSRF_TRUSTED_ORIGINS = os.environ.get("CSRF_TRUSTED_ORIGINS", "").split(",") if os.environ.get("CSRF_TRUSTED_ORIGINS") else []
+CORS_ALLOWED_ORIGINS = os.environ.get("CORS_ALLOWED_ORIGINS", "").split(",") if os.environ.get(
+    "CORS_ALLOWED_ORIGINS") else []
+CSRF_TRUSTED_ORIGINS = os.environ.get("CSRF_TRUSTED_ORIGINS", "").split(",") if os.environ.get(
+    "CSRF_TRUSTED_ORIGINS") else []
 
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
@@ -155,7 +157,15 @@ EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", default="")
 EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", default="")
 DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", default="")
 
-SESSION_COOKIE_AGE = os.environ.get("SESSION_COOKIE_AGE")
+# Django expects SECONDS (ints), not timedelta:
+SESSION_COOKIE_AGE = env_int("SESSION_COOKIE_AGE", 60 * 60 * 24 * 30)  # 30 days
+CSRF_COOKIE_AGE = env_int("CSRF_COOKIE_AGE", 60 * 60 * 24 * 7)  # 7 days
+
+# Password reset (Django expects seconds)
+PASSWORD_RESET_TIMEOUT = env_int("PASSWORD_RESET_TIMEOUT", 60 * 60 * 24 * 3)  # 3 days
+
+# Security (ints, not timedeltas)
+SECURE_HSTS_SECONDS = env_int("SECURE_HSTS_SECONDS", 31536000)  # 1 year
 
 AUTHENTICATION_BACKENDS = [
     "django.contrib.auth.backends.ModelBackend",
