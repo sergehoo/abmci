@@ -9,6 +9,7 @@ from phonenumber_field.formfields import PhoneNumberField
 from phonenumber_field.phonenumber import to_python
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
+from django.contrib.gis.db.models.functions import Distance as DistanceFunc
 
 from event.models import ParticipationEvenement
 from fidele.models import Fidele, UserProfileCompletion, Eglise, SEXE_CHOICES, MARITAL_CHOICES, Location, FidelePosition
@@ -119,15 +120,28 @@ class CustomRegisterSerializer(RegisterSerializer):
         })
         return cleaned
 
+    # def _find_nearest_eglise(self, point):
+    #     if point is None:
+    #         return None
+    #     qs = (Eglise.objects
+    #           .exclude(location__isnull=True)
+    #           .filter(location__distance_lte=(point, D(km=self.NEARBY_RADIUS_KM)))
+    #           .annotate(distance=Distance("location", point))
+    #           .order_by("distance"))
+    #     return qs.first()
     def _find_nearest_eglise(self, point):
+        """
+        Retourne l'église la plus proche dans le rayon NEARBY_RADIUS_KM, sinon None.
+        """
         if point is None:
             return None
-        qs = (Eglise.objects
-              .exclude(location__isnull=True)
-              .filter(location__distance_lte=(point, D(km=self.NEARBY_RADIUS_KM)))
-              .annotate(distance=Distance("location", point))
-              .order_by("distance"))
-        return qs.first()
+
+        return (Eglise.objects
+                .exclude(location__isnull=True)
+                .filter(location__distance_lte=(point, D(km=self.NEARBY_RADIUS_KM)))
+                .annotate(distance=DistanceFunc('location', point))
+                .order_by('distance')
+                .first())
 
     @transaction.atomic
     def save(self, request):
