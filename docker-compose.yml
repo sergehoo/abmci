@@ -76,7 +76,7 @@ services:
     image: prom/prometheus:latest
     container_name: abmciprometheus
     volumes:
-      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring:/etc/prometheus:ro
     ports:
       - "9098:9090"
     restart: unless-stopped
