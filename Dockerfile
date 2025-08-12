@@ -47,4 +47,5 @@ RUN mkdir -p /app/staticfiles /app/media
 EXPOSE 8000
 ENTRYPOINT ["/entrypoint.sh"]
 # Démarre Daphne (Channels)
-CMD ["daphne", "-b", "0.0.0.0", "-p", "8000", "abmci.asgi:application"]
+#CMD ["daphne", "-b", "0.0.0.0", "-p", "8000", "abmci.asgi:application"]
+CMD ["gunicorn", "abmci.asgi:application", "--bind=0.0.0.0:8000", "--workers=4", "--timeout=180", "--access-logfile=-", "--error-logfile=-", "--capture-output", "--log-level=info"]
