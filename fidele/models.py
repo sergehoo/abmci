@@ -135,6 +135,15 @@ class Eglise(models.Model):
 
     # 📍 géométrie: SRID=4326 (WGS84), ordres (lon, lat) !
     location = gis_models.PointField(srid=4326, null=True, blank=True)
+    verse_du_jour = models.TextField(null=True, blank=True)
+    verse_reference = models.CharField(max_length=100, null=True, blank=True)
+    verse_date = models.DateField(default=timezone.now)
+
+    def save(self, *args, **kwargs):
+        # Mettre à jour la date seulement si le verset change
+        if self.pk and 'verse_du_jour' in kwargs.get('update_fields', []):
+            self.verse_date = timezone.now().date()
+        super().save(*args, **kwargs)
 
 
     def __str__(self):

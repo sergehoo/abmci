@@ -277,3 +277,8 @@ class ParticipationEvenementSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Vous avez déjà scanné ce QR code.")
 
         return data
+
+class EgliseSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Eglise
+        fields = ['id', 'name', 'ville', 'pasteur', 'verse_du_jour', 'verse_reference', 'verse_date']
