@@ -4,13 +4,15 @@ DEBUG = True
 ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "").split(",") if os.environ.get("ALLOWED_HOSTS") else []
 
 # Postgres recommandé en prod
-DATABASES["default"] = {
+DATABASES = {
+  "default": {
     "ENGINE": "django.contrib.gis.db.backends.postgis",
     "NAME": os.environ.get("DB_NAME"),
     "USER": os.environ.get("DB_USER"),
     "PASSWORD": os.environ.get("DB_PASSWORD"),
     "HOST": os.environ.get("DB_HOST"),
-    "PORT": os.environ.get("DB_PORT", default="5432"),
+    "PORT": os.environ.get("DB_PORT", "5432"),
+  }
 }
 
 CSRF_COOKIE_SECURE = True
