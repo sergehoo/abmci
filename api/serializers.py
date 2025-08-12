@@ -278,7 +278,12 @@ class ParticipationEvenementSerializer(serializers.ModelSerializer):
 
         return data
 
-class EgliseSerializer(serializers.ModelSerializer):
+class VerseDuJourSerializer(serializers.ModelSerializer):
+    # On expose exactement les clés attendues par l'app
+    text = serializers.CharField(source='verse_du_jour', allow_blank=True, required=False)
+    reference = serializers.CharField(source='verse_reference', allow_blank=True, required=False)
+    date = serializers.DateField(source='verse_date', required=False)
+
     class Meta:
         model = Eglise
-        fields = ['id', 'name', 'ville', 'pasteur', 'verse_du_jour', 'verse_reference', 'verse_date']
+        fields = ('text', 'reference', 'date')

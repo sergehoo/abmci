@@ -20,7 +20,7 @@ from drf_yasg import openapi
 from rest_framework.views import APIView
 
 from api.serializers import UserSerializer, FideleSerializer, FideleCreateUpdateSerializer, \
-    UserProfileCompletionSerializer, ParticipationEvenementSerializer, EgliseSerializer
+    UserProfileCompletionSerializer, ParticipationEvenementSerializer, VerseDuJourSerializer
 from event.models import ParticipationEvenement, Evenement
 from fidele.models import Fidele, UserProfileCompletion, Eglise
 
@@ -220,10 +220,13 @@ class ParticipationListCreateView(generics.ListCreateAPIView):
 
 
 class VerseDuJourView(generics.RetrieveAPIView):
-    serializer_class = EgliseSerializer
-    permission_classes = [IsAuthenticated]
+    serializer_class = VerseDuJourSerializer
+    permission_classes = [permissions.IsAuthenticated]
 
     def get_object(self):
-        # Récupère l'église du fidèle connecté
-        fidele = self.request.user.fidele
+        # Église du fidèle connecté
+        fidele = getattr(self.request.user, 'fidele', None)
+        if not fidele or not fidele.eglise_id:
+            # Laisse DRF renvoyer 404 proprement
+            raise get_object_or_404(Eglise, pk=-1)  # forcera 404
         return get_object_or_404(Eglise, pk=fidele.eglise_id)
