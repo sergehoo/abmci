@@ -20,9 +20,9 @@ error() { printf "\033[1;31m[ERR ]\033[0m %s\n" "$*" >&2; }
 : "${COLLECTSTATIC:=auto}"     # auto|always|skip
 : "${RUN_MIGRATIONS:=1}"       # 1 pour exécuter les migrations au démarrage
 : "${CREATE_SUPERUSER:=0}"     # 1 pour créer un superuser si non présent
-: "${DJANGO_SUPERUSER_USERNAME:=admin}"
-: "${DJANGO_SUPERUSER_EMAIL:=admin@example.com}"
-: "${DJANGO_SUPERUSER_PASSWORD:=admin}"
+#: "${DJANGO_SUPERUSER_USERNAME:=admin}"
+#: "${DJANGO_SUPERUSER_EMAIL:=admin@example.com}"
+#: "${DJANGO_SUPERUSER_PASSWORD:=admin}"
 
 # ---------- Wait for Postgres ----------
 wait_for_postgres() {
