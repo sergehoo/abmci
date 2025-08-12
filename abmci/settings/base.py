@@ -146,14 +146,14 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 EMAIL_HOST = os.environ.get("EMAIL_HOST", default="")
-EMAIL_PORT = os.environ.get("EMAIL_PORT", cast=int, default=465)
-EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", cast=bool, default=False)
-EMAIL_USE_SSL = os.environ.get("EMAIL_USE_SSL", cast=bool, default=True)
+EMAIL_PORT = os.environ.get("EMAIL_PORT")
+EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS")
+EMAIL_USE_SSL = os.environ.get("EMAIL_USE_SSL")
 EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", default="")
 EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", default="")
 DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", default="")
 
-SESSION_COOKIE_AGE = os.environ.get("SESSION_COOKIE_AGE", cast=int, default=60 * 60 * 24 * 30)
+SESSION_COOKIE_AGE = os.environ.get("SESSION_COOKIE_AGE")
 
 AUTHENTICATION_BACKENDS = [
     "django.contrib.auth.backends.ModelBackend",
@@ -174,8 +174,8 @@ CHANNEL_LAYERS = {
 }
 
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
-CSRF_COOKIE_SECURE = os.environ.get("CSRF_COOKIE_SECURE", cast=bool, default=False)
-SESSION_COOKIE_SECURE = os.environ.get("SESSION_COOKIE_SECURE", cast=bool, default=False)
+CSRF_COOKIE_SECURE = os.environ.get("CSRF_COOKIE_SECURE")
+SESSION_COOKIE_SECURE = os.environ.get("SESSION_COOKIE_SECURE")
 
 # ====== ORANGE SMS ======
 ORANGE_TOKEN_URL = os.environ.get("ORANGE_TOKEN_URL", default="https://api.orange.com/oauth/v3/token")
