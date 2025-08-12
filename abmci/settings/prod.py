@@ -1,6 +1,6 @@
 # abmci/settings/prod.py
 from .base import *
-DEBUG = False
+DEBUG = True
 ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "").split(",") if os.environ.get("ALLOWED_HOSTS") else []
 
 # Postgres recommandé en prod
