@@ -33,8 +33,6 @@ LOGGING = {
     "root": {"handlers": ["console"], "level": "INFO"},
 }
 
-DEBUG = False
-SECRET_KEY = os.getenv("SECRET_KEY")  # mets une vraie clé longue
 
 SECURE_SSL_REDIRECT = True
 SECURE_HSTS_SECONDS = 31536000         # 1 an
