@@ -14,13 +14,16 @@ def env_int(key: str, default: int) -> int:
         return default
 
 
-SECRET_KEY = os.environ.get("SECRET_KEY")
+# SECRET_KEY = os.environ.get("SECRET_KEY")
+SECRET_KEY = 'django-insecure-+qv9un1&5@8q&yl5*^-jl_iw066p2o%7hdxsom0fqyn1^^cr@x'
+
 DEBUG = os.environ.get("DEBUG")
 
 ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "").split(",") if os.environ.get("ALLOWED_HOSTS") else []
 
 INSTALLED_APPS = [
     "django.contrib.admin",
+    "django.contrib.gis",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
@@ -125,6 +128,8 @@ REST_AUTH = {
     "JWT_AUTH_COOKIE": "auth",
     "JWT_AUTH_REFRESH_COOKIE": "refresh",
     "USER_DETAILS_SERIALIZER": "api.serializers.CustomUserDetailsSerializer",
+    'REGISTER_SERIALIZER': 'api.serializers.CustomRegisterSerializer',
+
 }
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=env_int("JWT_ACCESS_MIN", 60)),
@@ -175,6 +180,7 @@ ACCOUNT_FORMS = {
     "signup": "fidele.form.FideleSignupForm",
     "login": "fidele.form.FideleLoginForm",
 }
+
 LOGIN_REDIRECT_URL = "/"
 LOGOUT_REDIRECT_URL = "account_login"
 

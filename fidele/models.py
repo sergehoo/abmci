@@ -11,7 +11,7 @@ from django.utils.timezone import now
 from simple_history.models import HistoricalRecords
 from django_countries.fields import CountryField
 from phonenumber_field.modelfields import PhoneNumberField
-
+from django.contrib.gis.db import models as gis_models
 # Create your models here.
 
 MARITAL_CHOICES = [
@@ -129,12 +129,16 @@ class Location(models.Model):
 
 
 class Eglise(models.Model):
-    name = models.CharField(null=True, blank=True, max_length=250, )
-    ville = models.CharField(null=True, blank=True, max_length=250, )
-    pasteur = models.CharField(null=True, blank=True, max_length=250, )
+    name = models.CharField(max_length=250, null=True, blank=True)
+    ville = models.CharField(max_length=250, null=True, blank=True)
+    pasteur = models.CharField(max_length=250, null=True, blank=True)
+
+    # 📍 géométrie: SRID=4326 (WGS84), ordres (lon, lat) !
+    location = gis_models.PointField(srid=4326, null=True, blank=True)
+
 
     def __str__(self):
-        return self.name
+        return self.name or "Église sans nom"
 
 
 class ProblemeParticulier(models.Model):
@@ -280,6 +284,32 @@ class Fidele(models.Model):
             if difference < 90 and self.membre == 0:
                 return "Visiteur"
         return "Sympathisant"
+
+
+class FidelePosition(models.Model):
+    SOURCES = (
+        ("manual", "Manual"),
+        ("browser", "Browser"),
+        ("mobile_gps", "Mobile GPS"),
+        ("other", "Other"),
+    )
+
+    fidele = models.ForeignKey("Fidele", on_delete=models.CASCADE, related_name="positions")
+    latitude = models.DecimalField(max_digits=9, decimal_places=6)  # -90..90
+    longitude = models.DecimalField(max_digits=9, decimal_places=6)  # -180..180
+    accuracy = models.DecimalField(max_digits=7, decimal_places=2, null=True, blank=True)  # en mètres
+    captured_at = models.DateTimeField(default=timezone.now)
+    source = models.CharField(max_length=20, choices=SOURCES, default="manual")
+    note = models.CharField(max_length=255, null=True, blank=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["fidele", "captured_at"]),
+        ]
+        ordering = ["-captured_at"]
+
+    def __str__(self):
+        return f"{self.fidele_id} @ ({self.latitude}, {self.longitude}) {self.captured_at:%Y-%m-%d %H:%M}"
 
 
 class UserProfileCompletion(models.Model):

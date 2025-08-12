@@ -1,8 +1,11 @@
 from django.contrib import admin
+from django.contrib.gis.admin import GISModelAdmin
+from django.contrib.gis.forms import OSMWidget
 from simple_history.admin import SimpleHistoryAdmin
-
+from django.contrib.gis import admin as gis_admin
 from fidele.models import Department, MembreType, Fidele, Location, TypeLocation, Fonction, OuvrierPermanence, \
     Permanence, Eglise, Familles, SujetPriere, ProblemeParticulier, UserProfileCompletion
+from django.contrib.gis.db import models
 
 # Register your models here.
 admin.site.site_header = 'BACK-END ABMCI'
@@ -74,16 +77,36 @@ class UserProfileCompletionAdmin(admin.ModelAdmin):
     user_info.short_description = "Informations utilisateur"
 
 
+class CustomOSMWidget(OSMWidget):
+    # Paramètres par défaut pour la Côte d'Ivoire (Abidjan)
+    default_lon = -3.961808   # Longitude
+    default_lat = 5.386192    # Latitude
+    default_zoom = 15
+
+
 @admin.register(Eglise)
-class EgliseAdmin(SimpleHistoryAdmin):
-    list_display = ("id", "name", "ville")
-    # IMPORTANT: provide search_fields (used by autocomplete)
-    search_fields = ("name", "ville", "pays")
+class EgliseAdmin(GISModelAdmin):
+    list_display = ("name", "ville", "pasteur")
+    search_fields = ("name", "ville", "pasteur")
+    list_filter = ("ville",)
+
+    # Configuration du widget de carte
+    formfield_overrides = {
+        models.PointField: {
+            "widget": CustomOSMWidget(
+                attrs={
+                    'map_width': 1000,
+                    'map_height': 500,
+                    'display_raw': True,
+                }
+            )
+        }
+    }
 
 
 @admin.register(Fidele)
 class FideleAdmin(SimpleHistoryAdmin):
-    list_display = ("id", "user", "phone", "eglise", "type_membre","date_entree")
+    list_display = ("id", "user", "phone", "eglise", "type_membre", "date_entree")
     # IMPORTANT: provide search_fields (used by autocomplete)
     search_fields = ("user__first_name", "user__last_name", "phone", "qlook_id")
     list_filter = ("eglise", "type_membre")
