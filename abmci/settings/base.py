@@ -133,15 +133,15 @@ USE_TZ = True
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "rest_framework.authentication.BasicAuthentication",
-        "rest_framework.authentication.SessionAuthentication",
+        # "rest_framework.authentication.SessionAuthentication",
         "dj_rest_auth.jwt_auth.JWTCookieAuthentication",
     ],
     "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.IsAuthenticated"],
 }
 REST_AUTH = {
     "USE_JWT": True,
-    "JWT_AUTH_COOKIE": "auth",
-    "JWT_AUTH_REFRESH_COOKIE": "refresh",
+    "JWT_AUTH_COOKIE": None,  # pas de cookie JWT en mobile
+    "JWT_AUTH_REFRESH_COOKIE": None,
     "USER_DETAILS_SERIALIZER": "api.serializers.CustomUserDetailsSerializer",
     'REGISTER_SERIALIZER': 'api.serializers.CustomRegisterSerializer',
 
