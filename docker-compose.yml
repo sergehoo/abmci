@@ -11,11 +11,17 @@ services:
       - "1108:8000"
     env_file:
       - .env
+    environment:
+      # Facultatif mais utile pour GeoDjango (amd64)
+      GDAL_LIBRARY_PATH: /usr/lib/x86_64-linux-gnu/libgdal.so
+      GEOS_LIBRARY_PATH: /usr/lib/x86_64-linux-gnu/libgeos_c.so
     depends_on:
       abmcidb:
         condition: service_healthy
       redis:
         condition: service_started
+    networks:
+      - abmci-network
     restart: unless-stopped
 
   abmcidb:
@@ -32,14 +38,16 @@ services:
       interval: 10s
       timeout: 5s
       retries: 8
-    restart: unless-stopped
     networks:
       - abmci-network
+    restart: unless-stopped
 
   redis:
     image: redis:7
     container_name: abmciredis
     command: ["redis-server", "--appendonly", "yes"]
+    networks:
+      - abmci-network
     restart: unless-stopped
 
   celery:
@@ -48,13 +56,18 @@ services:
     command: celery -A abmci worker --loglevel=info
     volumes:
       - .:/app
+    env_file:
+      - .env
+    environment:
+      GDAL_LIBRARY_PATH: /usr/lib/x86_64-linux-gnu/libgdal.so
+      GEOS_LIBRARY_PATH: /usr/lib/x86_64-linux-gnu/libgeos_c.so
     depends_on:
       abmcidb:
         condition: service_healthy
       redis:
         condition: service_started
-    env_file:
-      - .env
+    networks:
+      - abmci-network
     restart: unless-stopped
 
   celery-beat:
@@ -63,22 +76,29 @@ services:
     command: celery -A abmci beat --loglevel=info
     volumes:
       - .:/app
+    env_file:
+      - .env
+    environment:
+      GDAL_LIBRARY_PATH: /usr/lib/x86_64-linux-gnu/libgdal.so
+      GEOS_LIBRARY_PATH: /usr/lib/x86_64-linux-gnu/libgeos_c.so
     depends_on:
       abmcidb:
         condition: service_healthy
       redis:
         condition: service_started
-    env_file:
-      - .env
+    networks:
+      - abmci-network
     restart: unless-stopped
 
   prometheus:
     image: prom/prometheus:latest
     container_name: abmciprometheus
     volumes:
-      - ./monitoring:/etc/prometheus:ro
+      - ./monitoring:/etc/prometheus:ro   # <-- assure-toi que ./monitoring/prometheus.yml existe
     ports:
       - "9098:9090"
+    networks:
+      - abmci-network
     restart: unless-stopped
 
   grafana:
@@ -88,14 +108,18 @@ services:
       - "3008:3000"
     volumes:
       - grafana_data:/var/lib/grafana
+    networks:
+      - abmci-network
     restart: unless-stopped
 
   adminer:
     image: adminer
     container_name: abmci-adminer
-    restart: unless-stopped
     ports:
       - "1208:8080"
+    networks:
+      - abmci-network
+    restart: unless-stopped
 
 volumes:
   postgres_data:
