@@ -5,7 +5,7 @@ ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "").split(",") if os.environ.get
 
 # Postgres recommandé en prod
 DATABASES["default"] = {
-    "ENGINE": "django.db.backends.postgresql",
+    "ENGINE": "django.contrib.gis.db.backends.postgis",
     "NAME": os.environ.get("DB_NAME"),
     "USER": os.environ.get("DB_USER"),
     "PASSWORD": os.environ.get("DB_PASSWORD"),
