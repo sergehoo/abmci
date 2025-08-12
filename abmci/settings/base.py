@@ -171,7 +171,6 @@ MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
-
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 EMAIL_HOST = os.environ.get("EMAIL_HOST", default="")
 EMAIL_PORT = os.environ.get("EMAIL_PORT")
@@ -202,6 +201,13 @@ ACCOUNT_FORMS = {
 
 LOGIN_REDIRECT_URL = "/"
 LOGOUT_REDIRECT_URL = "account_login"
+
+
+ACCOUNT_AUTHENTICATION_METHOD = "email"
+ACCOUNT_EMAIL_REQUIRED = True
+ACCOUNT_USERNAME_REQUIRED = False
+# ACCOUNT_EMAIL_VERIFICATION = "mandatory"  # ou "optional"
+ACCOUNT_UNIQUE_EMAIL = True
 
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap4"
 CRISPY_TEMPLATE_PACK = "bootstrap4"
