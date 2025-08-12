@@ -44,6 +44,6 @@ platformdirs~=4.2.2
 zipp~=3.23.0
 tzdata~=2025.2
 notifications~=0.3.2
-decouple~=0.0.7
+python-decouple>=3.8
 psycopg2
 gunicorn
