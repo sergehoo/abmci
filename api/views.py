@@ -7,6 +7,7 @@ import json
 from datetime import timedelta
 
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -20,7 +21,7 @@ from drf_yasg import openapi
 from rest_framework.views import APIView
 
 from api.serializers import UserSerializer, FideleSerializer, FideleCreateUpdateSerializer, \
-    UserProfileCompletionSerializer, ParticipationEvenementSerializer, VerseDuJourSerializer
+    UserProfileCompletionSerializer, ParticipationEvenementSerializer, VerseDuJourSerializer, EvenementListSerializer
 from event.models import ParticipationEvenement, Evenement
 from fidele.models import Fidele, UserProfileCompletion, Eglise
 
@@ -230,3 +231,51 @@ class VerseDuJourView(generics.RetrieveAPIView):
             # Laisse DRF renvoyer 404 proprement
             raise get_object_or_404(Eglise, pk=-1)  # forcera 404
         return get_object_or_404(Eglise, pk=fidele.eglise_id)
+
+DEFAULT_HORIZON_DAYS = 60
+
+class UpcomingEventsView(generics.ListAPIView):
+    serializer_class = EvenementListSerializer
+    permission_classes = [permissions.IsAuthenticated]  # on filtre par l’église du fidèle
+
+    def get_queryset(self):
+        user = self.request.user
+        fidele = getattr(user, "fidele", None)
+
+        if not fidele or not fidele.eglise_id:
+            raise ValidationError("Aucune église associée à l'utilisateur.")
+
+        now = timezone.now()
+        days = int(self.request.query_params.get("days", DEFAULT_HORIZON_DAYS))
+        until = now + timezone.timedelta(days=days)
+
+        qs = (
+            Evenement.objects.select_related("eglise", "type")
+            .filter(
+                eglise_id=fidele.eglise_id,
+                date_fin__gte=now,              # pas encore fini
+                date_debut__lte=until,          # dans l’horizon
+            )
+            .order_by("date_debut", "id")
+        )
+
+        # Filtres optionnels
+        type_id = self.request.query_params.get("type_id")
+        if type_id:
+            qs = qs.filter(type_id=type_id)
+
+        q = self.request.query_params.get("q")
+        if q:
+            qs = qs.filter(Q(titre__icontains=q) | Q(lieu__icontains=q))
+
+        return qs
+
+
+class UpcomingEventsHomeView(UpcomingEventsView):
+    """Version allégée pour l’accueil — renvoie les N prochains (3 par défaut)."""
+    def list(self, request, *args, **kwargs):
+        limit = int(request.query_params.get("limit", 3))
+        self.pagination_class = None  # pas de pagination, on limite directement
+        queryset = self.filter_queryset(self.get_queryset())[:limit]
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)

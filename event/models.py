@@ -59,6 +59,12 @@ class Evenement(models.Model):
     recurrence_rule = models.TextField(null=True, blank=True)  # Pour stocker la règle de récurrence
     end_recurrence = models.DateTimeField(null=True, blank=True)  # Date de fin de récurrence
 
+    class Meta:
+        indexes = [
+            models.Index(fields=["eglise", "date_debut"]),
+            models.Index(fields=["date_fin"]),
+        ]
+
     # recurrence = RecurrenceField(null=True, blank=True)
     def generate_events(self):
         if not self.is_recurrent or not self.recurrence_rule:

@@ -2,7 +2,8 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 
 from api.views import VerifyEmailView, UserDetailView, FideleDetailView, FideleListView, ProfileCompletionView, \
-    FideleCreateView, ParticipationListCreateView, ScanQRCodeAPIView, VerseDuJourView
+    FideleCreateView, ParticipationListCreateView, ScanQRCodeAPIView, VerseDuJourView, UpcomingEventsView, \
+    UpcomingEventsHomeView
 
 router = DefaultRouter()
 
@@ -24,5 +25,7 @@ urlpatterns = [
     path('scan-qr/<str:event_code>/', ScanQRCodeAPIView.as_view(), name='scan-qr-code'),
 
     path('eglise/verse-du-jour/', VerseDuJourView.as_view(), name='verse-du-jour'),
+    path("events/upcoming/", UpcomingEventsView.as_view(), name="events-upcoming"),
+    path("events/home/", UpcomingEventsHomeView.as_view(), name="events-home"),
 
 ]

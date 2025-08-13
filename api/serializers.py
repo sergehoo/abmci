@@ -11,7 +11,7 @@ from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from django.contrib.gis.db.models.functions import Distance as DistanceFunc
 
-from event.models import ParticipationEvenement
+from event.models import ParticipationEvenement, TypeEvent, Evenement
 from fidele.models import Fidele, UserProfileCompletion, Eglise, SEXE_CHOICES, MARITAL_CHOICES, Location, FidelePosition
 from phonenumber_field.serializerfields import PhoneNumberField as DRFPhoneNumberField
 
@@ -287,3 +287,42 @@ class VerseDuJourSerializer(serializers.ModelSerializer):
     class Meta:
         model = Eglise
         fields = ('text', 'reference', 'date')
+
+class TypeEventSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TypeEvent
+        fields = ("id", "name")
+
+class EvenementListSerializer(serializers.ModelSerializer):
+    type = TypeEventSerializer(read_only=True)
+    eglise_name = serializers.CharField(source="eglise.name", read_only=True)
+    banner_url = serializers.SerializerMethodField()
+    is_same_day = serializers.SerializerMethodField()
+    participants_count = serializers.IntegerField(source="nombre_participants", read_only=True)
+
+    class Meta:
+        model = Evenement
+        fields = (
+            "id",
+            "code",
+            "eglise",
+            "eglise_name",
+            "titre",
+            "date_debut",
+            "date_fin",
+            "is_same_day",
+            "lieu",
+            "description",
+            "type",
+            "banner_url",
+            "participants_count",
+        )
+
+    def get_banner_url(self, obj):
+        request = self.context.get("request")
+        if obj.banner and hasattr(obj.banner, "url"):
+            return request.build_absolute_uri(obj.banner.url) if request else obj.banner.url
+        return None
+
+    def get_is_same_day(self, obj):
+        return obj.is_same_date()
