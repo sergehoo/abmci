@@ -401,6 +401,7 @@ class PrayerRequestSerializer(serializers.ModelSerializer):
 
 
 class PrayerCommentSerializer(serializers.ModelSerializer):
+    content = serializers.CharField(allow_blank=False, trim_whitespace=True)
     user = UserLiteSerializer(read_only=True)
 
     class Meta:
