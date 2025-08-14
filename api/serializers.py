@@ -12,7 +12,8 @@ from django.contrib.auth import get_user_model
 from django.contrib.gis.db.models.functions import Distance as DistanceFunc
 
 from event.models import ParticipationEvenement, TypeEvent, Evenement
-from fidele.models import Fidele, UserProfileCompletion, Eglise, SEXE_CHOICES, MARITAL_CHOICES, Location, FidelePosition
+from fidele.models import Fidele, UserProfileCompletion, Eglise, SEXE_CHOICES, MARITAL_CHOICES, Location, \
+    FidelePosition, PrayerComment, PrayerLike, PrayerCategory, PrayerRequest
 from phonenumber_field.serializerfields import PhoneNumberField as DRFPhoneNumberField
 
 # from .models import Fidele, UserProfileCompletion
@@ -88,9 +89,9 @@ def get_point_from_request(request):
 class CustomRegisterSerializer(RegisterSerializer):
     # Identité
     first_name = serializers.CharField(required=True, max_length=50)
-    last_name  = serializers.CharField(required=True, max_length=150)
-    phone      = DRFPhoneNumberField(region='CI', required=False, allow_null=True)
-    birthdate  = serializers.DateField(required=True)
+    last_name = serializers.CharField(required=True, max_length=150)
+    phone = DRFPhoneNumberField(region='CI', required=False, allow_null=True)
+    birthdate = serializers.DateField(required=True)
 
     # Champs fidèles
     sexe = serializers.ChoiceField(choices=SEXE_CHOICES, required=False, allow_null=True)
@@ -111,12 +112,12 @@ class CustomRegisterSerializer(RegisterSerializer):
         vd = self.validated_data
         cleaned.update({
             "first_name": vd.get("first_name", "").strip(),
-            "last_name":  vd.get("last_name", "").strip(),
-            "phone":      vd.get("phone"),
-            "birthdate":  vd.get("birthdate"),
-            "sexe":       vd.get("sexe"),
+            "last_name": vd.get("last_name", "").strip(),
+            "phone": vd.get("phone"),
+            "birthdate": vd.get("birthdate"),
+            "sexe": vd.get("sexe"),
             "situation_matrimoniale": vd.get("situation_matrimoniale"),
-            "eglise":     vd.get("eglise"),  # peut rester None → auto
+            "eglise": vd.get("eglise"),  # peut rester None → auto
         })
         return cleaned
 
@@ -151,7 +152,7 @@ class CustomRegisterSerializer(RegisterSerializer):
 
         # Maj nom/prénom
         user.first_name = data["first_name"]
-        user.last_name  = data["last_name"]
+        user.last_name = data["last_name"]
         user.save(update_fields=["first_name", "last_name"])
 
         # Récupérer position depuis request (headers/geoip), hors schéma public
@@ -169,15 +170,15 @@ class CustomRegisterSerializer(RegisterSerializer):
         fidele, _ = Fidele.objects.update_or_create(
             user=user,
             defaults={
-                "phone":      data.get("phone") or None,
-                "birthdate":  data.get("birthdate"),
-                "eglise":     selected_eglise,
+                "phone": data.get("phone") or None,
+                "birthdate": data.get("birthdate"),
+                "eglise": selected_eglise,
                 "date_entree": timezone.now().date(),
-                "sexe":       data.get("sexe"),
+                "sexe": data.get("sexe"),
                 "situation_matrimoniale": data.get("situation_matrimoniale"),
-                "location":   default_location,
-                "membre":     0,
-                "sortie":     0,
+                "location": default_location,
+                "membre": 0,
+                "sortie": 0,
                 "is_deleted": 0,
             },
         )
@@ -186,7 +187,7 @@ class CustomRegisterSerializer(RegisterSerializer):
         if point is not None:
             FidelePosition.objects.create(
                 fidele=fidele,
-                latitude=point.y,   # si tu as DecimalFields lat/lng
+                latitude=point.y,  # si tu as DecimalFields lat/lng
                 longitude=point.x,
                 accuracy=accuracy,
                 source=source,
@@ -194,6 +195,7 @@ class CustomRegisterSerializer(RegisterSerializer):
             )
 
         return user
+
 
 class CustomUserDetailsSerializer(serializers.ModelSerializer):
     class Meta:
@@ -278,6 +280,7 @@ class ParticipationEvenementSerializer(serializers.ModelSerializer):
 
         return data
 
+
 class VerseDuJourSerializer(serializers.ModelSerializer):
     # On expose exactement les clés attendues par l'app
     text = serializers.CharField(source='verse_du_jour', allow_blank=True, required=False)
@@ -288,10 +291,12 @@ class VerseDuJourSerializer(serializers.ModelSerializer):
         model = Eglise
         fields = ('text', 'reference', 'date')
 
+
 class TypeEventSerializer(serializers.ModelSerializer):
     class Meta:
         model = TypeEvent
         fields = ("id", "name")
+
 
 class EvenementListSerializer(serializers.ModelSerializer):
     type = TypeEventSerializer(read_only=True)
@@ -326,3 +331,86 @@ class EvenementListSerializer(serializers.ModelSerializer):
 
     def get_is_same_day(self, obj):
         return obj.is_same_date()
+
+
+class UserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'first_name', 'last_name', 'email']
+
+
+class UserLiteSerializer(serializers.ModelSerializer):
+    avatar = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'first_name', 'last_name', 'email', 'avatar']
+
+    def get_avatar(self, obj):
+        # Adapte selon ton modèle User (ex: profile.avatar.url)
+        try:
+            return obj.profile.avatar.url
+        except Exception:
+            return None
+
+
+class PrayerCategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PrayerCategory
+        fields = ['id', 'name', 'icon']
+
+
+class PrayerRequestSerializer(serializers.ModelSerializer):
+    user = UserLiteSerializer(read_only=True)
+    category = PrayerCategorySerializer(read_only=True)
+    category_id = serializers.PrimaryKeyRelatedField(
+        source='category', queryset=PrayerCategory.objects.all(), write_only=True, required=False, allow_null=True
+    )
+    comments_count = serializers.IntegerField(source='comments.count', read_only=True)
+    likes_count = serializers.IntegerField(source='likes.count', read_only=True)
+    has_liked = serializers.SerializerMethodField()
+    audio_note_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = PrayerRequest
+        fields = [
+            'id', 'title', 'content', 'prayer_type', 'is_anonymous',
+            'user', 'category', 'category_id',
+            'audio_note', 'audio_note_url',
+            'likes_count', 'comments_count', 'has_liked',
+            'created_at', 'updated_at'
+        ]
+        read_only_fields = ['user', 'likes_count', 'comments_count', 'has_liked', 'audio_note_url']
+
+    def get_has_liked(self, obj):
+        req = self.context.get('request')
+        return (req and req.user.is_authenticated and obj.likes.filter(user=req.user).exists())
+
+    def get_audio_note_url(self, obj):
+        return obj.audio_note.url if obj.audio_note else None
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if instance.is_anonymous:
+            # Masquer l’identité, garder l’ID pour modération si besoin
+            data['user'] = {
+                'id': 0, 'username': 'anonyme', 'first_name': 'Anonyme',
+                'last_name': '', 'email': '', 'avatar': None
+            }
+        return data
+
+
+class PrayerCommentSerializer(serializers.ModelSerializer):
+    user = UserLiteSerializer(read_only=True)
+
+    class Meta:
+        model = PrayerComment
+        fields = ['id', 'prayer', 'user', 'content', 'created_at']
+        read_only_fields = ['user', 'created_at']
+
+
+class PrayerLikeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PrayerLike
+        fields = ['id', 'prayer', 'user', 'created_at']
+        read_only_fields = ['user', 'created_at']

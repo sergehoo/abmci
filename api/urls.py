@@ -3,9 +3,12 @@ from rest_framework.routers import DefaultRouter
 
 from api.views import VerifyEmailView, UserDetailView, FideleDetailView, FideleListView, ProfileCompletionView, \
     FideleCreateView, ParticipationListCreateView, ScanQRCodeAPIView, VerseDuJourView, UpcomingEventsView, \
-    UpcomingEventsHomeView
+    UpcomingEventsHomeView, PrayerCategoryViewSet, PrayerRequestViewSet, PrayerCommentViewSet
 
 router = DefaultRouter()
+router.register(r'prayer-categories', PrayerCategoryViewSet, basename='prayer-category')
+router.register(r'prayer-requests', PrayerRequestViewSet, basename='prayerrequest')
+router.register(r'prayer-comments', PrayerCommentViewSet, basename='prayer-comment')
 
 urlpatterns = [
     path('', include(router.urls)),

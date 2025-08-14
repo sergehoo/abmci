@@ -12,6 +12,7 @@ from simple_history.models import HistoricalRecords
 from django_countries.fields import CountryField
 from phonenumber_field.modelfields import PhoneNumberField
 from django.contrib.gis.db import models as gis_models
+
 # Create your models here.
 
 MARITAL_CHOICES = [
@@ -144,7 +145,6 @@ class Eglise(models.Model):
         if self.pk and 'verse_du_jour' in kwargs.get('update_fields', []):
             self.verse_date = timezone.now().date()
         super().save(*args, **kwargs)
-
 
     def __str__(self):
         return self.name or "Église sans nom"
@@ -500,3 +500,68 @@ class Deces(models.Model):
     officiant = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='ceremonies_deces')
     hommage = models.TextField(blank=True)
     participants = models.ManyToManyField(Fidele, related_name='ceremonies_deces_participes', blank=True)
+
+
+class PrayerCategory(models.Model):
+    name = models.CharField(max_length=100, db_index=True)
+    icon = models.CharField(max_length=50, blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['name']
+
+    def __str__(self):
+        return self.name
+
+
+class PrayerRequest(models.Model):
+    PRAYER = 'PR'
+    EXHORTATION = 'EX'
+    INTERCESSION = 'IN'
+    TYPE_CHOICES = [
+        (PRAYER, 'Prière'),
+        (EXHORTATION, 'Exhortation'),
+        (INTERCESSION, 'Intercession'),
+    ]
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='prayers')
+    category = models.ForeignKey(
+        PrayerCategory, on_delete=models.SET_NULL, null=True, blank=True, related_name='prayers'
+    )
+    title = models.CharField(max_length=200, db_index=True)
+    content = models.TextField()
+    prayer_type = models.CharField(max_length=2, choices=TYPE_CHOICES, default=PRAYER, db_index=True)
+    audio_note = models.FileField(upload_to='prayer_audios/', null=True, blank=True)
+    is_anonymous = models.BooleanField(default=False)
+
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return self.title
+
+
+class PrayerComment(models.Model):
+    prayer = models.ForeignKey(PrayerRequest, on_delete=models.CASCADE, related_name='comments')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='prayer_comments')
+    content = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ['created_at']
+
+    def __str__(self):
+        return f"Comment by {self.user} on {self.prayer_id}"
+
+
+class PrayerLike(models.Model):
+    prayer = models.ForeignKey(PrayerRequest, on_delete=models.CASCADE, related_name='likes')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='prayer_likes')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('prayer', 'user')
+        indexes = [models.Index(fields=['prayer', 'user'])]

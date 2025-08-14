@@ -9,9 +9,12 @@ from datetime import timedelta
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
+from django.db.models import Q, Prefetch
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
-from rest_framework import generics, permissions, status
+from rest_framework import generics, permissions, status, viewsets
+from rest_framework.decorators import action
+from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.contrib.auth import get_user_model
@@ -21,9 +24,11 @@ from drf_yasg import openapi
 from rest_framework.views import APIView
 
 from api.serializers import UserSerializer, FideleSerializer, FideleCreateUpdateSerializer, \
-    UserProfileCompletionSerializer, ParticipationEvenementSerializer, VerseDuJourSerializer, EvenementListSerializer
+    UserProfileCompletionSerializer, ParticipationEvenementSerializer, VerseDuJourSerializer, EvenementListSerializer, \
+    PrayerCommentSerializer, PrayerCategorySerializer, PrayerRequestSerializer
 from event.models import ParticipationEvenement, Evenement
-from fidele.models import Fidele, UserProfileCompletion, Eglise
+from fidele.models import Fidele, UserProfileCompletion, Eglise, PrayerComment, PrayerRequest, PrayerLike, \
+    PrayerCategory
 
 # from .models import Fidele, UserProfileCompletion
 # from .serializers import (
@@ -279,3 +284,73 @@ class UpcomingEventsHomeView(UpcomingEventsView):
         queryset = self.filter_queryset(self.get_queryset())[:limit]
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
+
+
+class IsOwnerOrReadOnly(permissions.BasePermission):
+    def has_object_permission(self, request, view, obj):
+        if request.method in permissions.SAFE_METHODS: return True
+        return getattr(obj, 'user_id', None) == request.user.id
+
+class PrayerCategoryViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = PrayerCategory.objects.all()
+    serializer_class = PrayerCategorySerializer
+    permission_classes = [permissions.AllowAny]
+
+class PrayerRequestViewSet(viewsets.ModelViewSet):
+    serializer_class = PrayerRequestSerializer
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly, IsOwnerOrReadOnly]
+    parser_classes = [MultiPartParser, FormParser]  # pour audio
+
+    def get_queryset(self):
+        qs = PrayerRequest.objects.select_related('user', 'category') \
+            .prefetch_related('likes', Prefetch('comments', queryset=PrayerComment.objects.only('id')))
+        t = self.request.query_params.get('type')
+        q = self.request.query_params.get('q')
+        if t in {'PR', 'EX', 'IN'}:
+            qs = qs.filter(prayer_type=t)
+        if q:
+            qs = qs.filter(title__icontains=q) | qs.filter(content__icontains=q)
+        return qs.order_by('-created_at')
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+    @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])
+    def like(self, request, pk=None):
+        prayer = self.get_object()
+        like, created = PrayerLike.objects.get_or_create(prayer=prayer, user=request.user)
+        if not created:
+            like.delete()
+            return Response({
+                'status': 'unliked',
+                'likes_count': prayer.likes.count(),
+                'has_liked': False
+            }, status=200)
+        return Response({
+            'status': 'liked',
+            'likes_count': prayer.likes.count(),
+            'has_liked': True
+        }, status=201)
+
+    @action(detail=True, methods=['get', 'post'], permission_classes=[permissions.IsAuthenticatedOrReadOnly])
+    def comments(self, request, pk=None):
+        prayer = self.get_object()
+        if request.method == 'GET':
+            data = PrayerCommentSerializer(prayer.comments.select_related('user'), many=True).data
+            return Response(data)
+        # POST
+        ser = PrayerCommentSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        ser.save(prayer=prayer, user=request.user)
+        return Response(ser.data, status=201)
+
+class PrayerCommentViewSet(viewsets.ModelViewSet):
+    serializer_class = PrayerCommentSerializer
+    permission_classes = [permissions.IsAuthenticated, IsOwnerOrReadOnly]
+
+    def get_queryset(self):
+        return PrayerComment.objects.filter(user=self.request.user).select_related('user', 'prayer')
+
+    def perform_create(self, serializer):
+        prayer = get_object_or_404(PrayerRequest, pk=self.request.data.get('prayer'))
+        serializer.save(user=self.request.user, prayer=prayer)

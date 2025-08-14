@@ -1,10 +1,12 @@
 from django.contrib import admin
 from django.contrib.gis.admin import GISModelAdmin
 from django.contrib.gis.forms import OSMWidget
+from django.utils.html import format_html
 from simple_history.admin import SimpleHistoryAdmin
 from django.contrib.gis import admin as gis_admin
 from fidele.models import Department, MembreType, Fidele, Location, TypeLocation, Fonction, OuvrierPermanence, \
-    Permanence, Eglise, Familles, SujetPriere, ProblemeParticulier, UserProfileCompletion
+    Permanence, Eglise, Familles, SujetPriere, ProblemeParticulier, UserProfileCompletion, PrayerLike, PrayerComment, \
+    PrayerRequest, PrayerCategory
 from django.contrib.gis.db import models
 
 # Register your models here.
@@ -110,3 +112,106 @@ class FideleAdmin(SimpleHistoryAdmin):
     # IMPORTANT: provide search_fields (used by autocomplete)
     search_fields = ("user__first_name", "user__last_name", "phone", "qlook_id")
     list_filter = ("eglise", "type_membre")
+
+@admin.register(PrayerCategory)
+class PrayerCategoryAdmin(admin.ModelAdmin):
+    list_display = ('name', 'icon', 'created_at')
+    list_filter = ('created_at',)
+    search_fields = ('name',)
+    # prepopulated_fields = {'slug': ('name',)}  # Si vous ajoutez un champ slug
+    ordering = ('name',)
+    date_hierarchy = 'created_at'
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related()
+
+
+@admin.register(PrayerRequest)
+class PrayerRequestAdmin(admin.ModelAdmin):
+    list_display = (
+        'title',
+        'user',
+        'get_prayer_type_display',
+        'category',
+        'is_anonymous',
+        'created_at',
+        'comments_count',
+        'likes_count',
+        # 'audio_player'
+    )
+    list_filter = ('prayer_type', 'is_anonymous', 'category', 'created_at')
+    search_fields = ('title', 'content', 'user__username')
+    raw_id_fields = ('user', 'category')
+    date_hierarchy = 'created_at'
+    readonly_fields = ('created_at', 'updated_at', 'comments_count', 'likes_count')
+    fieldsets = (
+        (None, {
+            'fields': ('user', 'title', 'content', 'prayer_type', 'category')
+        }),
+        ('Média', {
+            'fields': ['audio_note'],
+            'classes': ('collapse',)
+        }),
+        ('Options', {
+            'fields': ('is_anonymous',),
+            'classes': ('collapse',)
+        }),
+        ('Dates', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+        ('Statistiques', {
+            'fields': ('comments_count', 'likes_count'),
+            'classes': ('collapse',)
+        }),
+    )
+
+    def comments_count(self, obj):
+        return obj.comments.count()
+    comments_count.short_description = 'Commentaires'
+
+    def likes_count(self, obj):
+        return obj.likes.count()
+    likes_count.short_description = 'Likes'
+
+    def audio_player(self, obj):
+        if obj.audio_note:
+            return format_html(
+                '<audio controls src="{}" style="width: 100%"></audio>',
+                obj.audio_note.url
+            )
+        return "-"
+    audio_player.short_description = 'Audio'
+
+    def get_queryset(self, request):
+        return super().get_queryset(request)\
+            .select_related('user', 'category')\
+            .prefetch_related('comments', 'likes')
+
+
+@admin.register(PrayerComment)
+class PrayerCommentAdmin(admin.ModelAdmin):
+    list_display = ('content', 'user', 'prayer', 'created_at')
+    list_filter = ('created_at',)
+    search_fields = ('content', 'user__username', 'prayer__title')
+    raw_id_fields = ('user', 'prayer')
+    date_hierarchy = 'created_at'
+    readonly_fields = ('created_at',)
+
+    def get_queryset(self, request):
+        return super().get_queryset(request)\
+            .select_related('user', 'prayer')
+
+
+@admin.register(PrayerLike)
+class PrayerLikeAdmin(admin.ModelAdmin):
+    list_display = ('user', 'prayer', 'created_at')
+    list_filter = ('created_at',)
+    search_fields = ('user__username', 'prayer__title')
+    raw_id_fields = ('user', 'prayer')
+    date_hierarchy = 'created_at'
+    readonly_fields = ('created_at',)
+
+    def get_queryset(self, request):
+        return super().get_queryset(request)\
+            .select_related('user', 'prayer')
