@@ -8,7 +8,7 @@ from datetime import timedelta
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
-from django.db import IntegrityError, transaction
+from django.db import IntegrityError, transaction, models
 from django.db.models import Q, Prefetch
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -306,17 +306,60 @@ class PrayerRequestViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticatedOrReadOnly, IsOwnerOrReadOnly]
     parser_classes = [MultiPartParser, FormParser]  # pour audio
 
+    # def get_queryset(self):
+    #     qs = PrayerRequest.objects.select_related('user', 'category') \
+    #         .prefetch_related('likes', Prefetch('comments', queryset=PrayerComment.objects.only('id')))
+    #     t = self.request.query_params.get('type')
+    #     q = self.request.query_params.get('q')
+    #     if t in {'PR', 'EX', 'IN'}:
+    #         qs = qs.filter(prayer_type=t)
+    #     if q:
+    #         qs = qs.filter(title__icontains=q) | qs.filter(content__icontains=q)
+    #     return qs.order_by('-created_at')
     def get_queryset(self):
+        # Chargement optimal des relations
         qs = PrayerRequest.objects.select_related('user', 'category') \
-            .prefetch_related('likes', Prefetch('comments', queryset=PrayerComment.objects.only('id')))
+            .prefetch_related(
+            'likes',
+            Prefetch('comments',
+                     queryset=PrayerComment.objects.select_related('user')
+                     .only('id', 'content', 'created_at', 'user_id', 'prayer_id')
+                     )
+        )
+
+        # Filtres
         t = self.request.query_params.get('type')
         q = self.request.query_params.get('q')
         if t in {'PR', 'EX', 'IN'}:
             qs = qs.filter(prayer_type=t)
         if q:
-            qs = qs.filter(title__icontains=q) | qs.filter(content__icontains=q)
+            qs = qs.filter(
+                models.Q(title__icontains=q) |
+                models.Q(content__icontains=q)
+            )
         return qs.order_by('-created_at')
 
+    @action(detail=True, methods=['get', 'post'], permission_classes=[permissions.IsAuthenticatedOrReadOnly])
+    def comments(self, request, pk=None):
+        prayer = self.get_object()
+        if request.method == 'GET':
+            # Version optimisée
+            comments = prayer.comments.select_related('user').all()
+            serializer = PrayerCommentSerializer(
+                comments,
+                many=True,
+                context={'request': request}
+            )
+            return Response(serializer.data)
+
+        # POST
+        serializer = PrayerCommentSerializer(
+            data=request.data,
+            context={'request': request}
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save(prayer=prayer, user=request.user)
+        return Response(serializer.data, status=201)
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
 
@@ -337,18 +380,24 @@ class PrayerRequestViewSet(viewsets.ModelViewSet):
             'has_liked': True
         }, status=201)
 
-    @action(detail=True, methods=['get', 'post'], permission_classes=[permissions.IsAuthenticatedOrReadOnly])
-    def comments(self, request, pk=None):
-        prayer = self.get_object()
-        if request.method == 'GET':
-            data = PrayerCommentSerializer(prayer.comments.select_related('user'), many=True).data
-            return Response(data)
-        # POST
-        ser = PrayerCommentSerializer(data=request.data)
-        ser.is_valid(raise_exception=True)
-        ser.save(prayer=prayer, user=request.user)
-        return Response(ser.data, status=201)
-
+    # action comments
+    # @action(detail=True, methods=['get', 'post'], permission_classes=[permissions.IsAuthenticatedOrReadOnly])
+    # def comments(self, request, pk=None):
+    #     prayer = self.get_object()
+    #     if request.method == 'GET':
+    #         qs = (PrayerComment.objects
+    #               .filter(prayer_id=prayer.id)
+    #               .select_related('user')
+    #               .order_by('created_at'))
+    #         data = PrayerCommentSerializer(qs, many=True).data
+    #         return Response(data)
+    #
+    #     # POST
+    #     ser = PrayerCommentSerializer(data=request.data)
+    #     ser.is_valid(raise_exception=True)
+    #     ser.save(prayer=prayer, user=request.user)
+    #     return Response(ser.data, status=201)
+    #
 
 class PrayerCommentViewSet(viewsets.ModelViewSet):
     serializer_class = PrayerCommentSerializer
