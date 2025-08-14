@@ -237,7 +237,9 @@ class VerseDuJourView(generics.RetrieveAPIView):
             raise get_object_or_404(Eglise, pk=-1)  # forcera 404
         return get_object_or_404(Eglise, pk=fidele.eglise_id)
 
+
 DEFAULT_HORIZON_DAYS = 60
+
 
 class UpcomingEventsView(generics.ListAPIView):
     serializer_class = EvenementListSerializer
@@ -258,8 +260,8 @@ class UpcomingEventsView(generics.ListAPIView):
             Evenement.objects.select_related("eglise", "type")
             .filter(
                 eglise_id=fidele.eglise_id,
-                date_fin__gte=now,              # pas encore fini
-                date_debut__lte=until,          # dans l’horizon
+                date_fin__gte=now,  # pas encore fini
+                date_debut__lte=until,  # dans l’horizon
             )
             .order_by("date_debut", "id")
         )
@@ -278,6 +280,7 @@ class UpcomingEventsView(generics.ListAPIView):
 
 class UpcomingEventsHomeView(UpcomingEventsView):
     """Version allégée pour l’accueil — renvoie les N prochains (3 par défaut)."""
+
     def list(self, request, *args, **kwargs):
         limit = int(request.query_params.get("limit", 3))
         self.pagination_class = None  # pas de pagination, on limite directement
@@ -291,10 +294,12 @@ class IsOwnerOrReadOnly(permissions.BasePermission):
         if request.method in permissions.SAFE_METHODS: return True
         return getattr(obj, 'user_id', None) == request.user.id
 
+
 class PrayerCategoryViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = PrayerCategory.objects.all()
     serializer_class = PrayerCategorySerializer
     permission_classes = [permissions.AllowAny]
+
 
 class PrayerRequestViewSet(viewsets.ModelViewSet):
     serializer_class = PrayerRequestSerializer
@@ -343,6 +348,7 @@ class PrayerRequestViewSet(viewsets.ModelViewSet):
         ser.is_valid(raise_exception=True)
         ser.save(prayer=prayer, user=request.user)
         return Response(ser.data, status=201)
+
 
 class PrayerCommentViewSet(viewsets.ModelViewSet):
     serializer_class = PrayerCommentSerializer
