@@ -401,13 +401,13 @@ class PrayerRequestSerializer(serializers.ModelSerializer):
 
 
 class PrayerCommentSerializer(serializers.ModelSerializer):
-    content = serializers.CharField(allow_blank=False, trim_whitespace=True)
+    # content = serializers.CharField(allow_blank=False, trim_whitespace=True)
     user = UserLiteSerializer(read_only=True)
 
     class Meta:
         model = PrayerComment
         fields = ['id', 'prayer', 'user', 'content', 'created_at']
-        read_only_fields = ['user', 'created_at']
+        read_only_fields = ['prayer', 'user', 'created_at']
 
 
 class PrayerLikeSerializer(serializers.ModelSerializer):
