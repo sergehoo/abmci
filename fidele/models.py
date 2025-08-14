@@ -544,6 +544,17 @@ class PrayerRequest(models.Model):
         return self.title
 
 
+class PrayerAttachment(models.Model):
+    class MediaType(models.TextChoices):
+        IMAGE = 'image', 'Image'
+        AUDIO = 'audio', 'Audio'
+
+    prayer = models.ForeignKey(PrayerRequest, related_name='attachments', on_delete=models.CASCADE)
+    kind = models.CharField(max_length=10, choices=MediaType.choices)
+    file = models.FileField(upload_to='prayers/')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+
 class PrayerComment(models.Model):
     prayer = models.ForeignKey(PrayerRequest, on_delete=models.CASCADE, related_name='comments')
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='prayer_comments')

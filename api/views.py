@@ -14,7 +14,7 @@ from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import generics, permissions, status, viewsets
 from rest_framework.decorators import action
-from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.contrib.auth import get_user_model
@@ -339,27 +339,28 @@ class PrayerRequestViewSet(viewsets.ModelViewSet):
             )
         return qs.order_by('-created_at')
 
-    @action(detail=True, methods=['get', 'post'], permission_classes=[permissions.IsAuthenticatedOrReadOnly])
+    # action comments
+    @action(
+        detail=True,
+        methods=['get', 'post'],
+        permission_classes=[permissions.IsAuthenticatedOrReadOnly],
+        parser_classes=[JSONParser, FormParser, MultiPartParser],  # ⬅️ accepte JSON + form + multipart
+    )
     def comments(self, request, pk=None):
         prayer = self.get_object()
         if request.method == 'GET':
-            # Version optimisée
-            comments = prayer.comments.select_related('user').all()
-            serializer = PrayerCommentSerializer(
-                comments,
-                many=True,
-                context={'request': request}
-            )
-            return Response(serializer.data)
+            qs = (PrayerComment.objects
+                  .filter(prayer_id=prayer.id)
+                  .select_related('user')
+                  .order_by('created_at'))
+            data = PrayerCommentSerializer(qs, many=True).data
+            return Response(data)
 
         # POST
-        serializer = PrayerCommentSerializer(
-            data=request.data,
-            context={'request': request}
-        )
-        serializer.is_valid(raise_exception=True)
-        serializer.save(prayer=prayer, user=request.user)
-        return Response(serializer.data, status=201)
+        ser = PrayerCommentSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        ser.save(prayer=prayer, user=request.user)
+        return Response(ser.data, status=201)
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
 
