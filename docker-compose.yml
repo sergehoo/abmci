@@ -5,7 +5,8 @@ services:
     command: gunicorn abmci.wsgi:application --bind 0.0.0.0:8000
     volumes:
       - .:/app
-      - static_volume:/app/staticfiles
+#      - static_volume:/app/staticfiles
+      - /var/www/abmci/staticfiles:/app/staticfiles
 #      - media_volume:/app/media
       - /var/www/abmci/media:/app/media
       - /home/ubuntu/abmci/creds/firebase-admin.json:/app/firebase-admin.json:ro
