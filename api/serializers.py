@@ -390,11 +390,18 @@ class PrayerRequestSerializer(serializers.ModelSerializer):
     #     return obj.audio_note.url if obj.audio_note else None
 
     def get_audio_note_url(self, obj):
+        request = self.context.get('request')
         if not obj.audio_note:
             return None
-        url = obj.audio_note.url
-        request = self.context.get('request')
-        return request.build_absolute_uri(url) if request else url
+        url = obj.audio_note.url  # souvent /media/...
+        # renvoie une URL ABSOLUE (https://administration.abmci.com/media/...)
+        if request is not None:
+            return request.build_absolute_uri(url)
+        from django.conf import settings
+        base = getattr(settings, 'SITE_ORIGIN', None) or getattr(settings, 'MEDIA_ORIGIN', None)
+        if base:
+            return f"{base.rstrip('/')}{url}"
+        return url
 
     def to_representation(self, instance):
         data = super().to_representation(instance)

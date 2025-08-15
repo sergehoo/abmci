@@ -1,3 +1,5 @@
+from django.conf import settings
+from django.conf.urls.static import static
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 
@@ -36,4 +38,5 @@ urlpatterns = [
     path("events/upcoming/", UpcomingEventsView.as_view(), name="events-upcoming"),
     path("events/home/", UpcomingEventsHomeView.as_view(), name="events-home"),
 
-]
+] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+

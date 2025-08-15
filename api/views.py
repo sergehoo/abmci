@@ -374,6 +374,11 @@ class PrayerRequestViewSet(viewsets.ModelViewSet):
             'has_liked': True
         }, status=201)
 
+    def get_serializer_context(self):
+        ctx = super().get_serializer_context()
+        ctx['request'] = self.request
+        return ctx
+
 
 class PrayerCommentViewSet(viewsets.ModelViewSet):
     serializer_class = PrayerCommentSerializer
