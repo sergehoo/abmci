@@ -452,8 +452,11 @@ class BibleVersionViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
         ser = BibleVerseSerializer(page, many=True)
         return self.get_paginated_response(ser.data)
 
+    def get_queryset(self):
+        return BibleVersion.objects.all().order_by('code')
+
 class BibleVerseViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
-    queryset = BibleVerse.objects.all().select_related("code")
+    queryset = BibleVerse.objects.all().select_related("version")
     serializer_class = BibleVerseSerializer
     pagination_class = PageNumberPagination
     permission_classes = [permissions.AllowAny]
@@ -477,3 +480,5 @@ class BibleVerseViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
         page = self.paginate_queryset(qs)
         ser = self.get_serializer(page, many=True)
         return self.get_paginated_response(ser.data)
+
+
