@@ -2,7 +2,10 @@ from abmci.celery import shared_task
 from django.utils import timezone
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
+
+from event.models import Evenement
 from .models import ParticipationEvenement
+from .notifications.fcm import send_to_topic
 
 
 @shared_task
@@ -31,3 +34,10 @@ def send_event_reminders():
                 [participation.fidele.user.email],
                 fail_silently=False,
             )
+
+@shared_task
+def push_verse_of_the_day(text: str, reference: str):
+    title = 'Verset du jour'
+    body = f'{text} — {reference}'
+    data = {'type': 'verse'}
+    send_to_topic('verse', title, body, data)

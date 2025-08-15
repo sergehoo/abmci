@@ -1,6 +1,7 @@
 import random
 from datetime import date
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import User
 from django.db import models
@@ -44,7 +45,21 @@ def qlook():
     qlook = ("QL" + str(random.randrange(0, 999999999, 1)) + "AB")
     return qlook
 
+class Device(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='devices')
+    token = models.CharField(max_length=255, unique=True)  # FCM token
+    platform = models.CharField(max_length=20, choices=[('android','Android'), ('ios','iOS')])
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    last_seen = models.DateTimeField(auto_now=True)
 
+class Notification(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='notifications')
+    title = models.CharField(max_length=140)
+    body = models.TextField(blank=True)
+    data = models.JSONField(default=dict, blank=True)  # deep-link payload (type, ids, etc)
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
 class Fonction(models.Model):
     name = models.CharField(max_length=200)
     description = models.TextField(null=True, blank=True)
@@ -189,6 +204,7 @@ class Familles(models.Model):
 
 class Fidele(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="fidele", )
+    firebase_uid = models.CharField(max_length=128, unique=True, null=True, blank=True)
     qlook_id = models.CharField(default=qlook, unique=True, editable=False, max_length=100)
     birthdate = models.DateField(null=True, blank=True)
     sexe = models.CharField(choices=SEXE_CHOICES, max_length=100, null=True, blank=True, )
@@ -576,3 +592,4 @@ class PrayerLike(models.Model):
     class Meta:
         unique_together = ('prayer', 'user')
         indexes = [models.Index(fields=['prayer', 'user'])]
+

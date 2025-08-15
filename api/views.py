@@ -25,10 +25,10 @@ from rest_framework.views import APIView
 
 from api.serializers import UserSerializer, FideleSerializer, FideleCreateUpdateSerializer, \
     UserProfileCompletionSerializer, ParticipationEvenementSerializer, VerseDuJourSerializer, EvenementListSerializer, \
-    PrayerCommentSerializer, PrayerCategorySerializer, PrayerRequestSerializer
+    PrayerCommentSerializer, PrayerCategorySerializer, PrayerRequestSerializer, NotificationSerializer, DeviceSerializer
 from event.models import ParticipationEvenement, Evenement
 from fidele.models import Fidele, UserProfileCompletion, Eglise, PrayerComment, PrayerRequest, PrayerLike, \
-    PrayerCategory
+    PrayerCategory, Notification, Device
 
 # from .models import Fidele, UserProfileCompletion
 # from .serializers import (
@@ -385,3 +385,32 @@ class PrayerCommentViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         prayer = get_object_or_404(PrayerRequest, pk=self.request.data.get('prayer'))
         serializer.save(user=self.request.user, prayer=prayer)
+
+class DeviceViewSet(viewsets.ModelViewSet):
+    serializer_class = DeviceSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return Device.objects.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        # upsert par token
+        instance, _ = Device.objects.update_or_create(
+            token=serializer.validated_data['token'],
+            defaults={
+                'user': self.request.user,
+                'platform': serializer.validated_data.get('platform', 'android')
+            }
+        )
+        self.instance = instance
+
+    def create(self, request, *args, **kwargs):
+        resp = super().create(request, *args, **kwargs)
+        return resp
+
+class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
+    serializer_class = NotificationSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return Notification.objects.filter(user=self.request.user).order_by('-created_at')

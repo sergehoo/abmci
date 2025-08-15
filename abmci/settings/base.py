@@ -1,8 +1,11 @@
 # abmci/settings/base.py
+import json
 import os
 import re
 from pathlib import Path
 from datetime import timedelta
+import firebase_admin
+from firebase_admin import credentials
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
@@ -249,3 +252,15 @@ CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = TIME_ZONE
+
+# Option A — chemin vers le fichier de service account (recommandé en local/Docker)
+# FIREBASE_SERVICE_ACCOUNT_PATH = os.environ.get("FIREBASE_SERVICE_ACCOUNT_PATH")  # ex: /run/secrets/firebase.json
+
+# Option B — contenu JSON du service account en variable d'env (recommandé en prod PaaS)
+_FIREBASE_SERVICE_ACCOUNT_JSON = os.environ.get("FIREBASE_SERVICE_ACCOUNT_JSON")
+FIREBASE_SERVICE_ACCOUNT_DICT = json.loads(_FIREBASE_SERVICE_ACCOUNT_JSON) if _FIREBASE_SERVICE_ACCOUNT_JSON else None
+
+FIREBASE_SERVICE_ACCOUNT_PATH = os.environ.get("FIREBASE_SERVICE_ACCOUNT_PATH")
+if FIREBASE_SERVICE_ACCOUNT_PATH and not firebase_admin._apps:
+    cred = credentials.Certificate(FIREBASE_SERVICE_ACCOUNT_PATH)
+    firebase_admin.initialize_app(cred)

@@ -4,6 +4,7 @@ import json
 from datetime import timedelta, datetime
 
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.models import User
 from django.core.serializers.json import DjangoJSONEncoder
 from django.http import HttpResponse, Http404
 from django.shortcuts import render, redirect
@@ -21,7 +22,13 @@ from reportlab.lib.utils import ImageReader
 
 from event.models import Evenement, ParticipationEvenement
 from reportlab.pdfgen import canvas
-
+from django.db import transaction
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import permissions
+from rest_framework_simplejwt.tokens import RefreshToken
+from firebase_admin import auth as fb_auth, _auth_utils
+import phonenumbers
 
 def generate_qr_code(data):
     qr = qrcode.QRCode(
@@ -39,6 +46,100 @@ def generate_qr_code(data):
     return buffer.getvalue()
 
 
+def normalize_phone(phone: str | None) -> str | None:
+    if not phone:
+        return None
+    try:
+        p = phonenumbers.parse(phone, None)
+        return phonenumbers.format_number(p, phonenumbers.PhoneNumberFormat.E164)
+    except Exception:
+        return phone
+
+class FirebaseLoginView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    @transaction.atomic
+    def post(self, request):
+        """
+        Body: { "id_token": "<Firebase ID token>" }
+        """
+        id_token = (request.data.get("id_token") or "").strip()
+        if not id_token:
+            return Response({"detail": "id_token manquant."}, status=400)
+
+        try:
+            decoded = fb_auth.verify_id_token(id_token)
+        except _auth_utils.InvalidIdTokenError:
+            return Response({"detail": "ID token invalide."}, status=401)
+        except _auth_utils.ExpiredIdTokenError:
+            return Response({"detail": "ID token expiré."}, status=401)
+        except Exception as e:
+            return Response({"detail": f"Vérification échouée: {e}"}, status=401)
+
+        uid = decoded.get("uid")
+        email = decoded.get("email")
+        email_verified = decoded.get("email_verified", False)
+        phone = normalize_phone(decoded.get("phone_number"))
+        provider = decoded.get("firebase", {}).get("sign_in_provider")  # 'password' | 'phone' | 'google.com'...
+
+        if not uid:
+            return Response({"detail": "UID Firebase manquant."}, status=400)
+
+        # Reconciliation
+        user = None
+        # 1) par firebase_uid
+        try:
+            user = User.objects.get(firebase_uid=uid)
+        except User.DoesNotExist:
+            pass
+        # 2) par email
+        if user is None and email:
+            try:
+                user = User.objects.get(email__iexact=email)
+            except User.DoesNotExist:
+                pass
+        # 3) par phone
+        if user is None and phone:
+            try:
+                user = User.objects.get(phone_number=phone)
+            except User.DoesNotExist:
+                pass
+        # 4) créer sinon
+        if user is None:
+            username = email or f"user_{uid[:8]}"
+            user = User.objects.create(
+                username=username,
+                email=email or "",
+                firebase_uid=uid,
+                phone_number=phone,
+                is_active=True,
+            )
+        else:
+            changed = False
+            if not getattr(user, "firebase_uid", None):
+                user.firebase_uid = uid; changed = True
+            if email and user.email != email:
+                user.email = email; changed = True
+            if phone and getattr(user, "phone_number", None) != phone:
+                user.phone_number = phone; changed = True
+            if changed:
+                user.save(update_fields=["firebase_uid","email","phone_number"])
+
+        # Politique : pour provider "password", refuser si e-mail non vérifié
+        if provider == "password" and email and not email_verified:
+            return Response({"detail": "E-mail non vérifié."}, status=403)
+
+        # Émettre un JWT pour consommer ton API
+        refresh = RefreshToken.for_user(user)
+        return Response({
+            "access": str(refresh.access_token),
+            "refresh": str(refresh),
+            "user": {
+                "id": user.pk,
+                "email": user.email,
+                "phone_number": getattr(user, "phone_number", None),
+            }
+        }, status=200)
 class EventCalendarView(TemplateView):
     template_name = "event/calendar_view.html"
 

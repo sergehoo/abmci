@@ -13,7 +13,7 @@ from django.contrib.gis.db.models.functions import Distance as DistanceFunc
 
 from event.models import ParticipationEvenement, TypeEvent, Evenement
 from fidele.models import Fidele, UserProfileCompletion, Eglise, SEXE_CHOICES, MARITAL_CHOICES, Location, \
-    FidelePosition, PrayerComment, PrayerLike, PrayerCategory, PrayerRequest
+    FidelePosition, PrayerComment, PrayerLike, PrayerCategory, PrayerRequest, Device, Notification
 from phonenumber_field.serializerfields import PhoneNumberField as DRFPhoneNumberField
 
 # from .models import Fidele, UserProfileCompletion
@@ -386,8 +386,15 @@ class PrayerRequestSerializer(serializers.ModelSerializer):
         req = self.context.get('request')
         return (req and req.user.is_authenticated and obj.likes.filter(user=req.user).exists())
 
+    # def get_audio_note_url(self, obj):
+    #     return obj.audio_note.url if obj.audio_note else None
+
     def get_audio_note_url(self, obj):
-        return obj.audio_note.url if obj.audio_note else None
+        if not obj.audio_note:
+            return None
+        url = obj.audio_note.url
+        request = self.context.get('request')
+        return request.build_absolute_uri(url) if request else url
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
@@ -415,3 +422,17 @@ class PrayerLikeSerializer(serializers.ModelSerializer):
         model = PrayerLike
         fields = ['id', 'prayer', 'user', 'created_at']
         read_only_fields = ['user', 'created_at']
+
+
+class DeviceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Device
+        fields = ['id', 'token', 'platform']
+        read_only_fields = ['id']
+
+
+class NotificationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Notification
+        fields = ['id', 'title', 'body', 'data', 'is_read', 'created_at']
+        read_only_fields = ['id', 'created_at']

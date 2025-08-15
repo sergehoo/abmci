@@ -3,16 +3,21 @@ from rest_framework.routers import DefaultRouter
 
 from api.views import VerifyEmailView, UserDetailView, FideleDetailView, FideleListView, ProfileCompletionView, \
     FideleCreateView, ParticipationListCreateView, ScanQRCodeAPIView, VerseDuJourView, UpcomingEventsView, \
-    UpcomingEventsHomeView, PrayerCategoryViewSet, PrayerRequestViewSet, PrayerCommentViewSet
+    UpcomingEventsHomeView, PrayerCategoryViewSet, PrayerRequestViewSet, PrayerCommentViewSet, DeviceViewSet, \
+    NotificationViewSet
+from event.views import FirebaseLoginView
 
 router = DefaultRouter()
 router.register(r'prayer-categories', PrayerCategoryViewSet, basename='prayer-category')
 router.register(r'prayer-requests', PrayerRequestViewSet, basename='prayerrequest')
 router.register(r'prayer-comments', PrayerCommentViewSet, basename='prayer-comment')
+router.register(r'devices', DeviceViewSet, basename='devices')
+router.register(r'notifications', NotificationViewSet, basename='notifications')
 
 urlpatterns = [
     path('', include(router.urls)),
     path('auth/', include('dj_rest_auth.urls')),
+    path('auth/firebase/', FirebaseLoginView.as_view(), name='firebase-login'),
     path('auth/registration/', include('dj_rest_auth.registration.urls')),
     path('auth/verify-email/<str:key>/', VerifyEmailView.as_view(), name='verify_email'),
 
