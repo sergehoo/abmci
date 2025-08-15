@@ -15,6 +15,7 @@ from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from rest_framework import generics, permissions, status, viewsets, mixins
 from rest_framework.decorators import action
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -452,8 +453,9 @@ class BibleVersionViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
         return self.get_paginated_response(ser.data)
 
 class BibleVerseViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
-    queryset = BibleVerse.objects.all().select_related("version")
+    queryset = BibleVerse.objects.all().select_related("code")
     serializer_class = BibleVerseSerializer
+    pagination_class = PageNumberPagination
     permission_classes = [permissions.AllowAny]
 
     def list(self, request, *args, **kwargs):

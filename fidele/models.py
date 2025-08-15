@@ -603,6 +603,9 @@ class BibleVersion(models.Model):
     etag = models.CharField(max_length=64, blank=True, default="")
     updated_at = models.DateTimeField(auto_now=True)
 
+    class Meta:
+        ordering = ['code']
+
     def __str__(self): return self.code
 
 

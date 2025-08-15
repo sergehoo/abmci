@@ -446,6 +446,7 @@ class NotificationSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'created_at']
 
 class BibleVersionSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = BibleVersion
         fields = ("id", "code", "name", "language", "total_verses", "etag", "updated_at")

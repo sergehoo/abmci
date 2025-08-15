@@ -5,13 +5,15 @@ DEBUG = True
 ALLOWED_HOSTS = ["localhost", "127.0.0.1", "10.0.2.2"]
 
 # SQLite par défaut (hérité), sinon:
-DATABASES["default"] = {
+DATABASES= {
+'default': {
     "ENGINE": "django.contrib.gis.db.backends.postgis",
     "NAME": os.environ.get("DB_NAME"),
     "USER": os.environ.get("DB_USER"),
     "PASSWORD": os.environ.get("DB_PASSWORD"),
     "HOST": os.environ.get("DB_HOST"),
     "PORT": os.environ.get("DB_PORT", default="5432"),
+}
 }
 
 CSRF_COOKIE_SECURE = False
