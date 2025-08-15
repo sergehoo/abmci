@@ -13,7 +13,8 @@ from django.contrib.gis.db.models.functions import Distance as DistanceFunc
 
 from event.models import ParticipationEvenement, TypeEvent, Evenement
 from fidele.models import Fidele, UserProfileCompletion, Eglise, SEXE_CHOICES, MARITAL_CHOICES, Location, \
-    FidelePosition, PrayerComment, PrayerLike, PrayerCategory, PrayerRequest, Device, Notification
+    FidelePosition, PrayerComment, PrayerLike, PrayerCategory, PrayerRequest, Device, Notification, BibleVersion, \
+    BibleVerse
 from phonenumber_field.serializerfields import PhoneNumberField as DRFPhoneNumberField
 
 # from .models import Fidele, UserProfileCompletion
@@ -443,3 +444,14 @@ class NotificationSerializer(serializers.ModelSerializer):
         model = Notification
         fields = ['id', 'title', 'body', 'data', 'is_read', 'created_at']
         read_only_fields = ['id', 'created_at']
+
+class BibleVersionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = BibleVersion
+        fields = ("id", "code", "name", "language", "total_verses", "etag", "updated_at")
+
+class BibleVerseSerializer(serializers.ModelSerializer):
+    version = serializers.SlugRelatedField(slug_field="code", read_only=True)
+    class Meta:
+        model = BibleVerse
+        fields = ("version", "book", "chapter", "verse", "text", "updated_at")

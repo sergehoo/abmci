@@ -12,7 +12,8 @@ from django.db import IntegrityError, transaction, models
 from django.db.models import Q, Prefetch
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
-from rest_framework import generics, permissions, status, viewsets
+from django.utils.dateparse import parse_datetime
+from rest_framework import generics, permissions, status, viewsets, mixins
 from rest_framework.decorators import action
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.permissions import IsAuthenticated
@@ -25,10 +26,11 @@ from rest_framework.views import APIView
 
 from api.serializers import UserSerializer, FideleSerializer, FideleCreateUpdateSerializer, \
     UserProfileCompletionSerializer, ParticipationEvenementSerializer, VerseDuJourSerializer, EvenementListSerializer, \
-    PrayerCommentSerializer, PrayerCategorySerializer, PrayerRequestSerializer, NotificationSerializer, DeviceSerializer
+    PrayerCommentSerializer, PrayerCategorySerializer, PrayerRequestSerializer, NotificationSerializer, \
+    DeviceSerializer, BibleVersionSerializer, BibleVerseSerializer
 from event.models import ParticipationEvenement, Evenement
 from fidele.models import Fidele, UserProfileCompletion, Eglise, PrayerComment, PrayerRequest, PrayerLike, \
-    PrayerCategory, Notification, Device
+    PrayerCategory, Notification, Device, BibleVersion, BibleVerse
 
 # from .models import Fidele, UserProfileCompletion
 # from .serializers import (
@@ -419,3 +421,57 @@ class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
         return Notification.objects.filter(user=self.request.user).order_by('-created_at')
+
+class BibleVersionViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
+    queryset = BibleVersion.objects.all()
+    serializer_class = BibleVersionSerializer
+    permission_classes = [permissions.AllowAny]
+
+    @action(detail=True, methods=["get"], url_path="verses")
+    def verses(self, request, pk=None):
+        """/bible/versions/<id>/verses/?updated_after=ISO8601&page=1"""
+        version = self.get_object()
+        qs = BibleVerse.objects.filter(version=version)
+
+        ua = request.query_params.get("updated_after")
+        if ua:
+            dt = parse_datetime(ua)
+            if dt:
+                qs = qs.filter(updated_at__gt=dt)
+
+        # filtres optionnels pour des téléchargements ciblés
+        b = request.query_params.get("book")
+        if b: qs = qs.filter(book=b)
+        ch = request.query_params.get("chapter")
+        if ch: qs = qs.filter(chapter=int(ch))
+
+        qs = qs.order_by("book", "chapter", "verse")
+
+        page = self.paginate_queryset(qs)
+        ser = BibleVerseSerializer(page, many=True)
+        return self.get_paginated_response(ser.data)
+
+class BibleVerseViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
+    queryset = BibleVerse.objects.all().select_related("version")
+    serializer_class = BibleVerseSerializer
+    permission_classes = [permissions.AllowAny]
+
+    def list(self, request, *args, **kwargs):
+        """Endpoint global optionnel: /bible/verses/?version=LSG&updated_after=..."""
+        qs = self.get_queryset()
+        v = request.query_params.get("version")
+        if v: qs = qs.filter(version__code=v)
+        ua = request.query_params.get("updated_after")
+        if ua:
+            dt = parse_datetime(ua)
+            if dt:
+                qs = qs.filter(updated_at__gt=dt)
+        b = request.query_params.get("book")
+        if b: qs = qs.filter(book=b)
+        ch = request.query_params.get("chapter")
+        if ch: qs = qs.filter(chapter=int(ch))
+
+        qs = qs.order_by("book", "chapter", "verse")
+        page = self.paginate_queryset(qs)
+        ser = self.get_serializer(page, many=True)
+        return self.get_paginated_response(ser.data)

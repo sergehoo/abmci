@@ -6,7 +6,7 @@ from simple_history.admin import SimpleHistoryAdmin
 from django.contrib.gis import admin as gis_admin
 from fidele.models import Department, MembreType, Fidele, Location, TypeLocation, Fonction, OuvrierPermanence, \
     Permanence, Eglise, Familles, SujetPriere, ProblemeParticulier, UserProfileCompletion, PrayerLike, PrayerComment, \
-    PrayerRequest, PrayerCategory
+    PrayerRequest, PrayerCategory, BibleVersion, BibleVerse
 from django.contrib.gis.db import models
 
 # Register your models here.
@@ -215,3 +215,18 @@ class PrayerLikeAdmin(admin.ModelAdmin):
     def get_queryset(self, request):
         return super().get_queryset(request)\
             .select_related('user', 'prayer')
+
+@admin.register(BibleVersion)
+class BibleVersionAdmin(admin.ModelAdmin):
+    list_display = ('code', 'name', 'language', 'total_verses', 'updated_at')
+    list_filter = ('language',)
+    search_fields = ('code', 'name')
+    ordering = ('code',)
+
+@admin.register(BibleVerse)
+class BibleVerseAdmin(admin.ModelAdmin):
+    list_display = ('version', 'book', 'chapter', 'verse', 'updated_at')
+    list_filter = ('version', 'book')
+    search_fields = ('book', 'text')
+    list_select_related = ('version',)
+    ordering = ('version', 'book', 'chapter', 'verse')

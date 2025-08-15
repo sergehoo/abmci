@@ -6,7 +6,7 @@ from rest_framework.routers import DefaultRouter
 from api.views import VerifyEmailView, UserDetailView, FideleDetailView, FideleListView, ProfileCompletionView, \
     FideleCreateView, ParticipationListCreateView, ScanQRCodeAPIView, VerseDuJourView, UpcomingEventsView, \
     UpcomingEventsHomeView, PrayerCategoryViewSet, PrayerRequestViewSet, PrayerCommentViewSet, DeviceViewSet, \
-    NotificationViewSet
+    NotificationViewSet, BibleVersionViewSet, BibleVerseViewSet
 from event.views import FirebaseLoginView
 
 router = DefaultRouter()
@@ -15,7 +15,8 @@ router.register(r'prayer-requests', PrayerRequestViewSet, basename='prayerreques
 router.register(r'prayer-comments', PrayerCommentViewSet, basename='prayer-comment')
 router.register(r'devices', DeviceViewSet, basename='devices')
 router.register(r'notifications', NotificationViewSet, basename='notifications')
-
+router.register("versions", BibleVersionViewSet, basename="bible-version")
+router.register("verses", BibleVerseViewSet, basename="bible-verse")
 urlpatterns = [
     path('', include(router.urls)),
     path('auth/', include('dj_rest_auth.urls')),

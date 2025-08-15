@@ -593,3 +593,32 @@ class PrayerLike(models.Model):
         unique_together = ('prayer', 'user')
         indexes = [models.Index(fields=['prayer', 'user'])]
 
+
+class BibleVersion(models.Model):
+    code = models.CharField(max_length=16, unique=True)  # ex: "LSG"
+    name = models.CharField(max_length=128)              # ex: "Louis Segond 1910"
+    language = models.CharField(max_length=16, default="fr")
+    total_verses = models.PositiveIntegerField(default=0)
+    # permet au client de savoir s'il doit resynchroniser
+    etag = models.CharField(max_length=64, blank=True, default="")
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self): return self.code
+
+
+class BibleVerse(models.Model):
+    version = models.ForeignKey(BibleVersion, on_delete=models.CASCADE, related_name="verses")
+    book = models.CharField(max_length=64)             # "Genèse"
+    chapter = models.PositiveIntegerField()
+    verse = models.PositiveIntegerField()
+    text = models.TextField()
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ("version", "book", "chapter", "verse")
+        indexes = [
+            models.Index(fields=["version", "book"]),
+            models.Index(fields=["version", "book", "chapter"]),
+        ]
+
+    def __str__(self): return f"{self.version.code} {self.book} {self.chapter}:{self.verse}"
