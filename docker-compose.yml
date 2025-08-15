@@ -8,6 +8,7 @@ services:
       - static_volume:/app/staticfiles
 #      - media_volume:/app/media
       - /var/www/abmci/media:/app/media
+      - /home/ubuntu/abmci/creds/firebase-admin.json:/app/firebase-admin.json:ro
     ports:
       - "1108:8000"
     env_file:
