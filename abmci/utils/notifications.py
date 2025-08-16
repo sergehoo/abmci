@@ -1,6 +1,7 @@
 # core/utils/notifications.py
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
+from django.conf import settings
 
 
 def send_realtime_notification(user_id, data: dict):
@@ -12,3 +13,17 @@ def send_realtime_notification(user_id, data: dict):
             "content": data
         }
     )
+
+def send_fcm_multicast(tokens, title='', body='', data=None):
+    if not tokens: return
+    headers = {
+        'Authorization': f'key={settings.FCM_SERVER_KEY}',
+        'Content-Type': 'application/json',
+    }
+    payload = {
+        'registration_ids': tokens,
+        'notification': {'title': title, 'body': body},
+        'data': data or {},
+        'android': {'priority': 'high'},
+        'apns': {'headers': {'apns-priority': '10'}},
+    }

@@ -13,9 +13,11 @@ from django.db.models import Q, Prefetch
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
+from django.utils.http import http_date
+from django.utils.timezone import now
 from rest_framework import generics, permissions, status, viewsets, mixins
 from rest_framework.decorators import action
-from rest_framework.pagination import PageNumberPagination
+from rest_framework.pagination import PageNumberPagination, LimitOffsetPagination
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -28,10 +30,10 @@ from rest_framework.views import APIView
 from api.serializers import UserSerializer, FideleSerializer, FideleCreateUpdateSerializer, \
     UserProfileCompletionSerializer, ParticipationEvenementSerializer, VerseDuJourSerializer, EvenementListSerializer, \
     PrayerCommentSerializer, PrayerCategorySerializer, PrayerRequestSerializer, NotificationSerializer, \
-    DeviceSerializer, BibleVersionSerializer, BibleVerseSerializer
+    DeviceSerializer, BibleVersionSerializer, BibleVerseSerializer, BibleTagCreateSerializer, BannerSerializer
 from event.models import ParticipationEvenement, Evenement
 from fidele.models import Fidele, UserProfileCompletion, Eglise, PrayerComment, PrayerRequest, PrayerLike, \
-    PrayerCategory, Notification, Device, BibleVersion, BibleVerse
+    PrayerCategory, Notification, Device, BibleVersion, BibleVerse, BibleTag, Banner
 
 # from .models import Fidele, UserProfileCompletion
 # from .serializers import (
@@ -482,3 +484,63 @@ class BibleVerseViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
         return self.get_paginated_response(ser.data)
 
 
+class BibleTagViewSet(viewsets.GenericViewSet):
+    queryset = BibleTag.objects.select_related('sender', 'recipient')
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_serializer_class(self):
+        return BibleTagCreateSerializer
+
+    def create(self, request, *args, **kwargs):
+        ser = self.get_serializer(data=request.data, context={'request': request})
+        ser.is_valid(raise_exception=True)
+        tag = ser.save()
+        return Response({'id': tag.id}, status=status.HTTP_201_CREATED)
+
+class BannerPagination(LimitOffsetPagination):
+    default_limit = 20
+    max_limit = 100
+
+class BannerListView(generics.ListAPIView):
+    """
+    GET /api/banners/?active=true|false (par défaut true)
+    Query params: limit, offset (pagination)
+    Renvoie ETag + Cache-Control.
+    """
+    serializer_class = BannerSerializer
+    permission_classes = [permissions.AllowAny]
+    pagination_class = BannerPagination
+
+    def get_queryset(self):
+        qs = Banner.objects.all()
+        active_param = self.request.query_params.get("active", "true").lower()
+        if active_param in ("1", "true", "yes"):
+            qs = qs.filter(active=True)
+        return qs.order_by("order", "-updated_at")
+
+    def list(self, request, *args, **kwargs):
+        qs = self.get_queryset()
+
+        # ETag basé sur le max(updated_at) + count
+        last_upd = qs.order_by("-updated_at").values_list("updated_at", flat=True).first()
+        count = qs.count()
+        base = f"{last_upd.isoformat() if last_upd else 'none'}:{count}"
+        etag = hashlib.md5(base.encode("utf-8")).hexdigest()
+
+        # Gestion If-None-Match -> 304 si identique
+        if_none_match = request.META.get("HTTP_IF_NONE_MATCH")
+        if if_none_match and if_none_match.strip('"') == etag:
+            resp = Response(status=304)
+            resp["ETag"] = f'"{etag}"'
+            resp["Cache-Control"] = "public, max-age=60"  # 1 min côté client
+            return resp
+
+        page = self.paginate_queryset(qs)
+        serializer = self.get_serializer(page, many=True, context={"request": request})
+        resp = self.get_paginated_response(serializer.data)
+
+        # Entêtes cache
+        resp["ETag"] = f'"{etag}"'
+        resp["Cache-Control"] = "public, max-age=60"
+        resp["Last-Modified"] = http_date((last_upd or now()).timestamp())
+        return resp

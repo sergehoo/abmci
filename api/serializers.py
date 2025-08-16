@@ -11,10 +11,11 @@ from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from django.contrib.gis.db.models.functions import Distance as DistanceFunc
 
+from abmci.utils.notifications import send_fcm_multicast
 from event.models import ParticipationEvenement, TypeEvent, Evenement
 from fidele.models import Fidele, UserProfileCompletion, Eglise, SEXE_CHOICES, MARITAL_CHOICES, Location, \
     FidelePosition, PrayerComment, PrayerLike, PrayerCategory, PrayerRequest, Device, Notification, BibleVersion, \
-    BibleVerse
+    BibleVerse, BibleTag, Banner
 from phonenumber_field.serializerfields import PhoneNumberField as DRFPhoneNumberField
 
 # from .models import Fidele, UserProfileCompletion
@@ -456,3 +457,64 @@ class BibleVerseSerializer(serializers.ModelSerializer):
     class Meta:
         model = BibleVerse
         fields = ("version", "book", "chapter", "verse", "text", "updated_at")
+
+class BibleTagCreateSerializer(serializers.ModelSerializer):
+    # au choix: passer "recipient" comme email/username
+    recipient = serializers.CharField(write_only=True)
+
+    class Meta:
+        model = BibleTag
+        fields = ('recipient', 'version', 'book', 'chapter', 'verse', 'comment')
+
+    def create(self, validated):
+        request = self.context['request']
+        sender = request.user
+
+        # Résoudre le destinataire
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        value = validated.pop('recipient')
+        try:
+            user = User.objects.get(email=value)
+        except User.DoesNotExist:
+            try:
+                user = User.objects.get(username=value)
+            except User.DoesNotExist:
+                raise serializers.ValidationError({'recipient': 'Utilisateur introuvable'})
+
+        tag = BibleTag.objects.create(sender=sender, recipient=user, **validated)
+
+        # Notif FCM (selon ton modèle Device)
+        from fidele.models import Device
+        tokens = list(Device.objects.filter(user=user).values_list('token', flat=True))
+        if tokens:
+            # from utils import send_fcm_multicast  # à implémenter
+            send_fcm_multicast(
+                tokens,
+                title='On vous a tagué dans un verset',
+                body=f'{sender.get_full_name() or sender.username} — {tag.book} {tag.chapter}:{tag.verse} ({tag.version})',
+                data={
+                    'type': 'verse',
+                    'version': tag.version,
+                    'book': tag.book,
+                    'chapter': str(tag.chapter),
+                    'verse': str(tag.verse),
+                }
+            )
+
+        return tag
+
+
+class BannerSerializer(serializers.ModelSerializer):
+    image_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Banner
+        fields = ["id", "title", "subtitle", "image_url", "link_url", "order", "updated_at"]
+
+    def get_image_url(self, obj):
+        request = self.context.get("request")
+        url = obj.image.url
+        if request is not None:
+            return request.build_absolute_uri(url)
+        return url

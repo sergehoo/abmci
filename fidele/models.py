@@ -625,3 +625,39 @@ class BibleVerse(models.Model):
         ]
 
     def __str__(self): return f"{self.version.code} {self.book} {self.chapter}:{self.verse}"
+
+class BibleTag(models.Model):
+    sender = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='tags_sent')
+    recipient = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='tags_received')
+    version = models.CharField(max_length=16)
+    book = models.CharField(max_length=64)
+    chapter = models.PositiveIntegerField()
+    verse = models.PositiveIntegerField()
+    comment = models.TextField(blank=True, default='')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+      indexes = [models.Index(fields=['recipient', 'created_at'])]
+      ordering = ['-created_at']
+
+    def __str__(self): return f'{self.sender_id}→{self.recipient_id} {self.book} {self.chapter}:{self.verse} ({self.version})'
+
+def banner_upload_to(instance, filename):
+    # ex: banners/2025/08/<filename>
+    return f"banners/{instance.created_at:%Y/%m}/{filename}"
+
+class Banner(models.Model):
+    title = models.CharField(max_length=200, blank=True, default="")
+    subtitle = models.CharField(max_length=300, blank=True, default="")
+    image = models.ImageField(upload_to=banner_upload_to)
+    link_url = models.URLField(blank=True, default="")   # URL de redirection éventuelle
+    active = models.BooleanField(default=True)
+    order = models.PositiveIntegerField(default=0)        # tri
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)      # pour ETag
+
+    class Meta:
+        ordering = ["order", "-updated_at"]
+
+    def __str__(self):
+        return self.title or f"Banner #{self.pk}"

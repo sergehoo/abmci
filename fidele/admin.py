@@ -6,7 +6,7 @@ from simple_history.admin import SimpleHistoryAdmin
 from django.contrib.gis import admin as gis_admin
 from fidele.models import Department, MembreType, Fidele, Location, TypeLocation, Fonction, OuvrierPermanence, \
     Permanence, Eglise, Familles, SujetPriere, ProblemeParticulier, UserProfileCompletion, PrayerLike, PrayerComment, \
-    PrayerRequest, PrayerCategory, BibleVersion, BibleVerse
+    PrayerRequest, PrayerCategory, BibleVersion, BibleVerse, Banner
 from django.contrib.gis.db import models
 
 # Register your models here.
@@ -230,3 +230,10 @@ class BibleVerseAdmin(admin.ModelAdmin):
     search_fields = ('book', 'text')
     list_select_related = ('version',)
     ordering = ('version', 'book', 'chapter', 'verse')
+
+@admin.register(Banner)
+class BannerAdmin(admin.ModelAdmin):
+    list_display = ("id", "title", "active", "order", "updated_at")
+    list_filter = ("active",)
+    search_fields = ("title", "subtitle")
+    ordering = ("order", "-updated_at")
