@@ -644,7 +644,9 @@ class BibleTag(models.Model):
 
 def banner_upload_to(instance, filename):
     # ex: banners/2025/08/<filename>
-    return f"banners/{instance.created_at:%Y/%m}/{filename}"
+    # Utilise created_at si déjà présent (update), sinon "maintenant" (création)
+    dt = instance.created_at or timezone.now()
+    return f"banners/{dt:%Y/%m}/{filename}"
 
 class Banner(models.Model):
     title = models.CharField(max_length=200, blank=True, default="")
