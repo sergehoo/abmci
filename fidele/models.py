@@ -663,3 +663,41 @@ class Banner(models.Model):
 
     def __str__(self):
         return self.title or f"Banner #{self.pk}"
+
+
+class DonationCategory(models.Model):
+    code = models.SlugField(unique=True)  # 'offering', 'tithe', 'special'
+    name = models.CharField(max_length=120)
+
+    def __str__(self):
+        return self.name
+
+class Donation(models.Model):
+    RECURRENCE_CHOICES = [
+        ('none', 'None'),
+        ('weekly', 'Weekly'),
+        ('monthly', 'Monthly'),
+        ('quarterly', 'Quarterly'),
+        ('semiannual', 'Semiannual'),
+    ]
+    PAYMENT_METHODS = [
+        ('paystack', 'Paystack'),
+    ]
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL)
+    anonymous = models.BooleanField(default=False)
+
+    category = models.ForeignKey(DonationCategory, on_delete=models.PROTECT)
+    amount = models.IntegerField()  # en XOF (pas de centimes)
+    recurrence = models.CharField(max_length=16, choices=RECURRENCE_CHOICES, default='none')
+
+    payment_method = models.CharField(max_length=20, choices=PAYMENT_METHODS, default='paystack')
+    reference = models.CharField(max_length=100, unique=True)
+    status = models.CharField(max_length=20, default='pending')  # pending|success|failed|abandoned
+
+    authorization_url = models.URLField(blank=True, default='')
+    created_at = models.DateTimeField(auto_now_add=True)
+    paid_at = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.category.name} - {self.amount} XOF ({self.status})"

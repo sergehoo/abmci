@@ -15,7 +15,7 @@ from abmci.utils.notifications import send_fcm_multicast
 from event.models import ParticipationEvenement, TypeEvent, Evenement
 from fidele.models import Fidele, UserProfileCompletion, Eglise, SEXE_CHOICES, MARITAL_CHOICES, Location, \
     FidelePosition, PrayerComment, PrayerLike, PrayerCategory, PrayerRequest, Device, Notification, BibleVersion, \
-    BibleVerse, BibleTag, Banner
+    BibleVerse, BibleTag, Banner, DonationCategory
 from phonenumber_field.serializerfields import PhoneNumberField as DRFPhoneNumberField
 
 # from .models import Fidele, UserProfileCompletion
@@ -518,3 +518,15 @@ class BannerSerializer(serializers.ModelSerializer):
         if request is not None:
             return request.build_absolute_uri(url)
         return url
+
+class DonationCategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DonationCategory
+        fields = ['id', 'code', 'name']
+
+class CreateIntentSerializer(serializers.Serializer):
+    category_id = serializers.IntegerField()
+    amount = serializers.IntegerField(min_value=1)
+    anonymous = serializers.BooleanField(default=False)
+    payment_method = serializers.ChoiceField(choices=[('paystack', 'paystack')])
+    recurrence = serializers.ChoiceField(choices=['none','weekly','monthly','quarterly','semiannual'], default='none')

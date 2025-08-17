@@ -6,7 +6,7 @@ from simple_history.admin import SimpleHistoryAdmin
 from django.contrib.gis import admin as gis_admin
 from fidele.models import Department, MembreType, Fidele, Location, TypeLocation, Fonction, OuvrierPermanence, \
     Permanence, Eglise, Familles, SujetPriere, ProblemeParticulier, UserProfileCompletion, PrayerLike, PrayerComment, \
-    PrayerRequest, PrayerCategory, BibleVersion, BibleVerse, Banner
+    PrayerRequest, PrayerCategory, BibleVersion, BibleVerse, Banner, DonationCategory, Donation
 from django.contrib.gis.db import models
 
 # Register your models here.
@@ -237,3 +237,113 @@ class BannerAdmin(admin.ModelAdmin):
     list_filter = ("active",)
     search_fields = ("title", "subtitle")
     ordering = ("order", "-updated_at")
+
+
+@admin.register(DonationCategory)
+class DonationCategoryAdmin(admin.ModelAdmin):
+    list_display = ('code', 'name', 'donation_count')
+    search_fields = ('code', 'name')
+    ordering = ('code',)
+
+    def donation_count(self, obj):
+        return obj.donation_set.count()
+
+    donation_count.short_description = "Nombre de dons"
+
+
+@admin.register(Donation)
+class DonationAdmin(admin.ModelAdmin):
+    list_display = (
+        'reference',
+        'formatted_amount',
+        'category_link',
+        'user_link',
+        'payment_method',
+        'status_badge',
+        'recurrence',
+        'created_at',
+        'paid_at',
+        'authorization_link'
+    )
+    list_filter = (
+        'status',
+        'payment_method',
+        'recurrence',
+        'category',
+        ('paid_at', admin.DateFieldListFilter),
+    )
+    search_fields = ('reference', 'user__email', 'user__first_name', 'user__last_name')
+    list_select_related = ('user', 'category')
+    actions = ['resend_payment_link', 'mark_as_successful']
+    readonly_fields = ('reference', 'created_at', 'authorization_url')
+    fieldsets = (
+        (None, {
+            'fields': ('user', 'anonymous', 'category', 'amount')
+        }),
+        ('Paiement', {
+            'fields': ('payment_method', 'reference', 'status', 'authorization_url')
+        }),
+        ('Récurrence', {
+            'fields': ('recurrence',)
+        }),
+        ('Dates', {
+            'fields': ('created_at', 'paid_at')
+        }),
+    )
+
+    def formatted_amount(self, obj):
+        return f"{obj.amount:,} XOF"
+
+    formatted_amount.short_description = "Montant"
+    formatted_amount.admin_order_field = 'amount'
+
+    def category_link(self, obj):
+        url = reverse("admin:donations_donationcategory_change", args=[obj.category.id])
+        return format_html('<a href="{}">{}</a>', url, obj.category.name)
+
+    category_link.short_description = "Catégorie"
+    category_link.admin_order_field = 'category'
+
+    def user_link(self, obj):
+        if not obj.user:
+            return "Anonyme" if obj.anonymous else "Invité"
+        url = reverse("admin:accounts_user_change", args=[obj.user.id])
+        return format_html('<a href="{}">{}</a>', url, obj.user.get_full_name() or obj.user.email)
+
+    user_link.short_description = "Donateur"
+    user_link.admin_order_field = 'user'
+
+    def status_badge(self, obj):
+        colors = {
+            'pending': 'orange',
+            'success': 'green',
+            'failed': 'red',
+            'abandoned': 'gray'
+        }
+        return format_html(
+            '<span style="background: {}; color: white; padding: 3px 8px; border-radius: 10px">{}</span>',
+            colors.get(obj.status, 'blue'),
+            obj.status.upper()
+        )
+
+    status_badge.short_description = "Statut"
+
+    def authorization_link(self, obj):
+        if not obj.authorization_url:
+            return "-"
+        return format_html('<a href="{}" target="_blank">Lien de paiement</a>', obj.authorization_url)
+
+    authorization_link.short_description = "Lien Paiement"
+
+    @admin.action(description="Renvoyer le lien de paiement")
+    def resend_payment_link(self, request, queryset):
+        # Implémentez la logique d'envoi ici
+        self.message_user(request, f"{queryset.count()} liens envoyés")
+
+    @admin.action(description="Marquer comme payé")
+    def mark_as_successful(self, request, queryset):
+        updated = queryset.filter(status='pending').update(status='success', paid_at=timezone.now())
+        self.message_user(request, f"{updated} dons marqués comme payés")
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('user', 'category')

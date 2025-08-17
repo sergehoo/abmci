@@ -4,8 +4,11 @@ import base64
 import hashlib
 import hmac
 import json
+import os
+import uuid
 from datetime import timedelta
 
+import requests
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction, models
@@ -30,10 +33,11 @@ from rest_framework.views import APIView
 from api.serializers import UserSerializer, FideleSerializer, FideleCreateUpdateSerializer, \
     UserProfileCompletionSerializer, ParticipationEvenementSerializer, VerseDuJourSerializer, EvenementListSerializer, \
     PrayerCommentSerializer, PrayerCategorySerializer, PrayerRequestSerializer, NotificationSerializer, \
-    DeviceSerializer, BibleVersionSerializer, BibleVerseSerializer, BibleTagCreateSerializer, BannerSerializer
+    DeviceSerializer, BibleVersionSerializer, BibleVerseSerializer, BibleTagCreateSerializer, BannerSerializer, \
+    CreateIntentSerializer, DonationCategorySerializer
 from event.models import ParticipationEvenement, Evenement
 from fidele.models import Fidele, UserProfileCompletion, Eglise, PrayerComment, PrayerRequest, PrayerLike, \
-    PrayerCategory, Notification, Device, BibleVersion, BibleVerse, BibleTag, Banner
+    PrayerCategory, Notification, Device, BibleVersion, BibleVerse, BibleTag, Banner, Donation, DonationCategory
 
 # from .models import Fidele, UserProfileCompletion
 # from .serializers import (
@@ -544,3 +548,100 @@ class BannerListView(generics.ListAPIView):
         resp["Cache-Control"] = "public, max-age=60"
         resp["Last-Modified"] = http_date((last_upd or now()).timestamp())
         return resp
+
+PAYSTACK_SECRET = os.getenv('PAYSTACK_SECRET_KEY', getattr(settings, 'PAYSTACK_SECRET_KEY', ''))
+
+class CategoryListView(generics.ListAPIView):
+    queryset = DonationCategory.objects.all().order_by('name')
+    serializer_class = DonationCategorySerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+class CreateIntentView(generics.GenericAPIView):
+    serializer_class = CreateIntentSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        if not PAYSTACK_SECRET:
+            return Response({'detail': 'Paystack secret non configuré'}, status=500)
+
+        s = self.get_serializer(data=request.data)
+        s.is_valid(raise_exception=True)
+        data = s.validated_data
+
+        try:
+            category = DonationCategory.objects.get(id=data['category_id'])
+        except DonationCategory.DoesNotExist:
+            return Response({'detail': 'Catégorie inconnue'}, status=400)
+
+        # Référence unique
+        reference = f"DON-{uuid.uuid4().hex[:16].upper()}"
+
+        # Init transaction Paystack
+        init_url = "https://api.paystack.co/transaction/initialize"
+        # amount en kobo si NGN; pour XOF Paystack accepte amount * 100 en "base unit".
+        # Si tu veux rester en XOF entiers côté app, convertis ici en *100 si requis.
+        payload = {
+            "amount": data['amount'] * 100,  # <- adapte selon ta config Paystack/money
+            "email": request.user.email or "noreply@example.com",
+            "reference": reference,
+            "callback_url": settings.SITE_URL + "/donations/thanks/",  # ou deep-link
+            "currency": "XOF",  # adapte si besoin
+        }
+        headers = {"Authorization": f"Bearer {PAYSTACK_SECRET}"}
+        r = requests.post(init_url, json=payload, headers=headers, timeout=30)
+        if r.status_code not in (200, 201):
+            return Response({'detail': 'Erreur Paystack', 'body': r.text}, status=502)
+
+        resp = r.json()
+        if not resp.get('status'):
+            return Response({'detail': 'Init Paystack échouée', 'body': resp}, status=502)
+
+        auth_url = resp['data']['authorization_url']
+
+        # Crée le Donation local
+        Donation.objects.create(
+          user=request.user if not data['anonymous'] else None,
+          anonymous=data['anonymous'],
+          category=category,
+          amount=data['amount'],
+          recurrence=data['recurrence'],
+          payment_method=data['payment_method'],
+          reference=reference,
+          authorization_url=auth_url,
+          status='pending',
+        )
+
+        return Response({
+            'reference': reference,
+            'authorization_url': auth_url
+        }, status=status.HTTP_201_CREATED)
+
+class PaystackWebhookView(generics.GenericAPIView):
+    authentication_classes = []  # tu peux vérifier la signature Paystack (x-paystack-signature)
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        event = request.data
+        event_type = event.get('event')
+        data = event.get('data', {})
+
+        reference = data.get('reference')
+        status_ps = data.get('status')
+
+        if not reference:
+            return Response(status=200)
+
+        try:
+            d = Donation.objects.get(reference=reference)
+        except Donation.DoesNotExist:
+            return Response(status=200)
+
+        if event_type == 'charge.success' or status_ps == 'success':
+            d.status = 'success'
+            d.paid_at = timezone.now()
+            d.save(update_fields=['status', 'paid_at'])
+        elif status_ps in ('failed', 'abandoned'):
+            d.status = status_ps
+            d.save(update_fields=['status'])
+
+        return Response(status=200)

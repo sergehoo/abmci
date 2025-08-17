@@ -6,7 +6,8 @@ from rest_framework.routers import DefaultRouter
 from api.views import VerifyEmailView, UserDetailView, FideleDetailView, FideleListView, ProfileCompletionView, \
     FideleCreateView, ParticipationListCreateView, ScanQRCodeAPIView, VerseDuJourView, UpcomingEventsView, \
     UpcomingEventsHomeView, PrayerCategoryViewSet, PrayerRequestViewSet, PrayerCommentViewSet, DeviceViewSet, \
-    NotificationViewSet, BibleVersionViewSet, BibleVerseViewSet, BibleTagViewSet, BannerListView
+    NotificationViewSet, BibleVersionViewSet, BibleVerseViewSet, BibleTagViewSet, BannerListView, CategoryListView, \
+    CreateIntentView, PaystackWebhookView
 from event.views import FirebaseLoginView
 
 router = DefaultRouter()
@@ -25,6 +26,11 @@ urlpatterns = [
     path('auth/firebase/', FirebaseLoginView.as_view(), name='firebase-login'),
     path('auth/registration/', include('dj_rest_auth.registration.urls')),
     path('auth/verify-email/<str:key>/', VerifyEmailView.as_view(), name='verify_email'),
+
+    path('categories/', CategoryListView.as_view()),
+    path('intents/', CreateIntentView.as_view()),
+    path('paystack/webhook/', PaystackWebhookView.as_view()),
+
     path("banners/", BannerListView.as_view(), name="banner-list"),
 
     path('user/', UserDetailView.as_view(), name='user-detail'),
