@@ -257,6 +257,13 @@ CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = TIME_ZONE
 
+PAYSTACK_SECRET_KEY = os.getenv('PAYSTACK_SECRET_KEY')
+# settings.py
+PAYSTACK_SECRET_KEY = 'sk_live_xxx'  # ou sk_test_xxx
+PAYSTACK_PUBLIC_KEY = 'pk_live_xxx'
+PAYSTACK_BASE_URL = 'https://api.paystack.co'
+PAYSTACK_CURRENCY = 'XOF'  # vérifie la devise Paystack supportée pour ton compte/pays
+PAYSTACK_CALLBACK_URL = 'https://administration.abmci.com/payments/callback/'
 # Option A — chemin vers le fichier de service account (recommandé en local/Docker)
 # FIREBASE_SERVICE_ACCOUNT_PATH = os.environ.get("FIREBASE_SERVICE_ACCOUNT_PATH")  # ex: /run/secrets/firebase.json
 

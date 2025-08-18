@@ -1,0 +1,346 @@
+{% load static %}
+<!doctype html>
+<html lang="fr">
+<head>
+    <base href="./">
+    <meta charset="utf-8">
+    <meta name="author" content="ABMCI-Serge OGAH">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="description" content="Politique de confidentialité de l'application Alliance Connect">
+    <!-- Fav Icon  -->
+    <link rel="shortcut icon" href="{% static 'images/favicon.png'%}">
+    <!-- Page Title  -->
+    <title>Politique de confidentialité - Alliance Connect</title>
+    <!-- StyleSheets  -->
+    <link rel="stylesheet" href="{% static 'assets/css/dashlite.css'%}">
+    <link id="skin-default" rel="stylesheet" href="{% static 'assets/css/theme.css' %}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css">
+    <style>
+        /* Styles spécifiques pour la politique de confidentialité */
+        .privacy-container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+            padding: 2.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .privacy-header {
+            border-bottom: 1px solid #e5e9f2;
+            padding-bottom: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .privacy-title {
+            color: #6576ff;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .privacy-date {
+            color: #7987a1;
+            font-size: 0.9rem;
+        }
+
+        .privacy-section {
+            margin-bottom: 2.5rem;
+        }
+
+        .privacy-section h2 {
+            color: #364a63;
+            font-weight: 600;
+            font-size: 1.5rem;
+            margin-bottom: 1.25rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid #f1f2f6;
+        }
+
+        .privacy-section h3 {
+            color: #526484;
+            font-weight: 600;
+            font-size: 1.25rem;
+            margin: 1.5rem 0 1rem;
+        }
+
+        .privacy-section p, .privacy-section li {
+            color: #526484;
+            line-height: 1.7;
+        }
+
+        .privacy-section ul {
+            padding-left: 1.5rem;
+            margin: 1rem 0;
+        }
+
+        .privacy-section li {
+            margin-bottom: 0.5rem;
+        }
+
+        .highlight-box {
+            background-color: #f8f9fa;
+            border-left: 4px solid #6576ff;
+            padding: 1.25rem;
+            border-radius: 0 8px 8px 0;
+            margin: 1.5rem 0;
+        }
+
+        .contact-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: #6576ff;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 500;
+            transition: all 0.3s;
+            margin-top: 0.5rem;
+        }
+
+        .contact-btn:hover {
+            background: #4e64ff;
+            text-decoration: none;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(101, 118, 255, 0.25);
+        }
+
+        @media (max-width: 768px) {
+            .privacy-container {
+                padding: 1.5rem;
+            }
+
+            .privacy-title {
+                font-size: 1.75rem;
+            }
+
+            .privacy-section h2 {
+                font-size: 1.3rem;
+            }
+        }
+    </style>
+</head>
+
+<body class="nk-body bg-lighter npc-default has-sidebar">
+    <div class="nk-app-root">
+        <div class="nk-main">
+            <!-- Header -->
+            <div class="nk-header nk-header-fluid is-theme">
+                <div class="container-xl wide-xl">
+                    <div class="nk-header-wrap">
+                        <!-- Menu mobile -->
+                        <div class="nk-menu-trigger mr-sm-2 d-lg-none">
+                            <a href="#" class="nk-nav-toggle nk-quick-nav-icon" data-target="headerNav">
+                                <em class="icon ni ni-menu"></em>
+                            </a>
+                        </div>
+
+                        <!-- Logo -->
+                        <div class="nk-header-brand">
+                            <a href="{% url 'home' %}" class="logo-link">
+                                <img class="logo-light logo-img" src="{% static 'images/logo-abmci-min.png' %}" alt="logo">
+                                <img class="logo-dark logo-img" src="{% static 'images/logo-abmci-min.png' %}" alt="logo-dark">
+                            </a>
+                        </div>
+                        <span class="text-sm small text-white">Alliance Biblique <br>Missionnaire | Monde</span>
+
+                        <!-- Menu principal -->
+                        <div class="nk-header-menu" data-content="headerNav">
+                            <div class="nk-header-mobile">
+                                <div class="nk-header-brand">
+                                    <a href="{% url 'home' %}" class="logo-link">
+                                        <img class="logo-light logo-img" src="{% static 'images/logo-abmci-min.png' %}" alt="logo">
+                                        <img class="logo-dark logo-img" src="{% static 'images/logo-abmci-min.png' %}" alt="logo-dark">
+                                    </a>
+                                </div>
+                                <span class="text-sm-center small">Alliance Biblique <br>Missionnaire | Monde</span>
+                                <div class="nk-menu-trigger mr-n2">
+                                    <a href="#" class="nk-nav-toggle nk-quick-nav-icon" data-target="headerNav">
+                                        <em class="icon ni ni-arrow-left"></em>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Contenu principal -->
+            <div class="nk-content nk-content-fluid">
+                <div class="container-xl wide-xl">
+                    <div class="nk-content-inner">
+                        <div class="nk-content-body">
+                            <div class="nk-block-head nk-block-head-sm">
+                                <div class="nk-block-between g-3">
+                                    <div class="nk-block-head-content">
+                                        <h3 class="nk-block-title page-title">Politique de confidentialité</h3>
+                                        <div class="nk-block-des text-soft">
+                                            <p>Dernière mise à jour : 18 août 2025</p>
+                                        </div>
+                                    </div>
+                                    <div class="nk-block-head-content">
+                                        <div class="toggle-wrap nk-block-tools-toggle">
+                                            <a href="#" class="btn btn-icon btn-trigger toggle-expand" data-target="pageMenu">
+                                                <em class="icon ni ni-menu-alt"></em>
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Conteneur de la politique -->
+                            <div class="nk-block">
+                                <div class="privacy-container">
+                                    <div class="privacy-header">
+                                        <h1 class="privacy-title">Politique de confidentialité</h1>
+                                        <span class="privacy-date">Version 1.1 - 18 août 2025</span>
+                                    </div>
+
+                                    <div class="privacy-section">
+                                        <h2>1. Éditeur de l'application</h2>
+                                        <p>Alliance Connect (« l'App ») est éditée par <strong>ABMCI Worldwide</strong>, une organisation chrétienne internationale.</p>
+
+                                        <div class="highlight-box">
+                                            <h3>Contact</h3>
+                                            <p>Pour toute question concernant cette politique ou vos données personnelles :</p>
+                                            <a href="mailto:contact@abmci.com" class="contact-btn">
+                                                <em class="icon ni ni-mail"></em>
+                                                contact@abmci.com
+                                            </a>
+                                        </div>
+                                    </div>
+
+                                    <div class="privacy-section">
+                                        <h2>2. Utilisation de la caméra</h2>
+                                        <p>L'application peut demander l'autorisation d'utiliser la caméra pour certaines fonctionnalités :</p>
+                                        <ul>
+                                            <li>Capture de photos ou vidéos pour les profils ou publications</li>
+                                            <li>Scan de codes QR pour accéder à du contenu spécifique</li>
+
+                                        </ul>
+
+                                        <h3>Nos engagements</h3>
+                                        <ul>
+                                            <li>Le flux vidéo est traité <strong>uniquement sur votre appareil</strong>, sans transmission à nos serveurs</li>
+                                            <li>Aucune image ou vidéo n'est stockée sans votre consentement explicite</li>
+                                            <li>Vous pouvez modifier les autorisations à tout moment dans les paramètres de votre appareil</li>
+                                        </ul>
+                                    </div>
+
+                                    <div class="privacy-section">
+                                        <h2>3. Données collectées</h2>
+                                        <p>Nous pouvons traiter les données suivantes selon votre usage de l'application :</p>
+
+                                        <div class="highlight-box">
+                                            <h3>Catégories de données</h3>
+                                            <ul>
+                                                <li><strong>Identité</strong> : email, nom, prénom, photo de profil</li>
+                                                <li><strong>Contenu</strong> : publications, messages, prières, commentaires</li>
+                                                <li><strong>Technique</strong> : journaux d'erreurs, diagnostics, adresse IP</li>
+                                                <li><strong>Usage</strong> : statistiques d'utilisation anonymisées</li>
+                                            </ul>
+                                        </div>
+
+                                        <h3>Finalités du traitement</h3>
+                                        <p>Ces données servent à :</p>
+                                        <ul>
+                                            <li>Fournir et maintenir les fonctionnalités de l'application</li>
+                                            <li>Personnaliser votre expérience utilisateur</li>
+                                            <li>Améliorer continuellement notre service</li>
+                                            <li>Assurer la sécurité et la modération de la communauté</li>
+                                        </ul>
+                                    </div>
+
+                                    <div class="privacy-section">
+                                        <h2>4. Partage des données</h2>
+                                        <p>Nous nous engageons à ne pas vendre ou louer vos données personnelles à des tiers.</p>
+
+                                        <h3>Prestataires techniques</h3>
+                                        <p>Certains prestataires techniques peuvent avoir accès à des données limitées :</p>
+                                        <ul>
+                                            <li>Services d'hébergement sécurisés</li>
+                                            <li>Outils d'analyse d'usage anonymisés</li>
+                                            <li>Services de notifications push</li>
+                                            <li>Systèmes de paiement (le cas échéant)</li>
+                                        </ul>
+                                        <p>Tous nos partenaires sont sélectionnés pour leur conformité au RGPD et liés par des clauses contractuelles strictes.</p>
+                                    </div>
+
+                                    <div class="privacy-section">
+                                        <h2>5. Conservation des données</h2>
+                                        <p>Vos données sont conservées :</p>
+                                        <ul>
+                                            <li>Pendant la durée nécessaire à la fourniture du service</li>
+                                            <li>Conformément à nos obligations légales (comptabilité, etc.)</li>
+                                            <li>Jusqu'à votre demande de suppression (dans les limites légales)</li>
+                                        </ul>
+                                        <p>Les données anonymisées peuvent être conservées à des fins statistiques pour améliorer notre service.</p>
+                                    </div>
+
+                                    <div class="privacy-section">
+                                        <h2>6. Vos droits</h2>
+                                        <p>Conformément au RGPD, vous disposez des droits suivants :</p>
+
+                                        <div class="highlight-box">
+                                            <ul>
+                                                <li><strong>Droit d'accès</strong> : connaître les données que nous détenons</li>
+                                                <li><strong>Droit de rectification</strong> : corriger des informations inexactes</li>
+                                                <li><strong>Droit à l'effacement</strong> : demander la suppression de vos données</li>
+                                                <li><strong>Droit à la portabilité</strong> : récupérer vos données dans un format structuré</li>
+                                                <li><strong>Droit d'opposition</strong> : s'opposer à certains traitements</li>
+                                                <li><strong>Droit de limitation</strong> : demander la limitation du traitement</li>
+                                            </ul>
+                                        </div>
+
+                                        <p>Pour exercer ces droits, contactez-nous à l'adresse indiquée en section 1. Nous nous engageons à répondre dans un délai maximum d'un mois.</p>
+                                    </div>
+
+                                    <div class="privacy-section">
+                                        <h2>7. Sécurité des données</h2>
+                                        <p>Nous mettons en œuvre des mesures de sécurité appropriées :</p>
+                                        <ul>
+                                            <li>Chiffrement des données sensibles (SSL/TLS)</li>
+                                            <li>Protocoles de sécurité actualisés</li>
+                                            <li>Contrôles d'accès stricts et authentification</li>
+                                            <li>Sauvegardes régulières et sécurisées</li>
+                                            <li>Formation de nos équipes à la protection des données</li>
+                                        </ul>
+                                    </div>
+
+                                    <div class="privacy-section">
+                                        <h2>8. Modifications de cette politique</h2>
+                                        <p>Cette politique peut être mise à jour pour refléter :</p>
+                                        <ul>
+                                            <li>L'évolution de nos services et fonctionnalités</li>
+                                            <li>Les changements législatifs en matière de protection des données</li>
+                                            <li>Les bonnes pratiques du secteur</li>
+                                        </ul>
+                                        <p>Nous vous informerons des modifications substantielles via l'application ou par email. La date de la dernière mise à jour est indiquée en haut de cette page.</p>
+                                    </div>
+
+                                    <div class="privacy-section">
+                                        <h2>9. Juridiction applicable</h2>
+                                        <p>La présente politique de confidentialité est régie par les lois françaises. En cas de litige, les tribunaux français seront seuls compétents.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="{% static 'assets/js/bundle.js' %}"></script>
+    <script src="{% static 'assets/js/scripts.js' %}"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.9.0/js/bootstrap-datepicker.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.9.0/locales/bootstrap-datepicker.fr.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            $('.form-select[multiple], select[multiple]').select2({ width: '100%' });
+            $('select.form-select, select.form-control').not('[multiple]').select2({ width: '100%', minimumResultsForSearch: 6 });
+        });
+    </script>
+</body>
+</html>

@@ -22,7 +22,7 @@ from rest_framework import generics, permissions, status, viewsets, mixins
 from rest_framework.decorators import action
 from rest_framework.pagination import PageNumberPagination, LimitOffsetPagination
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
 from django.contrib.auth import get_user_model
 from allauth.account.models import EmailAddress
@@ -59,12 +59,12 @@ schema_view = get_schema_view(
 )
 
 
-class UserDetailView(generics.RetrieveUpdateAPIView):
-    serializer_class = UserSerializer
-    permission_classes = [permissions.IsAuthenticated]
-
-    def get_object(self):
-        return self.request.user
+# class UserDetailView(generics.RetrieveUpdateAPIView):
+#     serializer_class = UserSerializer
+#     permission_classes = [permissions.IsAuthenticated]
+#
+#     def get_object(self):
+#         return self.request.user
 
 
 class FideleListView(generics.ListAPIView):
@@ -645,3 +645,44 @@ class PaystackWebhookView(generics.GenericAPIView):
             d.save(update_fields=['status'])
 
         return Response(status=200)
+
+class DonationVerifyAPIView(APIView):
+    permission_classes = [IsAuthenticatedOrReadOnly]
+
+    def get(self, request, reference: str):
+        # 1) Vérifier la donation locale
+        try:
+            donation = Donation.objects.get(reference=reference)
+        except Donation.DoesNotExist:
+            return Response({'detail': 'Référence introuvable'}, status=404)
+
+        # 2) Interroger Paystack
+        headers = {
+            "Authorization": f"Bearer {settings.PAYSTACK_SECRET_KEY}",
+            "Content-Type": "application/json",
+        }
+        url = f"{settings.PAYSTACK_BASE_URL}/transaction/verify/{reference}"
+        try:
+            r = requests.get(url, headers=headers, timeout=20)
+            data = r.json()
+        except Exception as ex:
+            return Response({'detail': f'Erreur Paystack: {ex}'}, status=502)
+
+        # 3) Mettre à jour le statut
+        if r.status_code == 200 and data.get('status') and data['data']['status'] == 'success':
+            donation.status = 'success'
+            donation.paid_at = timezone.now()
+            donation.save(update_fields=['status', 'paid_at'])
+            return Response({'status': 'success'})
+        else:
+            donation.status = 'failed'
+            donation.save(update_fields=['status'])
+            return Response({'status': 'failed', 'paystack': data}, status=400)
+
+class UserDetailView(generics.RetrieveUpdateAPIView):
+    serializer_class = UserSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    parser_classes = [JSONParser, MultiPartParser, FormParser]
+
+    def get_object(self):
+        return self.request.user

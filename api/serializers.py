@@ -530,3 +530,50 @@ class CreateIntentSerializer(serializers.Serializer):
     anonymous = serializers.BooleanField(default=False)
     payment_method = serializers.ChoiceField(choices=[('paystack', 'paystack')])
     recurrence = serializers.ChoiceField(choices=['none','weekly','monthly','quarterly','semiannual'], default='none')
+
+class DonationIntentResponseSerializer(serializers.Serializer):
+    reference = serializers.CharField()
+    authorization_url = serializers.URLField()
+
+# class FideleSerializer(serializers.ModelSerializer):
+#     class Meta:
+#         model = Fidele
+#         fields = [
+#             "firebase_uid", "qlook_id",
+#             "birthdate", "sexe", "situation_matrimoniale", "signe",
+#             "nbr_enfants", "contry", "phone", "nationalite",
+#             "eglise_origine", "date_entree", "date_bapteme",
+#             "type_bapteme", "lieu_bapteme",
+#             "profession", "entreprise", "mensual_revenue", "salary_currency",
+#             "photo",
+#         ]
+#         read_only_fields = ["qlook_id"]
+#
+# class UserSerializer(serializers.ModelSerializer):
+#     fidele = FideleSerializer(required=False, allow_null=True)
+#
+#     class Meta:
+#         model = User
+#         fields = ["id", "email", "first_name", "last_name", "fidele"]
+#         read_only_fields = ["email", "id"]
+#
+#     def update(self, instance, validated_data):
+#         fidele_data = validated_data.pop("fidele", None)
+#         # user fields
+#         instance.first_name = validated_data.get("first_name", instance.first_name)
+#         instance.last_name  = validated_data.get("last_name",  instance.last_name)
+#         instance.save()
+#
+#         # fidele nested
+#         if fidele_data is not None:
+#             try:
+#                 fid = instance.fidele
+#             except Fidele.DoesNotExist:
+#                 fid = Fidele(user=instance)
+#
+#             # M2M/relations ignorées ici pour rester simple
+#             for k, v in fidele_data.items():
+#                 setattr(fid, k, v)
+#             fid.save()
+#
+#         return instance

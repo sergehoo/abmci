@@ -5,7 +5,7 @@ from django.urls import path
 from . import views
 from .views import FideleListView, permanencecreate, FideleDetailView, VieDeLEgliseListView, EngagementListView, \
     StatutSocialListView, MessagerieListView, DirectionDetailView, FideleUpdateView, SuivieFideleListView, \
-    FideleDeleteView, FideleTransferView, FideleCreateView, complete_profile, profile_complete
+    FideleDeleteView, FideleTransferView, FideleCreateView, complete_profile, profile_complete, Politique
 
 urlpatterns = [
                   path('membres/', FideleListView.as_view(), name='membres'),
@@ -16,6 +16,7 @@ urlpatterns = [
 
                   path('complete-profile/', complete_profile, name='complete_profile'),
                   path('profile-complete/', profile_complete, name='profile_complete'),
+                  path('politique/', Politique.as_view(), name='politique'),
 
                   path('suivie/', SuivieFideleListView.as_view(), name='suivie'),
                   path('membre/?P<str:slug>[0-9]+/', FideleDetailView.as_view(), name='membre'),

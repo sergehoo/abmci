@@ -38,6 +38,11 @@ def mark_all_read(request):
     return redirect('notifs:all')
 
 
+class Politique(TemplateView):
+    # context_object_name = 'politique'
+    template_name = 'landing/politique.html'
+
+
 class HomePageView(LoginRequiredMixin, TemplateView):
     login_url = 'login/'
     form_class = LoginForm
@@ -200,7 +205,8 @@ class SuivieFideleListView(LoginRequiredMixin, ListView):
             'nouveaux_visiteurs': nouveaux_visiteurs,
             'baptises': baptises,
             'total_problemes': total_problemes,
-            'pourcentage_visiteurs': (total_visiteurs / Fidele.objects.count() * 100) if Fidele.objects.count() > 0 else 0,
+            'pourcentage_visiteurs': (
+                        total_visiteurs / Fidele.objects.count() * 100) if Fidele.objects.count() > 0 else 0,
             'pourcentage_nouveaux': (nouveaux_visiteurs / total_visiteurs * 100) if total_visiteurs > 0 else 0,
             'pourcentage_baptises': (baptises / total_visiteurs * 100) if total_visiteurs > 0 else 0,
             'pourcentage_avec_problemes': (total_problemes / total_visiteurs * 100) if total_visiteurs > 0 else 0,
