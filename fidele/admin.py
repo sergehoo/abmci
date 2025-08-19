@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from django.contrib import admin
 from django.contrib.gis.admin import GISModelAdmin
 from django.contrib.gis.forms import OSMWidget
@@ -6,7 +8,7 @@ from simple_history.admin import SimpleHistoryAdmin
 from django.contrib.gis import admin as gis_admin
 from fidele.models import Department, MembreType, Fidele, Location, TypeLocation, Fonction, OuvrierPermanence, \
     Permanence, Eglise, Familles, SujetPriere, ProblemeParticulier, UserProfileCompletion, PrayerLike, PrayerComment, \
-    PrayerRequest, PrayerCategory, BibleVersion, BibleVerse, Banner, DonationCategory, Donation
+    PrayerRequest, PrayerCategory, BibleVersion, BibleVerse, Banner, DonationCategory, Donation, VerseOfDay
 from django.contrib.gis.db import models
 
 # Register your models here.
@@ -347,3 +349,39 @@ class DonationAdmin(admin.ModelAdmin):
 
     def get_queryset(self, request):
         return super().get_queryset(request).select_related('user', 'category')
+
+
+@admin.register(VerseOfDay)
+class VerseOfDayAdmin(admin.ModelAdmin):
+    # Configuration de l'affichage dans la liste
+    list_display = ('date', 'reference', 'version', 'language','context_key')
+    list_filter = ('version', 'language', 'date')
+    search_fields = ('reference', 'text')
+    ordering = ('-date',)
+    date_hierarchy = 'date'
+
+    # Configuration du formulaire d'édition
+    fieldsets = (
+        (None, {
+            'fields': ('date', 'version', 'language','context_key')
+        }),
+        ('Contenu du verset', {
+            'fields': ('reference', 'text')
+        }),
+
+    )
+
+    # Champs en lecture seule
+    # readonly_fields = ('created_at', 'updated_at')
+
+    # Actions personnalisées
+    actions = ['duplicate_verse']
+
+    def duplicate_verse(self, request, queryset):
+        for verse in queryset:
+            verse.pk = None
+            verse.date = verse.date + timedelta(days=1)
+            verse.save()
+        self.message_user(request, f"{queryset.count()} verset(s) dupliqué(s) avec succès.")
+
+    duplicate_verse.short_description = "Dupliquer les versets sélectionnés (date +1 jour)"

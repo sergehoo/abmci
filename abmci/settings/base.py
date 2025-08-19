@@ -72,6 +72,10 @@ INSTALLED_APPS = [
     "django_countries",
     "phonenumber_field",
     "drf_yasg",
+    'djcelery',
+    'celery',
+    "django_celery_beat",  # optionnel mais recommandé
+
 ]
 
 MIDDLEWARE = [
@@ -129,7 +133,7 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 LANGUAGE_CODE = "fr-FR"
-TIME_ZONE = "UTC"
+TIME_ZONE = "Africa/Abidjan"
 USE_I18N = True
 USE_TZ = True
 
@@ -250,6 +254,7 @@ LOGGING = {
     "root": {"handlers": ["console"], "level": "INFO"},
 }
 
+
 CELERY_BROKER_URL = os.getenv("REDIS_URL", "redis://abmciredis:6379/0")
 CELERY_RESULT_BACKEND = os.getenv("REDIS_URL", "redis://abmciredis:6379/0")
 CELERY_ACCEPT_CONTENT = ["json"]
@@ -259,7 +264,6 @@ CELERY_TIMEZONE = TIME_ZONE
 
 PAYSTACK_SECRET_KEY = os.getenv('PAYSTACK_SECRET_KEY')
 # settings.py
-PAYSTACK_SECRET_KEY = 'sk_live_xxx'  # ou sk_test_xxx
 PAYSTACK_PUBLIC_KEY = 'pk_live_xxx'
 PAYSTACK_BASE_URL = 'https://api.paystack.co'
 PAYSTACK_CURRENCY = 'XOF'  # vérifie la devise Paystack supportée pour ton compte/pays

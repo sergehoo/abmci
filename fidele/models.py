@@ -649,6 +649,24 @@ class BibleTag(models.Model):
             self): return f'{self.sender_id}→{self.recipient_id} {self.book} {self.chapter}:{self.verse} ({self.version})'
 
 
+
+class VerseOfDay(models.Model):
+    """Cache du VDJ (contexte-aware) pour éviter les recalculs et garder un audit."""
+    date = models.DateField(db_index=True)
+    version = models.CharField(max_length=32, db_index=True, default='LSG')
+    language = models.CharField(max_length=8, db_index=True, default='fr')
+    # Contexte déterminant le choix (ex: "SEASON:ADVENT", "EVENT:marriage", "WEEKDAY:MON")
+    context_key = models.CharField(max_length=64, default='DEFAULT', db_index=True)
+    text = models.TextField()
+    reference = models.CharField(max_length=128)
+
+    class Meta:
+        unique_together = ('date', 'version', 'language', 'context_key')
+        ordering = ('-date',)
+
+    def __str__(self):
+        return f"{self.date} [{self.version}/{self.language}] {self.context_key} {self.reference}"
+
 def banner_upload_to(instance, filename):
     # ex: banners/2025/08/<filename>
     # Utilise created_at si déjà présent (update), sinon "maintenant" (création)
