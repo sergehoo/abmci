@@ -659,7 +659,7 @@ def process_account_deletion_request(req_id):
 
 
 class AccountDeleteRequestView(LoginRequiredMixin, View):
-    template_name = "account/account_delete.html"
+    template_name = "landing/account_delete.html"
 
     def get(self, request, *args, **kwargs):
         return render(request, self.template_name, {"form": ConfirmDeleteForm()})

@@ -45,13 +45,15 @@ def qlook():
     qlook = ("QL" + str(random.randrange(0, 999999999, 1)) + "AB")
     return qlook
 
+
 class Device(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='devices')
     token = models.CharField(max_length=255, unique=True)  # FCM token
-    platform = models.CharField(max_length=20, choices=[('android','Android'), ('ios','iOS')])
+    platform = models.CharField(max_length=20, choices=[('android', 'Android'), ('ios', 'iOS')])
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     last_seen = models.DateTimeField(auto_now=True)
+
 
 class Notification(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='notifications')
@@ -60,6 +62,8 @@ class Notification(models.Model):
     data = models.JSONField(default=dict, blank=True)  # deep-link payload (type, ids, etc)
     is_read = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
+
+
 class Fonction(models.Model):
     name = models.CharField(max_length=200)
     description = models.TextField(null=True, blank=True)
@@ -596,7 +600,7 @@ class PrayerLike(models.Model):
 
 class BibleVersion(models.Model):
     code = models.CharField(max_length=16, unique=True)  # ex: "LSG"
-    name = models.CharField(max_length=128)              # ex: "Louis Segond 1910"
+    name = models.CharField(max_length=128)  # ex: "Louis Segond 1910"
     language = models.CharField(max_length=16, default="fr")
     total_verses = models.PositiveIntegerField(default=0)
     # permet au client de savoir s'il doit resynchroniser
@@ -611,7 +615,7 @@ class BibleVersion(models.Model):
 
 class BibleVerse(models.Model):
     version = models.ForeignKey(BibleVersion, on_delete=models.CASCADE, related_name="verses")
-    book = models.CharField(max_length=64)             # "Genèse"
+    book = models.CharField(max_length=64)  # "Genèse"
     chapter = models.PositiveIntegerField()
     verse = models.PositiveIntegerField()
     text = models.TextField()
@@ -626,6 +630,7 @@ class BibleVerse(models.Model):
 
     def __str__(self): return f"{self.version.code} {self.book} {self.chapter}:{self.verse}"
 
+
 class BibleTag(models.Model):
     sender = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='tags_sent')
     recipient = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='tags_received')
@@ -637,10 +642,12 @@ class BibleTag(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-      indexes = [models.Index(fields=['recipient', 'created_at'])]
-      ordering = ['-created_at']
+        indexes = [models.Index(fields=['recipient', 'created_at'])]
+        ordering = ['-created_at']
 
-    def __str__(self): return f'{self.sender_id}→{self.recipient_id} {self.book} {self.chapter}:{self.verse} ({self.version})'
+    def __str__(
+            self): return f'{self.sender_id}→{self.recipient_id} {self.book} {self.chapter}:{self.verse} ({self.version})'
+
 
 def banner_upload_to(instance, filename):
     # ex: banners/2025/08/<filename>
@@ -648,15 +655,16 @@ def banner_upload_to(instance, filename):
     dt = instance.created_at or timezone.now()
     return f"banners/{dt:%Y/%m}/{filename}"
 
+
 class Banner(models.Model):
     title = models.CharField(max_length=200, blank=True, default="")
     subtitle = models.CharField(max_length=300, blank=True, default="")
     image = models.ImageField(upload_to=banner_upload_to)
-    link_url = models.URLField(blank=True, default="")   # URL de redirection éventuelle
+    link_url = models.URLField(blank=True, default="")  # URL de redirection éventuelle
     active = models.BooleanField(default=True)
-    order = models.PositiveIntegerField(default=0)        # tri
+    order = models.PositiveIntegerField(default=0)  # tri
     created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)      # pour ETag
+    updated_at = models.DateTimeField(auto_now=True)  # pour ETag
 
     class Meta:
         ordering = ["order", "-updated_at"]
@@ -671,6 +679,7 @@ class DonationCategory(models.Model):
 
     def __str__(self):
         return self.name
+
 
 class Donation(models.Model):
     RECURRENCE_CHOICES = [
@@ -701,6 +710,7 @@ class Donation(models.Model):
 
     def __str__(self):
         return f"{self.category.name} - {self.amount} XOF ({self.status})"
+
 
 class AccountDeletionRequest(models.Model):
     STATUS_CHOICES = [

@@ -720,7 +720,7 @@ class FideleViewSet(viewsets.ModelViewSet):
     serializer_class = FideleSerializer
     permission_classes = [IsAuthenticated]
     pagination_class = StandardResultsSetPagination
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    # filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
 
     filterset_fields = {
         'eglise': ['exact'],

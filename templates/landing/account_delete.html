@@ -1,0 +1,279 @@
+{% load static %}
+<!doctype html>
+<html lang="fr">
+<head>
+    <base href="./">
+    <meta charset="utf-8">
+    <meta name="author" content="ABMCI-Serge OGAH">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="description" content="Demande de suppression de compte - Alliance Connect">
+    <!-- Fav Icon  -->
+    <link rel="shortcut icon" href="{% static 'images/favicon.png'%}">
+    <!-- Page Title  -->
+    <title>Supprimer mon compte - Alliance Connect</title>
+    <!-- StyleSheets  -->
+    <link rel="stylesheet" href="{% static 'assets/css/dashlite.css'%}">
+    <link id="skin-default" rel="stylesheet" href="{% static 'assets/css/theme.css' %}">
+    <style>
+        .delete-account-container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+            padding: 2.5rem;
+            margin-bottom: 2rem;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .delete-header {
+            border-bottom: 1px solid #e5e9f2;
+            padding-bottom: 1.5rem;
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+
+        .warning-icon {
+            font-size: 3rem;
+            color: #f0506e;
+            margin-bottom: 1rem;
+        }
+
+        .delete-title {
+            color: #364a63;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .delete-subtitle {
+            color: #f0506e;
+            font-weight: 500;
+        }
+
+        .consequences-list {
+            background-color: #fff4f2;
+            border-left: 4px solid #f0506e;
+            padding: 1.25rem;
+            border-radius: 0 8px 8px 0;
+            margin: 1.5rem 0;
+        }
+
+        .consequences-list li {
+            margin-bottom: 0.5rem;
+            color: #526484;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-label {
+            font-weight: 500;
+            color: #364a63;
+            margin-bottom: 0.5rem;
+        }
+
+        .btn-container {
+            display: flex;
+            gap: 1rem;
+            margin-top: 2rem;
+            flex-wrap: wrap;
+        }
+
+        @media (max-width: 768px) {
+            .delete-account-container {
+                padding: 1.5rem;
+            }
+            
+            .btn-container {
+                flex-direction: column;
+            }
+            
+            .btn-container .btn {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+
+<body class="nk-body bg-lighter npc-default has-sidebar">
+    <div class="nk-app-root">
+        <div class="nk-main">
+            <!-- Header -->
+            <div class="nk-header nk-header-fluid is-theme">
+                <div class="container-xl wide-xl">
+                    <div class="nk-header-wrap">
+                        <!-- Menu mobile -->
+                        <div class="nk-menu-trigger mr-sm-2 d-lg-none">
+                            <a href="#" class="nk-nav-toggle nk-quick-nav-icon" data-target="headerNav">
+                                <em class="icon ni ni-menu"></em>
+                            </a>
+                        </div>
+
+                        <!-- Logo -->
+                        <div class="nk-header-brand">
+                            <a href="{% url 'home' %}" class="logo-link">
+                                <img class="logo-light logo-img" src="{% static 'images/logo-abmci-min.png' %}" alt="logo">
+                                <img class="logo-dark logo-img" src="{% static 'images/logo-abmci-min.png' %}" alt="logo-dark">
+                            </a>
+                        </div>
+                        <span class="text-sm small text-white">Alliance Biblique <br>Missionnaire | Monde</span>
+
+                        <!-- Menu principal -->
+                        <div class="nk-header-menu" data-content="headerNav">
+                            <div class="nk-header-mobile">
+                                <div class="nk-header-brand">
+                                    <a href="{% url 'home' %}" class="logo-link">
+                                        <img class="logo-light logo-img" src="{% static 'images/logo-abmci-min.png' %}" alt="logo">
+                                        <img class="logo-dark logo-img" src="{% static 'images/logo-abmci-min.png' %}" alt="logo-dark">
+                                    </a>
+                                </div>
+                                <span class="text-sm-center small">Alliance Biblique <br>Missionnaire | Monde</span>
+                                <div class="nk-menu-trigger mr-n2">
+                                    <a href="#" class="nk-nav-toggle nk-quick-nav-icon" data-target="headerNav">
+                                        <em class="icon ni ni-arrow-left"></em>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Contenu principal -->
+            <div class="nk-content nk-content-fluid">
+                <div class="container-xl wide-xl">
+                    <div class="nk-content-inner">
+                        <div class="nk-content-body">
+                            <div class="nk-block-head nk-block-head-sm">
+                                <div class="nk-block-between g-3">
+                                    <div class="nk-block-head-content">
+                                        <h3 class="nk-block-title page-title">Supprimer mon compte</h3>
+                                        <div class="nk-block-des text-soft">
+                                            <p>Cette action est irréversible</p>
+                                        </div>
+                                    </div>
+                                    
+                                </div>
+                            </div>
+
+                            <!-- Conteneur de suppression de compte -->
+                            <div class="nk-block">
+                                <div class="delete-account-container">
+                                    <div class="delete-header">
+                                        <div class="warning-icon">
+                                            <em class="icon ni ni-alert-fill"></em>
+                                        </div>
+                                        <h2 class="delete-title">Supprimer définitivement votre compte</h2>
+                                        <p class="delete-subtitle">Cette action est irréversible et entraînera la perte de toutes vos données.</p>
+                                    </div>
+
+                                    <div class="delete-content">
+                                        <p>Avant de procéder à la suppression de votre compte, veuillez prendre connaissance des conséquences :</p>
+                                        
+                                        <ul class="consequences-list">
+                                            <li>Toutes vos données personnelles seront définitivement supprimées de nos serveurs</li>
+                                            <li>Vos contributions, messages et publications seront anonymisés ou supprimés</li>
+                                            <li>Vous perdrez l'accès à tous les services associés à votre compte</li>
+                                            <li>Cette action ne peut pas être annulée</li>
+                                        </ul>
+
+                                        <p>Si vous souhaitez plutôt désactiver temporairement votre compte, consultez les options dans vos paramètres</a>.</p>
+
+                                        <form method="post">
+                                            {% csrf_token %}
+                                            
+                                            <div class="form-group">
+                                                <label class="form-label" for="id_confirm">Pour confirmer, tapez "SUPPRIMER" dans le champ ci-dessous :</label>
+                                                {{ form.confirm }}
+                                                {% if form.confirm.errors %}
+                                                    <div class="text-danger small mt-1">
+                                                        {% for error in form.confirm.errors %}
+                                                            {{ error }}
+                                                        {% endfor %}
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                            
+                                            <div class="form-group">
+                                                <label class="form-label" for="id_password">Veuillez confirmer votre mot de passe :</label>
+                                                {{ form.password }}
+                                                {% if form.password.errors %}
+                                                    <div class="text-danger small mt-1">
+                                                        {% for error in form.password.errors %}
+                                                            {{ error }}
+                                                        {% endfor %}
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+
+                                            <div class="form-group">
+                                                <div class="form-check">
+                                                    {{ form.understand }}
+                                                    <label class="form-check-label" for="id_understand">
+                                                        Je comprends que cette action est irréversible et que toutes mes données seront définitivement supprimées.
+                                                    </label>
+                                                </div>
+                                                {% if form.understand.errors %}
+                                                    <div class="text-danger small mt-1">
+                                                        {% for error in form.understand.errors %}
+                                                            {{ error }}
+                                                        {% endfor %}
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+
+                                            <div class="btn-container">
+                                                <button class="btn btn-danger" type="submit">
+                                                    <em class="icon ni ni-trash"></em>
+                                                    Supprimer définitivement mon compte
+                                                </button>
+                                                <a class="btn btn-secondary" href="/">
+                                                    <em class="icon ni ni-arrow-left"></em>
+                                                    Annuler et retourner aux paramètres
+                                                </a>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="{% static 'assets/js/bundle.js' %}"></script>
+    <script src="{% static 'assets/js/scripts.js' %}"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Désactiver le bouton de soumission initialement
+            const submitButton = document.querySelector('button[type="submit"]');
+            const understandCheckbox = document.getElementById('id_understand');
+            const confirmText = document.getElementById('id_confirm');
+            
+            function toggleSubmitButton() {
+                if (understandCheckbox.checked && confirmText.value === 'SUPPRIMER') {
+                    submitButton.disabled = false;
+                } else {
+                    submitButton.disabled = true;
+                }
+            }
+            
+            understandCheckbox.addEventListener('change', toggleSubmitButton);
+            confirmText.addEventListener('input', toggleSubmitButton);
+            
+            // Initial state
+            toggleSubmitButton();
+            
+            // Confirmation supplémentaire
+            submitButton.addEventListener('click', function(e) {
+                if (!confirm('Êtes-vous ABSOLUMENT certain de vouloir supprimer votre compte ? Cette action est irréversible.')) {
+                    e.preventDefault();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
