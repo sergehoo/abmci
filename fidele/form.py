@@ -466,3 +466,15 @@ class MariageForm(forms.ModelForm):
             raise ValidationError("La date de mariage semble trop lointaine.")
 
         return cleaned
+
+class ConfirmDeleteForm(forms.Form):
+    confirm = forms.CharField(
+        label="Tapez SUPPRIMER pour confirmer",
+        help_text="Cette action est irréversible.",
+    )
+
+    def clean_confirm(self):
+        value = (self.cleaned_data["confirm"] or "").strip().upper()
+        if value != "SUPPRIMER":
+            raise forms.ValidationError("Vous devez taper exactement SUPPRIMER.")
+        return value

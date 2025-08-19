@@ -4,6 +4,7 @@ from django.core.mail import send_mail
 from django.template.loader import render_to_string
 
 from event.models import Evenement
+from fidele.views import process_account_deletion_request
 from .models import ParticipationEvenement
 from .notifications.fcm import send_to_topic
 
@@ -41,3 +42,7 @@ def push_verse_of_the_day(text: str, reference: str):
     body = f'{text} — {reference}'
     data = {'type': 'verse'}
     send_to_topic('verse', title, body, data)
+
+@shared_task
+def task_process_account_deletion_request(req_id):
+    process_account_deletion_request(req_id)

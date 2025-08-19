@@ -11,14 +11,19 @@ from datetime import timedelta
 import requests
 from django.conf import settings
 from django.core.exceptions import ValidationError
+from django.core.mail import send_mail
 from django.db import IntegrityError, transaction, models
 from django.db.models import Q, Prefetch
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
+from django.utils.decorators import method_decorator
 from django.utils.http import http_date
 from django.utils.timezone import now
-from rest_framework import generics, permissions, status, viewsets, mixins
+from django.views import View
+from django.views.decorators.csrf import csrf_exempt
+from rest_framework import generics, permissions, status, viewsets, mixins, pagination
 from rest_framework.decorators import action
 from rest_framework.pagination import PageNumberPagination, LimitOffsetPagination
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
@@ -37,7 +42,8 @@ from api.serializers import UserSerializer, FideleSerializer, FideleCreateUpdate
     CreateIntentSerializer, DonationCategorySerializer
 from event.models import ParticipationEvenement, Evenement
 from fidele.models import Fidele, UserProfileCompletion, Eglise, PrayerComment, PrayerRequest, PrayerLike, \
-    PrayerCategory, Notification, Device, BibleVersion, BibleVerse, BibleTag, Banner, Donation, DonationCategory
+    PrayerCategory, Notification, Device, BibleVersion, BibleVerse, BibleTag, Banner, Donation, DonationCategory, \
+    AccountDeletionRequest
 
 # from .models import Fidele, UserProfileCompletion
 # from .serializers import (
@@ -363,6 +369,7 @@ class PrayerRequestViewSet(viewsets.ModelViewSet):
             return Response(ser.errors, status=status.HTTP_400_BAD_REQUEST)
         ser.save(prayer=prayer, user=request.user)
         return Response(ser.data, status=status.HTTP_201_CREATED)
+
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
 
@@ -400,6 +407,7 @@ class PrayerCommentViewSet(viewsets.ModelViewSet):
         prayer = get_object_or_404(PrayerRequest, pk=self.request.data.get('prayer'))
         serializer.save(user=self.request.user, prayer=prayer)
 
+
 class DeviceViewSet(viewsets.ModelViewSet):
     serializer_class = DeviceSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -422,12 +430,14 @@ class DeviceViewSet(viewsets.ModelViewSet):
         resp = super().create(request, *args, **kwargs)
         return resp
 
+
 class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = NotificationSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
         return Notification.objects.filter(user=self.request.user).order_by('-created_at')
+
 
 class BibleVersionViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
     queryset = BibleVersion.objects.all()
@@ -460,6 +470,7 @@ class BibleVersionViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
 
     def get_queryset(self):
         return BibleVersion.objects.all().order_by('code')
+
 
 class BibleVerseViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
     queryset = BibleVerse.objects.all().select_related("version")
@@ -501,9 +512,11 @@ class BibleTagViewSet(viewsets.GenericViewSet):
         tag = ser.save()
         return Response({'id': tag.id}, status=status.HTTP_201_CREATED)
 
+
 class BannerPagination(LimitOffsetPagination):
     default_limit = 20
     max_limit = 100
+
 
 class BannerListView(generics.ListAPIView):
     """
@@ -549,12 +562,15 @@ class BannerListView(generics.ListAPIView):
         resp["Last-Modified"] = http_date((last_upd or now()).timestamp())
         return resp
 
+
 PAYSTACK_SECRET = os.getenv('PAYSTACK_SECRET_KEY', getattr(settings, 'PAYSTACK_SECRET_KEY', ''))
+
 
 class CategoryListView(generics.ListAPIView):
     queryset = DonationCategory.objects.all().order_by('name')
     serializer_class = DonationCategorySerializer
     permission_classes = [permissions.IsAuthenticated]
+
 
 class CreateIntentView(generics.GenericAPIView):
     serializer_class = CreateIntentSerializer
@@ -600,21 +616,22 @@ class CreateIntentView(generics.GenericAPIView):
 
         # Crée le Donation local
         Donation.objects.create(
-          user=request.user if not data['anonymous'] else None,
-          anonymous=data['anonymous'],
-          category=category,
-          amount=data['amount'],
-          recurrence=data['recurrence'],
-          payment_method=data['payment_method'],
-          reference=reference,
-          authorization_url=auth_url,
-          status='pending',
+            user=request.user if not data['anonymous'] else None,
+            anonymous=data['anonymous'],
+            category=category,
+            amount=data['amount'],
+            recurrence=data['recurrence'],
+            payment_method=data['payment_method'],
+            reference=reference,
+            authorization_url=auth_url,
+            status='pending',
         )
 
         return Response({
             'reference': reference,
             'authorization_url': auth_url
         }, status=status.HTTP_201_CREATED)
+
 
 class PaystackWebhookView(generics.GenericAPIView):
     authentication_classes = []  # tu peux vérifier la signature Paystack (x-paystack-signature)
@@ -645,6 +662,7 @@ class PaystackWebhookView(generics.GenericAPIView):
             d.save(update_fields=['status'])
 
         return Response(status=200)
+
 
 class DonationVerifyAPIView(APIView):
     permission_classes = [IsAuthenticatedOrReadOnly]
@@ -679,6 +697,7 @@ class DonationVerifyAPIView(APIView):
             donation.save(update_fields=['status'])
             return Response({'status': 'failed', 'paystack': data}, status=400)
 
+
 class UserDetailView(generics.RetrieveUpdateAPIView):
     serializer_class = UserSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -686,3 +705,73 @@ class UserDetailView(generics.RetrieveUpdateAPIView):
 
     def get_object(self):
         return self.request.user
+
+
+class StandardResultsSetPagination(pagination.PageNumberPagination):
+    page_size = 20
+    page_size_query_param = 'page_size'
+    max_page_size = 100
+
+
+class FideleViewSet(viewsets.ModelViewSet):
+    queryset = Fidele.objects.filter(is_deleted=0).select_related(
+        'user', 'eglise', 'type_membre'
+    ).prefetch_related('fonction')
+    serializer_class = FideleSerializer
+    permission_classes = [IsAuthenticated]
+    pagination_class = StandardResultsSetPagination
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+
+    filterset_fields = {
+        'eglise': ['exact'],
+        'type_membre': ['exact'],
+        'membre': ['exact'],
+        'sexe': ['exact'],
+        'situation_matrimoniale': ['exact'],
+        'date_entree': ['gte', 'lte', 'exact'],
+        'created_at': ['gte', 'lte', 'exact'],
+    }
+
+    search_fields = [
+        'user__first_name',
+        'user__last_name',
+        'user__email',
+        'phone',
+        'qlook_id',
+        'profession',
+        'entreprise',
+    ]
+
+    ordering_fields = [
+        'user__last_name',
+        'user__first_name',
+        'date_entree',
+        'created_at',
+    ]
+    ordering = ['user__last_name']
+
+
+class AccountDeletePerformWebhook(View):
+    """API minimale: POST authentifié (via session/cookie ou DRF/JWT si tu utilises DRF).
+       Ici, on suppose une session déjà authentifiée (web). Adapte à DRF si besoin.
+    """
+
+    @method_decorator(csrf_exempt)  # si tu gères token différemment ; sinon garde CSRF
+    def post(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return JsonResponse({"detail": "Authentication required"}, status=401)
+
+        AccountDeletionRequest.objects.create(user=request.user, status="requested")
+        try:
+            send_mail(
+                subject="Demande de suppression de compte (API)",
+                message=f"Utilisateur #{request.user.pk} a demandé la suppression via API.",
+                from_email=getattr(settings, "DEFAULT_FROM_EMAIL", None),
+                recipient_list=[getattr(settings, "SUPPORT_EMAIL", "support@example.com")],
+                fail_silently=True,
+            )
+        except Exception:
+            pass
+
+        # déconnexion côté web ; pour mobile, renvoie 200 et laisse le client purger son token
+        return JsonResponse({"status": "requested"})

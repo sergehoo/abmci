@@ -2,6 +2,7 @@ from collections import defaultdict
 from datetime import timedelta
 
 from allauth.account.forms import LoginForm
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
@@ -11,10 +12,11 @@ from django.db.models import Count, Q, Case, When, IntegerField
 from django.shortcuts import render, get_object_or_404, redirect
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
+from django.views import View
 from django.views.generic import TemplateView, ListView, DetailView, UpdateView, FormView, DeleteView, CreateView
 from fidele.models import Fidele, Department, Permanence, Eglise, ProblemeParticulier, Fonction, MembreType, \
-    TransferHistory, Notification, UserProfileCompletion
-from fidele.form import PermanenceForm, FideleUpdateForm, FideleTransferForm, ProfileCompletionForm
+    TransferHistory, Notification, UserProfileCompletion, AccountDeletionRequest
+from fidele.form import PermanenceForm, FideleUpdateForm, FideleTransferForm, ProfileCompletionForm, ConfirmDeleteForm
 from event.models import ParticipationEvenement
 
 
@@ -206,7 +208,7 @@ class SuivieFideleListView(LoginRequiredMixin, ListView):
             'baptises': baptises,
             'total_problemes': total_problemes,
             'pourcentage_visiteurs': (
-                        total_visiteurs / Fidele.objects.count() * 100) if Fidele.objects.count() > 0 else 0,
+                    total_visiteurs / Fidele.objects.count() * 100) if Fidele.objects.count() > 0 else 0,
             'pourcentage_nouveaux': (nouveaux_visiteurs / total_visiteurs * 100) if total_visiteurs > 0 else 0,
             'pourcentage_baptises': (baptises / total_visiteurs * 100) if total_visiteurs > 0 else 0,
             'pourcentage_avec_problemes': (total_problemes / total_visiteurs * 100) if total_visiteurs > 0 else 0,
@@ -617,3 +619,78 @@ def complete_profile(request):
 @login_required
 def profile_complete(request):
     return render(request, 'home/profile_complete.html')
+
+
+def perform_user_full_deletion(user):
+    """Ici on anonymise/supprime toutes les données applicatives liées à l'utilisateur,
+       puis on supprime l’utilisateur lui-même."""
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
+
+    # TODO: anonymiser/supprimer données spécifiques (messages, posts, fichiers, logs…)
+    # Exemple:
+    # Post.objects.filter(author=user).delete()
+    # FileUpload.objects.filter(owner=user).delete()
+    # etc.
+
+    # Enfin, suppression du user (CASCADE sur FK on_delete=models.CASCADE)
+    user.delete()
+
+
+def process_account_deletion_request(req_id):
+    req = AccountDeletionRequest.objects.select_related("user").get(pk=req_id)
+    if req.status not in ("requested", "failed"):
+        return
+
+    req.status = "processing"
+    req.save(update_fields=["status"])
+
+    try:
+        with transaction.atomic():
+            perform_user_full_deletion(req.user)
+        req.status = "done"
+        req.processed_at = timezone.now()
+        req.save(update_fields=["status", "processed_at"])
+    except Exception as e:
+        req.status = "failed"
+        req.notes = str(e)
+        req.save(update_fields=["status", "notes"])
+        raise
+
+
+class AccountDeleteRequestView(LoginRequiredMixin, View):
+    template_name = "account/account_delete.html"
+
+    def get(self, request, *args, **kwargs):
+        return render(request, self.template_name, {"form": ConfirmDeleteForm()})
+
+    def post(self, request, *args, **kwargs):
+        form = ConfirmDeleteForm(request.POST)
+        if not form.is_valid():
+            return render(request, self.template_name, {"form": form})
+
+        req = AccountDeletionRequest.objects.create(user=request.user, status="requested")
+        # (optionnel) notifier l’équipe / l’utilisateur
+        try:
+            send_mail(
+                subject="Demande de suppression de compte",
+                message=f"Utilisateur #{request.user.pk} a demandé la suppression.",
+                from_email=getattr(settings, "DEFAULT_FROM_EMAIL", None),
+                recipient_list=[getattr(settings, "SUPPORT_EMAIL", "support@example.com")],
+                fail_silently=True,
+            )
+        except Exception:
+            pass
+
+        # Déconnexion immédiate
+        # perform_logout(request, "account_logout")  # allauth logout helper
+        messages.success(request, "Votre demande de suppression a été enregistrée.")
+        return redirect("account_delete_done")
+
+
+# (B) Page "demande reçue"
+class AccountDeleteDoneView(View):
+    template_name = "account/account_delete_done.html"
+
+    def get(self, request, *args, **kwargs):
+        return render(request, self.template_name)

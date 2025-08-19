@@ -22,8 +22,9 @@ from django.contrib import admin
 from django.template.defaulttags import url
 from django.urls import path, include
 
-from api.views import schema_view
-from fidele.views import HomePageView, FideleListView, mark_all_read, mark_read, all_notifications
+from api.views import schema_view, AccountDeletePerformWebhook
+from fidele.views import HomePageView, FideleListView, mark_all_read, mark_read, all_notifications, \
+    AccountDeleteRequestView, AccountDeleteDoneView
 
 urlpatterns = [
                   path('admin/', admin.site.urls),
@@ -43,7 +44,10 @@ urlpatterns = [
                   path('signup/', SignupView.as_view(template_name='registration/signup.html'), name='account_signup'),
                   path('login/', LoginView.as_view(template_name='registration/login.html'), name='account_login'),
                   path('logout/', LogoutView.as_view(template_name='registration/logout.html'), name='account_logout'),
-
+                  path("account/delete/", AccountDeleteRequestView.as_view(), name="account_delete"),
+                  path("account/delete/done/", AccountDeleteDoneView.as_view(), name="account_delete_done"),
+                  # API (pour app mobile) : POST auth → crée la demande de suppression
+                  path("api/account/delete/", AccountDeletePerformWebhook.as_view(), name="api_account_delete"),
               ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

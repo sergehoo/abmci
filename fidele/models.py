@@ -701,3 +701,23 @@ class Donation(models.Model):
 
     def __str__(self):
         return f"{self.category.name} - {self.amount} XOF ({self.status})"
+
+class AccountDeletionRequest(models.Model):
+    STATUS_CHOICES = [
+        ("requested", "Requested"),
+        ("processing", "Processing"),
+        ("done", "Done"),
+        ("canceled", "Canceled"),
+        ("failed", "Failed"),
+    ]
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="deletion_requests")
+    requested_at = models.DateTimeField(auto_now_add=True)
+    processed_at = models.DateTimeField(null=True, blank=True)
+    status = models.CharField(max_length=16, choices=STATUS_CHOICES, default="requested")
+    notes = models.TextField(blank=True, default="")
+
+    class Meta:
+        ordering = ("-requested_at",)
+
+    def __str__(self):
+        return f"DeletionRequest(user={self.user_id}, status={self.status})"
