@@ -11,7 +11,7 @@ from datetime import timedelta
 import requests
 from django.conf import settings
 from django.contrib.gis.geos import Point
-from django.contrib.gis.measure import Distance
+from django.contrib.gis.measure import Distance, D
 from django.core.exceptions import ValidationError
 from django.core.mail import send_mail
 from django.db import IntegrityError, transaction, models
