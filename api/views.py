@@ -10,6 +10,8 @@ from datetime import timedelta
 
 import requests
 from django.conf import settings
+from django.contrib.gis.geos import Point
+from django.contrib.gis.measure import Distance
 from django.core.exceptions import ValidationError
 from django.core.mail import send_mail
 from django.db import IntegrityError, transaction, models
@@ -23,8 +25,8 @@ from django.utils.http import http_date
 from django.utils.timezone import now
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
-from rest_framework import generics, permissions, status, viewsets, mixins, pagination
-from rest_framework.decorators import action
+from rest_framework import generics, permissions, status, viewsets, mixins, pagination, filters
+from rest_framework.decorators import action, api_view
 from rest_framework.pagination import PageNumberPagination, LimitOffsetPagination
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
@@ -39,7 +41,7 @@ from api.serializers import UserSerializer, FideleSerializer, FideleCreateUpdate
     UserProfileCompletionSerializer, ParticipationEvenementSerializer, VerseDuJourSerializer, EvenementListSerializer, \
     PrayerCommentSerializer, PrayerCategorySerializer, PrayerRequestSerializer, NotificationSerializer, \
     DeviceSerializer, BibleVersionSerializer, BibleVerseSerializer, BibleTagCreateSerializer, BannerSerializer, \
-    CreateIntentSerializer, DonationCategorySerializer
+    CreateIntentSerializer, DonationCategorySerializer, EgliseSerializer, EgliseListSerializer
 from event.models import ParticipationEvenement, Evenement
 from fidele.models import Fidele, UserProfileCompletion, Eglise, PrayerComment, PrayerRequest, PrayerLike, \
     PrayerCategory, Notification, Device, BibleVersion, BibleVerse, BibleTag, Banner, Donation, DonationCategory, \
@@ -775,3 +777,81 @@ class AccountDeletePerformWebhook(View):
 
         # déconnexion côté web ; pour mobile, renvoie 200 et laisse le client purger son token
         return JsonResponse({"status": "requested"})
+
+
+class EgliseListView(generics.ListAPIView):
+    """API pour lister les églises avec recherche et tri"""
+    queryset = Eglise.objects.all()
+    serializer_class = EgliseListSerializer
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['name', 'ville', 'pasteur']
+    ordering_fields = ['name', 'ville', 'verse_date']
+    ordering = ['name']
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+
+        # Filtrage manuel par ville
+        ville = self.request.query_params.get('ville')
+        if ville:
+            queryset = queryset.filter(ville__icontains=ville)
+
+        # Filtrage manuel par pasteur
+        pasteur = self.request.query_params.get('pasteur')
+        if pasteur:
+            queryset = queryset.filter(pasteur__icontains=pasteur)
+
+        return queryset
+
+
+class EgliseDetailView(generics.RetrieveAPIView):
+    """API pour obtenir les détails d'une église spécifique"""
+    queryset = Eglise.objects.all()
+    serializer_class = EgliseSerializer
+
+
+class EgliseProcheListView(generics.ListAPIView):
+    """API pour trouver les églises proches d'une position géographique"""
+    serializer_class = EgliseListSerializer
+
+    def get_queryset(self):
+        queryset = Eglise.objects.filter(location__isnull=False)
+
+        # Récupérer les paramètres de latitude et longitude
+        lat = self.request.query_params.get('lat')
+        lon = self.request.query_params.get('lon')
+        radius = self.request.query_params.get('radius', 10)  # 10km par défaut
+
+        if lat and lon:
+            try:
+                user_location = Point(float(lon), float(lat), srid=4326)
+                # Stocker la position pour le sérialiseur
+                self.request.user_position = user_location
+
+                # Filtrer par distance
+                queryset = queryset.annotate(
+                    distance=Distance('location', user_location)
+                ).filter(distance__lte=radius * 1000)  # Convertir km en mètres
+
+                # Ordonner par distance
+                queryset = queryset.order_by('distance')
+
+            except (ValueError, TypeError):
+                # Si les coordonnées sont invalides, retourner toutes les églises
+                pass
+
+        return queryset
+
+
+@api_view(['GET'])
+def eglises_avec_verset_du_jour(request):
+    """API personnalisée pour les églises avec leur verset du jour"""
+    eglises = Eglise.objects.exclude(verse_du_jour__isnull=True).exclude(verse_du_jour='')
+
+    # Filtrer par ville si spécifié
+    ville = request.query_params.get('ville')
+    if ville:
+        eglises = eglises.filter(ville__icontains=ville)
+
+    serializer = EgliseSerializer(eglises, many=True, context={'request': request})
+    return Response(serializer.data)

@@ -30,29 +30,30 @@ class FideleSignupForm(SignupForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+        # ✅ Mettre une église par défaut (exemple : la première de la base)
+        default_eglise = Eglise.objects.first()
+        if default_eglise:
+            self.fields['eglise'].initial = default_eglise.id
+
         self.fields['password1'].widget.attrs['class'] = 'form-control form-control-lg'
         self.fields['password2'].widget.attrs['class'] = 'form-control form-control-lg'
 
-    #     self.fields['email'].widget.attrs['class'] = 'form-control form-control-lg'
-    #     self.fields['phone'].widget.attrs['class'] = 'form-control form-control-lg'
-    #     self.fields['first_name'].widget.attrs['class'] = 'form-control form-control-lg'
-    #     self.fields['last_name'].widget.attrs['class'] = 'form-control form-control-lg'
-    #     self.fields['birthdate'].widget.attrs['class'] = 'form-control form-control-lg'
-
     def save(self, request):
-        # Sauvegarde de l'utilisateur
         user = super().save(request)
         user.first_name = self.cleaned_data['first_name']
         user.last_name = self.cleaned_data['last_name']
         user.save()
 
-        # Création automatique du fidèle
+        # ✅ Si aucune église sélectionnée → utiliser la valeur par défaut
+        eglise = self.cleaned_data.get('eglise') or Eglise.objects.first()
+
         if not hasattr(user, 'fidele'):
             Fidele.objects.create(
                 user=user,
                 phone=self.cleaned_data.get('phone'),
                 birthdate=self.cleaned_data.get('birthdate'),
-                eglise=self.cleaned_data.get('eglise'),  # ✅ l’église sélectionnée
+                eglise=eglise,
                 qlook_id=get_random_string(12),
                 date_entree=timezone.now().date(),
             )

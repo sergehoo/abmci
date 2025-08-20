@@ -577,3 +577,34 @@ class DonationIntentResponseSerializer(serializers.Serializer):
 #             fid.save()
 #
 #         return instance
+
+class EgliseSerializer(serializers.ModelSerializer):
+    # Champ calculé pour la distance (optionnel)
+    distance = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Eglise
+        fields = [
+            'id', 'name', 'ville', 'pasteur',
+            'location', 'verse_du_jour', 'verse_reference', 'verse_date',
+            'distance'  # Optionnel
+        ]
+        read_only_fields = ['verse_date']
+
+    def get_distance(self, obj):
+        # Calculer la distance depuis la position de l'utilisateur (si fournie)
+        request = self.context.get('request')
+        if request and hasattr(request, 'user_position'):
+            user_position = request.user_position
+            if obj.location and user_position:
+                # Implémentez le calcul de distance ici
+                return calculate_distance(user_position, obj.location)
+        return None
+
+
+class EgliseListSerializer(serializers.ModelSerializer):
+    """Sérialiseur simplifié pour la liste"""
+
+    class Meta:
+        model = Eglise
+        fields = ['id', 'name', 'ville', 'pasteur', 'location']

@@ -1,13 +1,15 @@
 from celery import shared_task
 from django.core.management import call_command
+from django.db import transaction
 
-# from abmci.celery import shared_task
 from django.utils import timezone
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
 
 from event.models import Evenement
+from fidele.models import Eglise
 from fidele.views import process_account_deletion_request
+from fidele.vod_smart import pick_smart_daily_verse_for_eglise
 from .models import ParticipationEvenement
 from .notifications.fcm import send_to_topic
 
@@ -40,11 +42,29 @@ def send_event_reminders():
             )
 
 
+
 @shared_task
-def task_update_verse_du_jour(version="LSG", lang="fr"):
-    call_command("update_verse_du_jour", version=version, lang=lang)
-
-
+def update_daily_verses_for_all_eglisess(version_code="LSG", language="fr"):
+    """
+    Tâche planifiée (via django-celery-beat) qui sélectionne et enregistre
+    un verset pour chaque église (variation déterministe + anti-répétition).
+    """
+    count = 0
+    today = timezone.localdate()
+    for e in Eglise.objects.all():
+        try:
+            with transaction.atomic():
+                pick_smart_daily_verse_for_eglise(
+                    eglise=e,
+                    version_code=version_code,
+                    language=language,
+                    on_date=today,
+                )
+                count += 1
+        except Exception as ex:
+            # logge toi-même si besoin
+            print(f"[VOD] {e.id}: {ex}")
+    return count
 @shared_task
 def task_process_account_deletion_request(req_id):
     process_account_deletion_request(req_id)

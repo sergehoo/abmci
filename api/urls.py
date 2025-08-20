@@ -7,7 +7,8 @@ from api.views import VerifyEmailView, UserDetailView, FideleDetailView, FideleL
     FideleCreateView, ParticipationListCreateView, ScanQRCodeAPIView, VerseDuJourView, UpcomingEventsView, \
     UpcomingEventsHomeView, PrayerCategoryViewSet, PrayerRequestViewSet, PrayerCommentViewSet, DeviceViewSet, \
     NotificationViewSet, BibleVersionViewSet, BibleVerseViewSet, BibleTagViewSet, BannerListView, CategoryListView, \
-    CreateIntentView, PaystackWebhookView, DonationVerifyAPIView
+    CreateIntentView, PaystackWebhookView, DonationVerifyAPIView, EgliseListView, EgliseDetailView, \
+    EgliseProcheListView, eglises_avec_verset_du_jour
 from event.views import FirebaseLoginView
 
 router = DefaultRouter()
@@ -26,6 +27,10 @@ urlpatterns = [
     path('auth/firebase/', FirebaseLoginView.as_view(), name='firebase-login'),
     path('auth/registration/', include('dj_rest_auth.registration.urls')),
     path('auth/verify-email/<str:key>/', VerifyEmailView.as_view(), name='verify_email'),
+
+    path('eglises/', EgliseListView.as_view(), name='eglise-list'),
+    path('eglises/<int:pk>/', EgliseDetailView.as_view(), name='eglise-detail'),
+    path('eglises/proches/', EgliseProcheListView.as_view(), name='eglise-proches'),
 
     path('categories/', CategoryListView.as_view()),
     path('intents/', CreateIntentView.as_view()),

@@ -1,7 +1,7 @@
 # core/services/vod_smart.py
 import hashlib
 from datetime import date, timedelta, datetime
-from typing import Iterable, Optional
+from typing import Iterable, Optional, Tuple
 from django.db import transaction
 from django.utils import timezone
 from django.db.models import Q
@@ -16,13 +16,18 @@ def _seed_int(s: str) -> int:
     return int(h[:8], 16)
 
 
-def _deterministic_pick(qs, context_key: str, version_code: str, language: str, on_date):
+def _deterministic_pick(qs, context_key: str, version_code: str, language: str, on_date: date, eglise_id: int,
+                        exclude_ids: Optional[Iterable[int]] = None) -> Optional['BibleVerse']:
+    """
+    Pick déterministe via seed + offset, avec exclu optionnelle d'IDs (éviter répétitions).
+    """
+    if exclude_ids:
+        qs = qs.exclude(id__in=set(exclude_ids))
     total = qs.count()
     if total == 0:
         return None
-    seed = _seed_int(f"{on_date.isoformat()}|{version_code}|{language}|{context_key}")
+    seed = _seed_int(f"{on_date.isoformat()}|{version_code}|{language}|{context_key}|EGLISE:{eglise_id}")
     offset = seed % total
-    # ordre stable
     return qs.order_by('id')[offset:offset + 1].first()
 
 
@@ -45,7 +50,6 @@ WEEKDAY_POOLS = {
     6: ["Psaumes", "Jean", "Actes"],  # Dimanche
 }
 
-# Thèmes -> critères simples (keywords et/ou livres conseillés)
 THEME_KEYWORDS = {
     "mariage": {"keywords": ["amour", "époux", "épouse", "union"],
                 "books": ["1 Corinthiens", "Genèse", "Cantique des Cantiques", "Éphésiens"]},
@@ -59,7 +63,6 @@ THEME_KEYWORDS = {
 
 def _season_for(d: date) -> Optional[str]:
     y = d.year
-    # Périodes approximatives (tu peux raffiner selon calendrier liturgique réel)
     advent_start = date(y, 12, 1)
     christmas_end = date(y, 1, 7)
     lent_start = date(y, 2, 15)
@@ -80,7 +83,11 @@ def _season_for(d: date) -> Optional[str]:
 
 
 def _build_queryset(version: BibleVersion, books: Optional[Iterable[str]] = None,
-                    keywords: Optional[Iterable[str]] = None):
+                    keywords: Optional[Iterable[str]] = None,
+                    min_len: int = 40, max_len: int = 240):
+    """
+    Contraintes simples de longueur pour lisibilité sur mobile + filtres livres/mots-clés.
+    """
     qs = BibleVerse.objects.filter(version=version)
     if books:
         qs = qs.filter(book__in=list(set(books)))
@@ -89,21 +96,78 @@ def _build_queryset(version: BibleVersion, books: Optional[Iterable[str]] = None
         for k in keywords:
             q |= Q(text__icontains=k)
         qs = qs.filter(q)
+    # longueur (SQL simple via LENGTH)
+    qs = qs.extra(where=["length(text) BETWEEN %s AND %s"], params=[min_len, max_len])
     return qs
 
 
+def _recent_usage_ids(eglise: Eglise, window_days: int = 90) -> Iterable[int]:
+    """
+    IDs des versets (BibleVerse.id) récemment utilisés par cette église.
+    On mappe book/chapter/verse à leurs IDs via une requête.
+    """
+    since = timezone.localdate() - timedelta(days=window_days)
+    usages = VerseUsage.objects.filter(eglise=eglise, used_on__gte=since) \
+        .values('book', 'chapter', 'verse')
+    if not usages:
+        return []
+
+    # Récupère les IDs correspondants (tous versions confondues pour le livre/ch/verset)
+    clauses = Q()
+    for u in usages:
+        clauses |= Q(book=u['book'], chapter=u['chapter'], verse=u['verse'])
+    if not clauses.children:
+        return []
+
+    return (BibleVerse.objects.filter(clauses)
+            .values_list('id', flat=True))
+
+
+def _save_vod_and_usage(eglise: Eglise, on_date: date, version: BibleVersion,
+                        text: str, book: str, chapter: int, verse: int,
+                        language: str, context_key: str, reference: str):
+    with transaction.atomic():
+        # Un VOD par (date, eglise)
+        VerseOfDay.objects.update_or_create(
+            date=on_date, eglise=eglise,
+            defaults={
+                'version': version.code,
+                'language': language,
+                'context_key': context_key,
+                'text': text,
+                'reference': reference,
+            }
+        )
+        # Historiser l’usage pour l’anti-répétition
+        VerseUsage.objects.create(
+            eglise=eglise,
+            used_on=on_date,
+            version=version.code,
+            book=book,
+            chapter=chapter,
+            verse=verse,
+        )
+
+
 # ---------- Sélection principale ----------
-def pick_smart_daily_verse(
+def pick_smart_daily_verse_for_eglise(
+        eglise: Eglise,
         version_code: str = "LSG",
         language: str = "fr",
         on_date: Optional[date] = None,
-        eglise: Optional[Eglise] = None,
-):
+) -> Tuple[date, str, str, str, str, str]:
     """
-    Choisit un verset en fonction du contexte: événement proche > saison > jour de semaine > fallback.
-    Retourne dict {date, version, language, context_key, text, reference}.
+    Retourne (date, version_code, language, context_key, text, reference)
+    Choix par priorité: événements (±7j) > saison > jour de semaine > fallback.
+    Variation déterministe par église (seed inclut l’ID).
+    Anti-répétition (fenêtre 90 jours).
     """
+    if not eglise:
+        raise ValueError("Église requise")
+
     on_date = on_date or timezone.localdate()
+
+    # Version par défaut / ou préférée si ton modèle Eglise en stocke une
     try:
         version = BibleVersion.objects.get(code=version_code)
     except BibleVersion.DoesNotExist:
@@ -111,114 +175,79 @@ def pick_smart_daily_verse(
         if not version:
             raise RuntimeError("Aucune BibleVersion disponible")
 
-    # 0) événements à ±7 jours (priorité)
-    if eglise:
-        start = timezone.make_aware(datetime.combine(on_date - timedelta(days=7), datetime.min.time()))
-        end = timezone.make_aware(datetime.combine(on_date + timedelta(days=1), datetime.min.time()))
-        events = (Evenement.objects
-                  .filter(eglise=eglise, date_debut__gte=start, date_fin__lt=end)
-                  .order_by('date_debut')[:3])
-        for ev in events:
-            for tag in (ev.tags or []):
-                tag = str(tag).lower().strip()
-                if tag in THEME_KEYWORDS:
-                    ctx = f"EVENT:{tag}"
-                    # cache
-                    cached = VerseOfDay.objects.filter(date=on_date, version=version.code, language=language,
-                                                       context_key=ctx).first()
-                    if cached:
-                        return {
-                            "date": cached.date,
-                            "version": cached.version,
-                            "language": cached.language,
-                            "context_key": cached.context_key,
-                            "text": cached.text,
-                            "reference": cached.reference,
-                        }
-                    conf = THEME_KEYWORDS[tag]
-                    qs = _build_queryset(version, conf.get("books"), conf.get("keywords"))
-                    chosen = _deterministic_pick(qs, ctx, version.code, language, on_date)
-                    if chosen:
-                        ref = f"{chosen.book} {chosen.chapter}:{chosen.verse}"
-                        with transaction.atomic():
-                            vod, _ = VerseOfDay.objects.get_or_create(
-                                date=on_date, version=version.code, language=language, context_key=ctx,
-                                defaults={"text": chosen.text, "reference": ref},
-                            )
-                        return {
-                            "date": on_date, "version": version.code, "language": language,
-                            "context_key": ctx, "text": chosen.text, "reference": ref,
-                        }
+    # 0) si déjà caché pour aujourd’hui → renvoyer direct
+    cached = VerseOfDay.objects.filter(date=on_date, eglise=eglise).first()
+    if cached:
+        return (cached.date, cached.version, cached.language, cached.context_key, cached.text, cached.reference)
 
-    # 1) saison/fête
+    # IDs à exclure (anti-répétition)
+    exclude_ids = list(_recent_usage_ids(eglise, window_days=90))
+
+    # ----- 1) événements à ±7 jours (priorité) -----
+    start = timezone.make_aware(datetime.combine(on_date - timedelta(days=7), datetime.min.time()))
+    end = timezone.make_aware(datetime.combine(on_date + timedelta(days=1), datetime.min.time()))
+
+    events = (Evenement.objects
+              .filter(eglise=eglise, date_debut__gte=start, date_fin__lt=end)
+              .order_by('date_debut')[:3])
+
+    for ev in events:
+        for tag in (ev.tags or []):
+            tag = str(tag).lower().strip()
+            if tag in THEME_KEYWORDS:
+                ctx = f"EVENT:{tag}"
+                books = THEME_KEYWORDS[tag].get("books")
+                keywords = THEME_KEYWORDS[tag].get("keywords")
+                qs = _build_queryset(version, books, keywords)
+                chosen = _deterministic_pick(qs, ctx, version.code, language, on_date, eglise.id, exclude_ids)
+                if chosen:
+                    ref = f"{chosen.book} {chosen.chapter}:{chosen.verse}"
+                    _save_vod_and_usage(
+                        eglise, on_date, version, chosen.text,
+                        chosen.book, chosen.chapter, chosen.verse,
+                        language, ctx, ref
+                    )
+                    return (on_date, version.code, language, ctx, chosen.text, ref)
+
+    # ----- 2) saison/fête -----
     season = _season_for(on_date)
     if season and season in SEASON_BOOK_POOLS:
         ctx = f"SEASON:{season}"
-        cached = VerseOfDay.objects.filter(date=on_date, version=version.code, language=language,
-                                           context_key=ctx).first()
-        if cached:
-            return {
-                "date": cached.date, "version": cached.version, "language": cached.language,
-                "context_key": cached.context_key, "text": cached.text, "reference": cached.reference,
-            }
-        books = SEASON_BOOK_POOLS[season]
-        qs = _build_queryset(version, books=books)
-        chosen = _deterministic_pick(qs, ctx, version.code, language, on_date)
+        qs = _build_queryset(version, books=SEASON_BOOK_POOLS[season])
+        chosen = _deterministic_pick(qs, ctx, version.code, language, on_date, eglise.id, exclude_ids)
         if chosen:
             ref = f"{chosen.book} {chosen.chapter}:{chosen.verse}"
-            with transaction.atomic():
-                VerseOfDay.objects.get_or_create(
-                    date=on_date, version=version.code, language=language, context_key=ctx,
-                    defaults={"text": chosen.text, "reference": ref},
-                )
-            return {
-                "date": on_date, "version": version.code, "language": language,
-                "context_key": ctx, "text": chosen.text, "reference": ref,
-            }
+            _save_vod_and_usage(
+                eglise, on_date, version, chosen.text,
+                chosen.book, chosen.chapter, chosen.verse,
+                language, ctx, ref
+            )
+            return (on_date, version.code, language, ctx, chosen.text, ref)
 
-    # 2) jour de la semaine
+    # ----- 3) jour de la semaine -----
     weekday = on_date.weekday()  # 0=lundi … 6=dimanche
     ctx = f"WEEKDAY:{weekday}"
-    cached = VerseOfDay.objects.filter(date=on_date, version=version.code, language=language, context_key=ctx).first()
-    if cached:
-        return {
-            "date": cached.date, "version": cached.version, "language": cached.language,
-            "context_key": cached.context_key, "text": cached.text, "reference": cached.reference,
-        }
-    books = WEEKDAY_POOLS.get(weekday)
-    qs = _build_queryset(version, books=books)
-    chosen = _deterministic_pick(qs, ctx, version.code, language, on_date)
+    qs = _build_queryset(version, books=WEEKDAY_POOLS.get(weekday))
+    chosen = _deterministic_pick(qs, ctx, version.code, language, on_date, eglise.id, exclude_ids)
     if chosen:
         ref = f"{chosen.book} {chosen.chapter}:{chosen.verse}"
-        with transaction.atomic():
-            VerseOfDay.objects.get_or_create(
-                date=on_date, version=version.code, language=language, context_key=ctx,
-                defaults={"text": chosen.text, "reference": ref},
-            )
-        return {
-            "date": on_date, "version": version.code, "language": language,
-            "context_key": ctx, "text": chosen.text, "reference": ref,
-        }
+        _save_vod_and_usage(
+            eglise, on_date, version, chosen.text,
+            chosen.book, chosen.chapter, chosen.verse,
+            language, ctx, ref
+        )
+        return (on_date, version.code, language, ctx, chosen.text, ref)
 
-    # 3) fallback : tous versets de la version
+    # ----- 4) fallback -----
     ctx = "DEFAULT"
-    cached = VerseOfDay.objects.filter(date=on_date, version=version.code, language=language, context_key=ctx).first()
-    if cached:
-        return {
-            "date": cached.date, "version": cached.version, "language": cached.language,
-            "context_key": cached.context_key, "text": cached.text, "reference": cached.reference,
-        }
     qs = _build_queryset(version)
-    chosen = _deterministic_pick(qs, ctx, version.code, language, on_date)
+    chosen = _deterministic_pick(qs, ctx, version.code, language, on_date, eglise.id, exclude_ids)
     if not chosen:
         raise RuntimeError("Aucun verset disponible")
     ref = f"{chosen.book} {chosen.chapter}:{chosen.verse}"
-    with transaction.atomic():
-        VerseOfDay.objects.get_or_create(
-            date=on_date, version=version.code, language=language, context_key=ctx,
-            defaults={"text": chosen.text, "reference": ref},
-        )
-    return {
-        "date": on_date, "version": version.code, "language": language,
-        "context_key": ctx, "text": chosen.text, "reference": ref,
-    }
+    _save_vod_and_usage(
+        eglise, on_date, version, chosen.text,
+        chosen.book, chosen.chapter, chosen.verse,
+        language, ctx, ref
+    )
+    return (on_date, version.code, language, ctx, chosen.text, ref)

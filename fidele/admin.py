@@ -3,6 +3,7 @@ from datetime import timedelta
 from django.contrib import admin
 from django.contrib.gis.admin import GISModelAdmin
 from django.contrib.gis.forms import OSMWidget
+from django.urls import reverse
 from django.utils.html import format_html
 from simple_history.admin import SimpleHistoryAdmin
 from django.contrib.gis import admin as gis_admin
@@ -354,25 +355,28 @@ class DonationAdmin(admin.ModelAdmin):
 @admin.register(VerseOfDay)
 class VerseOfDayAdmin(admin.ModelAdmin):
     # Configuration de l'affichage dans la liste
-    list_display = ('date', 'reference', 'version', 'language','context_key')
-    list_filter = ('version', 'language', 'date')
-    search_fields = ('reference', 'text')
-    ordering = ('-date',)
+    list_display = ('date', 'eglise', 'reference', 'version', 'language', 'context_key', 'created_at')
+    list_filter = ('eglise', 'version', 'language', 'context_key', 'date')
+    search_fields = ('reference', 'text', 'context_key', 'eglise__nom')
+    ordering = ('-date', 'eglise')
     date_hierarchy = 'date'
 
     # Configuration du formulaire d'édition
     fieldsets = (
         (None, {
-            'fields': ('date', 'version', 'language','context_key')
+            'fields': ('date', 'eglise', 'version', 'language', 'context_key')
         }),
         ('Contenu du verset', {
             'fields': ('reference', 'text')
         }),
-
+        ('Métadonnées', {
+            'fields': ('created_at',),
+            'classes': ('collapse',)
+        })
     )
 
     # Champs en lecture seule
-    # readonly_fields = ('created_at', 'updated_at')
+    readonly_fields = ('created_at',)
 
     # Actions personnalisées
     actions = ['duplicate_verse']

@@ -651,29 +651,54 @@ class BibleTag(models.Model):
 
 
 class VerseOfDay(models.Model):
-    """Cache du VDJ (contexte-aware) pour éviter les recalculs et garder un audit."""
-    date = models.DateField(db_index=True)
-    version = models.CharField(max_length=32, db_index=True, default='LSG')
-    language = models.CharField(max_length=8, db_index=True, default='fr')
-    # Contexte déterminant le choix (ex: "SEASON:ADVENT", "EVENT:marriage", "WEEKDAY:MON")
+    """
+    Cache du verset du jour, par église, version et langue.
+    Un enregistrement par (date, église).
+    """
+    date = models.DateField(default=timezone.localdate)
+    eglise = models.ForeignKey('fidele.Eglise', on_delete=models.CASCADE, related_name='vods')
+    version = models.CharField(max_length=16, default='LSG')
+    language = models.CharField(max_length=16, default='fr')
     context_key = models.CharField(max_length=64, default='DEFAULT', db_index=True)
     text = models.TextField()
     reference = models.CharField(max_length=128)
+    created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        unique_together = ('date', 'version', 'language', 'context_key')
-        ordering = ('-date',)
+        unique_together = (('date', 'eglise'),)
+        indexes = [
+            models.Index(fields=['eglise', 'date']),
+            models.Index(fields=['version', 'language']),
+        ]
 
     def __str__(self):
-        return f"{self.date} [{self.version}/{self.language}] {self.context_key} {self.reference}"
-
+        return f"{self.date} - {self.eglise_id} - {self.reference}"
 def banner_upload_to(instance, filename):
     # ex: banners/2025/08/<filename>
     # Utilise created_at si déjà présent (update), sinon "maintenant" (création)
     dt = instance.created_at or timezone.now()
     return f"banners/{dt:%Y/%m}/{filename}"
 
+class VerseUsage(models.Model):
+    """
+    Historique des versets utilisés par église, pour éviter les répétitions
+    trop rapprochées (fenêtre glissante).
+    """
+    eglise = models.ForeignKey('fidele.Eglise', on_delete=models.CASCADE, related_name='verse_usages')
+    used_on = models.DateField(default=timezone.localdate, db_index=True)
+    version = models.CharField(max_length=16, default='LSG')
+    book = models.CharField(max_length=64)
+    chapter = models.PositiveIntegerField()
+    verse = models.PositiveIntegerField()
 
+    class Meta:
+        indexes = [
+            models.Index(fields=['eglise', 'used_on']),
+            models.Index(fields=['eglise', 'book', 'chapter', 'verse']),
+        ]
+
+    def __str__(self):
+        return f"{self.eglise_id} - {self.book} {self.chapter}:{self.verse} ({self.used_on})"
 class Banner(models.Model):
     title = models.CharField(max_length=200, blank=True, default="")
     subtitle = models.CharField(max_length=300, blank=True, default="")

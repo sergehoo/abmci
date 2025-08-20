@@ -55,6 +55,7 @@ INSTALLED_APPS = [
     "rest_framework_simplejwt",
     "dj_rest_auth",
     "dj_rest_auth.registration",
+    'django_filters',
     "corsheaders",
     "allauth",
     "allauth.account",
@@ -72,7 +73,6 @@ INSTALLED_APPS = [
     "django_countries",
     "phonenumber_field",
     "drf_yasg",
-    'djcelery',
     'celery',
     "django_celery_beat",  # optionnel mais recommandé
 
