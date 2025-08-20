@@ -789,14 +789,13 @@ def _get_float(request, name):
         return float(v)
     except (TypeError, ValueError):
         return None
-
-@method_decorator(cache_page(60 * 5), name="dispatch")   # 5 min de cache
+@method_decorator(cache_page(60 * 5), name="dispatch")
 class EgliseListView(generics.ListAPIView):
     """
-    API pour lister les églises avec recherche et tri (publique)
+    API publique : lister les églises (recherche + tri)
     """
     permission_classes = [AllowAny]
-    authentication_classes = []  # bypass auth globale si IsAuthenticated par défaut
+    authentication_classes = []
 
     queryset = Eglise.objects.all()
     serializer_class = EgliseListSerializer
@@ -806,62 +805,91 @@ class EgliseListView(generics.ListAPIView):
     ordering = ['name']
 
     def get_queryset(self):
-        queryset = super().get_queryset()
+        qs = super().get_queryset()
 
-        # Filtrage manuel par ville
         ville = self.request.query_params.get('ville')
         if ville:
-            queryset = queryset.filter(ville__icontains=ville)
+            qs = qs.filter(ville__icontains=ville)
 
-        # Filtrage manuel par pasteur
         pasteur = self.request.query_params.get('pasteur')
         if pasteur:
-            queryset = queryset.filter(pasteur__icontains=pasteur)
+            qs = qs.filter(pasteur__icontains=pasteur)
 
-        return queryset
+        return qs
 
 
 class EgliseDetailView(generics.RetrieveAPIView):
-    """
-    Détail d'une église (public)
-    """
     permission_classes = [AllowAny]
     authentication_classes = []
-
-    queryset = Eglise.objects.all()
     serializer_class = EgliseSerializer
+    queryset = Eglise.objects.all()
+
+    def get_object(self):
+        obj = super().get_object()
+        lat = self.request.query_params.get('lat')
+        lon = self.request.query_params.get('lon')
+        if lat and lon and obj.location:
+            try:
+                from django.contrib.gis.geos import Point
+                from django.contrib.gis.db.models.functions import Distance
+                user_pt = Point(float(lon), float(lat), srid=4326)
+                # on ré-annote sur un queryset filtré par id
+                obj = (Eglise.objects.filter(pk=obj.pk)
+                       .annotate(distance=Distance('location', user_pt))
+                       .get(pk=obj.pk))
+                self.request.user_position = user_pt
+            except Exception:
+                pass
+        return obj
+
+    def get_serializer_context(self):
+        ctx = super().get_serializer_context()
+        ctx['request'] = self.request
+        return ctx
 
 
-@method_decorator(cache_page(60 * 2), name="dispatch")   # 2 min
+@method_decorator(cache_page(60 * 2), name="dispatch")
 class EgliseProcheListView(generics.ListAPIView):
     """
-    Églises proches d'une position (public) :
-    /api/eglises/proches/?lat=...&lon=...&radius=10
-    - radius en km (1..200)
+    API publique : églises proches
+    /api/eglises/proches/?lat=..&lon=..&radius=10   (radius en km)
     """
     permission_classes = [AllowAny]
     authentication_classes = []
-
     serializer_class = EgliseListSerializer
-
 
     def get_queryset(self):
         qs = Eglise.objects.filter(location__isnull=False)
+
         lat = self.request.query_params.get('lat')
         lon = self.request.query_params.get('lon')
-        radius = float(self.request.query_params.get('radius', 10))  # km
+        radius_km = float(self.request.query_params.get('radius', 10))  # km
 
         if lat and lon:
             try:
                 user_pt = Point(float(lon), float(lat), srid=4326)  # (lon, lat)
+
+                # On annote un champ 'distance' de type Distance (mesurée en mètres si geography/srid=4326)
                 qs = qs.annotate(
-                    distance=Distance('location', user_pt)  # mètres
+                    distance=Distance('location', user_pt)
                 ).filter(
-                    distance__lte=radius * 1000.0
+                    # IMPORTANT : on filtre avec une Distance D(km=...) pour éviter les conversions manuelles
+                    distance__lte=D(km=radius_km)
                 ).order_by('distance')
+
+                # On garde la position pour le serializer si besoin ultérieur
+                self.request.user_position = user_pt
+
             except (ValueError, TypeError):
                 pass
+
         return qs
+
+    def get_serializer_context(self):
+        ctx = super().get_serializer_context()
+        # Passer la requête (et donc user_position éventuelle) aux serializers
+        ctx['request'] = self.request
+        return ctx
 @api_view(['GET'])
 def eglises_avec_verset_du_jour(request):
     """API personnalisée pour les églises avec leur verset du jour"""

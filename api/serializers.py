@@ -578,31 +578,13 @@ class DonationIntentResponseSerializer(serializers.Serializer):
 #             fid.save()
 #
 #         return instance
-
-class EgliseSerializer(serializers.ModelSerializer):
-    # Champ calculé pour la distance (optionnel)
-    distance = serializers.SerializerMethodField()
-
-    class Meta:
-        model = Eglise
-        fields = [
-            'id', 'name', 'ville', 'pasteur',
-            'location', 'verse_du_jour', 'verse_reference', 'verse_date',
-            'distance'  # Optionnel
-        ]
-        read_only_fields = ['verse_date']
-
-    def get_distance(self, obj):
-        # Calculer la distance depuis la position de l'utilisateur (si fournie)
-        request = self.context.get('request')
-        if request and hasattr(request, 'user_position'):
-            user_position = request.user_position
-            if obj.location and user_position:
-                # Implémentez le calcul de distance ici
-                return calculate_distance(user_position, obj.location)
-        return None
-
 class EgliseListSerializer(serializers.ModelSerializer):
+    """
+    Serializer “liste/carte” :
+    - location retournée en GeoJSON simple
+    - lat/lon extraits pour le mobile
+    - distance normalisée en mètres (float)
+    """
     location = serializers.SerializerMethodField()
     lat = serializers.SerializerMethodField()
     lon = serializers.SerializerMethodField()
@@ -612,14 +594,15 @@ class EgliseListSerializer(serializers.ModelSerializer):
         model = Eglise
         fields = [
             'id', 'name', 'ville', 'pasteur',
-            'location', 'lat', 'lon',     # <-- ajoutés
-            'distance',                   # <-- en mètres si annotée
+            'location', 'lat', 'lon',
+            'distance',                   # <- float en mètres si annoté
             'verse_du_jour', 'verse_reference', 'verse_date',
         ]
 
     def get_location(self, obj):
         if not obj.location:
             return None
+        # GeoJSON minimal
         return {
             "type": "Point",
             "coordinates": [obj.location.x, obj.location.y]  # (lon, lat)
@@ -632,5 +615,66 @@ class EgliseListSerializer(serializers.ModelSerializer):
         return obj.location.x if obj.location else None
 
     def get_distance(self, obj):
+        """
+        Lorsque la vue a annoté 'distance' (Distance GeoDjango),
+        on renvoie la valeur en mètres via .m
+        """
         d = getattr(obj, 'distance', None)
-        return float(d) if d is not None else None
+        if d is None:
+            return None
+        # d est un django.contrib.gis.measure.Distance -> exposer en mètres
+        try:
+            return d.m  # ✅ valeur numérique en mètres
+        except Exception:
+            # fallback ultime (selon backend/SRID) si jamais pas d'attribut d'unité
+            try:
+                return float(d)
+            except Exception:
+                return None
+
+
+class EgliseSerializer(serializers.ModelSerializer):
+    """
+    Serializer “détail”.
+    On réutilise la logique distance si la vue a annoté, sinon None.
+    """
+    location = serializers.SerializerMethodField()
+    lat = serializers.SerializerMethodField()
+    lon = serializers.SerializerMethodField()
+    distance = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Eglise
+        fields = [
+            'id', 'name', 'ville', 'pasteur',
+            'location', 'lat', 'lon',
+            'verse_du_jour', 'verse_reference', 'verse_date',
+            'distance',
+        ]
+        read_only_fields = ['verse_date']
+
+    def get_location(self, obj):
+        if not obj.location:
+            return None
+        return {
+            "type": "Point",
+            "coordinates": [obj.location.x, obj.location.y]
+        }
+
+    def get_lat(self, obj):
+        return obj.location.y if obj.location else None
+
+    def get_lon(self, obj):
+        return obj.location.x if obj.location else None
+
+    def get_distance(self, obj):
+        d = getattr(obj, 'distance', None)
+        if d is None:
+            return None
+        try:
+            return d.m
+        except Exception:
+            try:
+                return float(d)
+            except Exception:
+                return None
