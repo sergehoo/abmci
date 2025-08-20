@@ -37,6 +37,7 @@ from allauth.account.models import EmailAddress
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
 from rest_framework.views import APIView
+from django.contrib.gis.db.models.functions import DistanceSphere
 
 from api.serializers import UserSerializer, FideleSerializer, FideleCreateUpdateSerializer, \
     UserProfileCompletionSerializer, ParticipationEvenementSerializer, VerseDuJourSerializer, EvenementListSerializer, \
@@ -846,25 +847,20 @@ class EgliseProcheListView(generics.ListAPIView):
 
     def get_queryset(self):
         qs = Eglise.objects.filter(location__isnull=False)
-
         lat = self.request.query_params.get('lat')
         lon = self.request.query_params.get('lon')
         radius = float(self.request.query_params.get('radius', 10))  # km
 
         if lat and lon:
             try:
-                user_point = Point(float(lon), float(lat), srid=4326)  # (lon, lat)
-                # ✅ distance en mètres, indépendante du backend
+                user_pt = Point(float(lon), float(lat), srid=4326)  # (lon, lat)
                 qs = qs.annotate(
-                    distance=DistanceSphere('location', user_point)
+                    distance=DistanceSphere('location', user_pt)  # mètres
                 ).filter(
                     distance__lte=radius * 1000.0
                 ).order_by('distance')
-                # Pour le serializer (optionnel)
-                self.request.user_position = user_point
             except (ValueError, TypeError):
                 pass
-
         return qs
 @api_view(['GET'])
 def eglises_avec_verset_du_jour(request):
