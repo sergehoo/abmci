@@ -604,8 +604,39 @@ class EgliseSerializer(serializers.ModelSerializer):
 
 
 class EgliseListSerializer(serializers.ModelSerializer):
-    """Sérialiseur simplifié pour la liste"""
+    location = serializers.SerializerMethodField()
+    lat = serializers.SerializerMethodField()
+    lon = serializers.SerializerMethodField()
+    distance = serializers.SerializerMethodField()  # mètres (float) si annotée
+    verse_reference = serializers.CharField(source='verse_reference', allow_blank=True)
+    verse_du_jour = serializers.CharField(source='verse_du_jour', allow_blank=True)
+    verse_date = serializers.DateField(source='verse_date')
 
     class Meta:
         model = Eglise
-        fields = ['id', 'name', 'ville', 'pasteur', 'location']
+        fields = [
+            'id', 'name', 'ville', 'pasteur',
+            'location', 'lat', 'lon',
+            'distance',         # <— float en mètres
+            'verse_reference', 'verse_du_jour', 'verse_date',
+        ]
+
+    def get_location(self, obj):
+        if not obj.location:
+            return None
+        # ✅ GeoJSON minimal
+        return {
+            "type": "Point",
+            "coordinates": [obj.location.x, obj.location.y]  # (lon, lat)
+        }
+
+    def get_lat(self, obj):
+        return obj.location.y if obj.location else None
+
+    def get_lon(self, obj):
+        return obj.location.x if obj.location else None
+
+    def get_distance(self, obj):
+        # annotée dans la vue via DistanceSphere → nombre en mètres
+        d = getattr(obj, 'distance', None)
+        return float(d) if d is not None else None

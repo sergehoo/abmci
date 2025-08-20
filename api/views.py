@@ -843,29 +843,26 @@ class EgliseProcheListView(generics.ListAPIView):
 
     serializer_class = EgliseListSerializer
 
+
     def get_queryset(self):
         qs = Eglise.objects.filter(location__isnull=False)
 
-        lat = _get_float(self.request, 'lat')
-        lon = _get_float(self.request, 'lon')
-        radius_km = _get_float(self.request, 'radius') or 10.0
-        # garde-fous
-        radius_km = max(1.0, min(radius_km, 200.0))
+        lat = self.request.query_params.get('lat')
+        lon = self.request.query_params.get('lon')
+        radius = float(self.request.query_params.get('radius', 10))  # km
 
-        if lat is not None and lon is not None:
+        if lat and lon:
             try:
-                # Point(lon, lat) en SRID=4326
-                user_location = Point(lon, lat, srid=4326)
-                # Dispo dans le serializer pour calculer distance_km si besoin
-                self.request.user_position = user_location
-
-                qs = (
-                    qs.annotate(distance=Distance('location', user_location))
-                      .filter(distance__lte=radius_km * 1000.0)
-                      .order_by('distance')
-                )
-            except Exception:
-                # si coords invalides, on renvoie la liste brute (sans distance)
+                user_point = Point(float(lon), float(lat), srid=4326)  # (lon, lat)
+                # ✅ distance en mètres, indépendante du backend
+                qs = qs.annotate(
+                    distance=DistanceSphere('location', user_point)
+                ).filter(
+                    distance__lte=radius * 1000.0
+                ).order_by('distance')
+                # Pour le serializer (optionnel)
+                self.request.user_position = user_point
+            except (ValueError, TypeError):
                 pass
 
         return qs

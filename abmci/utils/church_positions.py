@@ -2,6 +2,9 @@ from django.contrib.gis.geos import Point
 from django.contrib.gis.db.models.functions import Distance
 from django.contrib.gis.measure import D
 
+from fidele.models import Eglise
+
+
 def calculate_distance(point1, point2):
     """Calculer la distance en kilomètres entre deux points"""
     if point1 and point2:
