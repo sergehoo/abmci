@@ -31,6 +31,7 @@ urlpatterns = [
     path('eglises/', EgliseListView.as_view(), name='eglise-list'),
     path('eglises/<int:pk>/', EgliseDetailView.as_view(), name='eglise-detail'),
     path('eglises/proches/', EgliseProcheListView.as_view(), name='eglise-proches'),
+    path('api/eglises/avec-verset/', eglises_avec_verset_du_jour, name='eglise-avec-verset'),
 
     path('categories/', CategoryListView.as_view()),
     path('intents/', CreateIntentView.as_view()),

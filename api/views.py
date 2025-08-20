@@ -24,12 +24,13 @@ from django.utils.decorators import method_decorator
 from django.utils.http import http_date
 from django.utils.timezone import now
 from django.views import View
+from django.views.decorators.cache import cache_page
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework import generics, permissions, status, viewsets, mixins, pagination, filters
 from rest_framework.decorators import action, api_view
 from rest_framework.pagination import PageNumberPagination, LimitOffsetPagination
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
-from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
+from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly, AllowAny
 from rest_framework.response import Response
 from django.contrib.auth import get_user_model
 from allauth.account.models import EmailAddress
@@ -778,9 +779,24 @@ class AccountDeletePerformWebhook(View):
         # déconnexion côté web ; pour mobile, renvoie 200 et laisse le client purger son token
         return JsonResponse({"status": "requested"})
 
+# ------- Helpers -------
+def _get_float(request, name):
+    v = request.query_params.get(name)
+    if v is None or v == "":
+        return None
+    try:
+        return float(v)
+    except (TypeError, ValueError):
+        return None
 
+@method_decorator(cache_page(60 * 5), name="dispatch")   # 5 min de cache
 class EgliseListView(generics.ListAPIView):
-    """API pour lister les églises avec recherche et tri"""
+    """
+    API pour lister les églises avec recherche et tri (publique)
+    """
+    permission_classes = [AllowAny]
+    authentication_classes = []  # bypass auth globale si IsAuthenticated par défaut
+
     queryset = Eglise.objects.all()
     serializer_class = EgliseListSerializer
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
@@ -805,44 +821,54 @@ class EgliseListView(generics.ListAPIView):
 
 
 class EgliseDetailView(generics.RetrieveAPIView):
-    """API pour obtenir les détails d'une église spécifique"""
+    """
+    Détail d'une église (public)
+    """
+    permission_classes = [AllowAny]
+    authentication_classes = []
+
     queryset = Eglise.objects.all()
     serializer_class = EgliseSerializer
 
 
+@method_decorator(cache_page(60 * 2), name="dispatch")   # 2 min
 class EgliseProcheListView(generics.ListAPIView):
-    """API pour trouver les églises proches d'une position géographique"""
+    """
+    Églises proches d'une position (public) :
+    /api/eglises/proches/?lat=...&lon=...&radius=10
+    - radius en km (1..200)
+    """
+    permission_classes = [AllowAny]
+    authentication_classes = []
+
     serializer_class = EgliseListSerializer
 
     def get_queryset(self):
-        queryset = Eglise.objects.filter(location__isnull=False)
+        qs = Eglise.objects.filter(location__isnull=False)
 
-        # Récupérer les paramètres de latitude et longitude
-        lat = self.request.query_params.get('lat')
-        lon = self.request.query_params.get('lon')
-        radius = self.request.query_params.get('radius', 10)  # 10km par défaut
+        lat = _get_float(self.request, 'lat')
+        lon = _get_float(self.request, 'lon')
+        radius_km = _get_float(self.request, 'radius') or 10.0
+        # garde-fous
+        radius_km = max(1.0, min(radius_km, 200.0))
 
-        if lat and lon:
+        if lat is not None and lon is not None:
             try:
-                user_location = Point(float(lon), float(lat), srid=4326)
-                # Stocker la position pour le sérialiseur
+                # Point(lon, lat) en SRID=4326
+                user_location = Point(lon, lat, srid=4326)
+                # Dispo dans le serializer pour calculer distance_km si besoin
                 self.request.user_position = user_location
 
-                # Filtrer par distance
-                queryset = queryset.annotate(
-                    distance=Distance('location', user_location)
-                ).filter(distance__lte=radius * 1000)  # Convertir km en mètres
-
-                # Ordonner par distance
-                queryset = queryset.order_by('distance')
-
-            except (ValueError, TypeError):
-                # Si les coordonnées sont invalides, retourner toutes les églises
+                qs = (
+                    qs.annotate(distance=Distance('location', user_location))
+                      .filter(distance__lte=radius_km * 1000.0)
+                      .order_by('distance')
+                )
+            except Exception:
+                # si coords invalides, on renvoie la liste brute (sans distance)
                 pass
 
-        return queryset
-
-
+        return qs
 @api_view(['GET'])
 def eglises_avec_verset_du_jour(request):
     """API personnalisée pour les églises avec leur verset du jour"""

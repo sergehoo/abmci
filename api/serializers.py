@@ -11,6 +11,7 @@ from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from django.contrib.gis.db.models.functions import Distance as DistanceFunc
 
+from abmci.utils.church_positions import calculate_distance
 from abmci.utils.notifications import send_fcm_multicast
 from event.models import ParticipationEvenement, TypeEvent, Evenement
 from fidele.models import Fidele, UserProfileCompletion, Eglise, SEXE_CHOICES, MARITAL_CHOICES, Location, \
