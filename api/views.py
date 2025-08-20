@@ -37,7 +37,7 @@ from allauth.account.models import EmailAddress
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
 from rest_framework.views import APIView
-from django.contrib.gis.db.models.functions import DistanceSphere
+from django.contrib.gis.db.models.functions import Distance
 
 from api.serializers import UserSerializer, FideleSerializer, FideleCreateUpdateSerializer, \
     UserProfileCompletionSerializer, ParticipationEvenementSerializer, VerseDuJourSerializer, EvenementListSerializer, \
@@ -855,7 +855,7 @@ class EgliseProcheListView(generics.ListAPIView):
             try:
                 user_pt = Point(float(lon), float(lat), srid=4326)  # (lon, lat)
                 qs = qs.annotate(
-                    distance=DistanceSphere('location', user_pt)  # mètres
+                    distance=Distance('location', user_pt)  # mètres
                 ).filter(
                     distance__lte=radius * 1000.0
                 ).order_by('distance')
