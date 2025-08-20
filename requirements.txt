@@ -23,10 +23,12 @@ dj-rest-auth==7.0.1
 Django==5.1.3
 django-allauth==65.3.0
 django-appconf==1.1.0
+django-celery==3.1.17
 django-celery-beat==2.8.1
 django-cors-headers==4.7.0
 django-countries==7.6.1
 django-crispy-forms==2.4
+django-filter==25.1
 django-jsonfield-backport==1.0.5
 django-model-utils==5.0.0
 django-notifs==4.0.0
@@ -63,6 +65,7 @@ inflection==0.5.1
 iniconfig==2.1.0
 jsonfield==3.2.0
 kombu==5.5.4
+Markdown==3.8.2
 msgpack==1.1.1
 packaging==25.0
 phonenumbers==9.0.10
@@ -101,3 +104,4 @@ uritemplate==4.2.0
 urllib3==2.5.0
 vine==5.1.0
 wcwidth==0.2.13
+django_filters
