@@ -851,44 +851,64 @@ class EgliseDetailView(generics.RetrieveAPIView):
 @method_decorator(cache_page(60 * 2), name="dispatch")
 class EgliseProcheListView(generics.ListAPIView):
     """
-    API publique : églises proches
-    /api/eglises/proches/?lat=..&lon=..&radius=10   (radius en km)
+    Églises proches d'une position (public) :
+    /api/eglises/proches/?lat=...&lon=...&radius=10&all=1&limit=500
+
+    - radius en km (par défaut 10)
+    - all=1 pour ignorer le filtre de distance (renvoie toutes les églises avec distance, triées)
+    - limit: nombre max d’items (défaut 500, plafond 2000)
     """
     permission_classes = [AllowAny]
     authentication_classes = []
     serializer_class = EgliseListSerializer
 
+
     def get_queryset(self):
         qs = Eglise.objects.filter(location__isnull=False)
-
         lat = self.request.query_params.get('lat')
         lon = self.request.query_params.get('lon')
-        radius_km = float(self.request.query_params.get('radius', 10))  # km
+
+        radius = float(self.request.query_params.get('radius', 10.0))  # km
+        # plafond côté API (évite les abus)
+        radius = max(0.1, min(radius, 5000.0))
+
+        show_all = str(self.request.query_params.get('all', '0')).lower() in ('1', 'true', 'yes')
+
+        limit = int(self.request.query_params.get('limit', 500))
+        limit = max(1, min(limit, 2000))
 
         if lat and lon:
             try:
-                user_pt = Point(float(lon), float(lat), srid=4326)  # (lon, lat)
-
-                # On annote un champ 'distance' de type Distance (mesurée en mètres si geography/srid=4326)
+                user_pt = Point(float(lon), float(lat), srid=4326)
+                # Distance sphérique en mètres et tri par distance
                 qs = qs.annotate(
-                    distance=Distance('location', user_pt)
-                ).filter(
-                    # IMPORTANT : on filtre avec une Distance D(km=...) pour éviter les conversions manuelles
-                    distance__lte=D(km=radius_km)
+                    distance=DistanceSphere('location', user_pt),
                 ).order_by('distance')
 
-                # On garde la position pour le serializer si besoin ultérieur
-                self.request.user_position = user_pt
+                if not show_all:
+                    # filtrage par rayon seulement si all=0
+                    qs = qs.filter(distance__lte=radius * 1000.0)
 
+                # limite “hard” pour les performances
+                qs = qs[:limit]
+
+                # On stocke des infos pour le serializer
+                self.request._user_point = user_pt
+                self.request._radius_m = radius * 1000.0
             except (ValueError, TypeError):
-                pass
+                # lat/lon invalides -> pas d’annotation distance
+                qs = qs[:limit]
+        else:
+            # pas de position -> renvoyer tout, tri alphabétique, avec limite
+            qs = qs.order_by('name')[:limit]
 
         return qs
 
     def get_serializer_context(self):
         ctx = super().get_serializer_context()
-        # Passer la requête (et donc user_position éventuelle) aux serializers
-        ctx['request'] = self.request
+        # passer infos au serializer pour calculer in_range
+        ctx['user_point'] = getattr(self.request, '_user_point', None)
+        ctx['radius_m'] = getattr(self.request, '_radius_m', None)
         return ctx
 @api_view(['GET'])
 def eglises_avec_verset_du_jour(request):

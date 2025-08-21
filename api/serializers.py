@@ -579,30 +579,24 @@ class DonationIntentResponseSerializer(serializers.Serializer):
 #
 #         return instance
 class EgliseListSerializer(serializers.ModelSerializer):
-    """
-    Serializer “liste/carte” :
-    - location retournée en GeoJSON simple
-    - lat/lon extraits pour le mobile
-    - distance normalisée en mètres (float)
-    """
     location = serializers.SerializerMethodField()
     lat = serializers.SerializerMethodField()
     lon = serializers.SerializerMethodField()
     distance = serializers.SerializerMethodField()
+    in_range = serializers.SerializerMethodField()  # ✅ nouveau
 
     class Meta:
         model = Eglise
         fields = [
             'id', 'name', 'ville', 'pasteur',
             'location', 'lat', 'lon',
-            'distance',                   # <- float en mètres si annoté
+            'distance', 'in_range',
             'verse_du_jour', 'verse_reference', 'verse_date',
         ]
 
     def get_location(self, obj):
         if not obj.location:
             return None
-        # GeoJSON minimal
         return {
             "type": "Point",
             "coordinates": [obj.location.x, obj.location.y]  # (lon, lat)
@@ -615,23 +609,20 @@ class EgliseListSerializer(serializers.ModelSerializer):
         return obj.location.x if obj.location else None
 
     def get_distance(self, obj):
-        """
-        Lorsque la vue a annoté 'distance' (Distance GeoDjango),
-        on renvoie la valeur en mètres via .m
-        """
         d = getattr(obj, 'distance', None)
-        if d is None:
-            return None
-        # d est un django.contrib.gis.measure.Distance -> exposer en mètres
+        # DistanceSphere renvoie un float (mètres) avec PostGIS, mais
+        # selon setup, ça peut être un objet. On force proprement.
         try:
-            return d.m  # ✅ valeur numérique en mètres
-        except Exception:
-            # fallback ultime (selon backend/SRID) si jamais pas d'attribut d'unité
-            try:
-                return float(d)
-            except Exception:
-                return None
+            return float(d) if d is not None else None
+        except (TypeError, ValueError):
+            return None
 
+    def get_in_range(self, obj):
+        radius_m = self.context.get('radius_m')
+        d = self.get_distance(obj)
+        if d is None or radius_m is None:
+            return None  # inconnu
+        return d <= radius_m
 
 class EgliseSerializer(serializers.ModelSerializer):
     """

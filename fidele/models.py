@@ -55,14 +55,6 @@ class Device(models.Model):
     last_seen = models.DateTimeField(auto_now=True)
 
 
-class Notification(models.Model):
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='notifications')
-    title = models.CharField(max_length=140)
-    body = models.TextField(blank=True)
-    data = models.JSONField(default=dict, blank=True)  # deep-link payload (type, ids, etc)
-    is_read = models.BooleanField(default=False)
-    created_at = models.DateTimeField(auto_now_add=True)
-
 
 class Fonction(models.Model):
     name = models.CharField(max_length=200)
@@ -160,11 +152,32 @@ class Eglise(models.Model):
     verse_date = models.DateField(default=timezone.now)
 
     def save(self, *args, **kwargs):
-        # Mettre à jour la date seulement si le verset change
-        if self.pk and 'verse_du_jour' in kwargs.get('update_fields', []):
-            self.verse_date = timezone.now().date()
-        super().save(*args, **kwargs)
+        """
+        Rafraîchit verse_date quand le texte/référence changent via un save() classique.
+        Note: bulk_update ne déclenche pas save(); la commande positionne verse_date elle-même.
+        """
+        update_fields = kwargs.get("update_fields")
+        today = timezone.localdate()
 
+        if update_fields:
+            fields = set(update_fields)
+            if {"verse_du_jour", "verse_reference"} & fields:
+                self.verse_date = today
+                kwargs["update_fields"] = list(fields | {"verse_date"})
+        else:
+            if self.pk:
+                try:
+                    old = Eglise.objects.only("verse_du_jour", "verse_reference").get(pk=self.pk)
+                    if (old.verse_du_jour or "") != (self.verse_du_jour or "") or \
+                       (old.verse_reference or "") != (self.verse_reference or ""):
+                        self.verse_date = today
+                except Eglise.DoesNotExist:
+                    pass
+
+        return super().save(*args, **kwargs)
+
+    def __str__(self):
+        return self.name or "Église sans nom"
     def __str__(self):
         return self.name or "Église sans nom"
 

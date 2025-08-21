@@ -1,3 +1,6 @@
 ### dotenv template
 .env
+google-services.json
 
+static/abmci-62f4d-firebase.json
+static/google-services.json

@@ -1,4 +1,5 @@
 # abmci/settings/base.py
+import base64
 import json
 import os
 import re
@@ -272,9 +273,11 @@ PAYSTACK_CALLBACK_URL = 'https://administration.abmci.com/payments/callback/'
 # FIREBASE_SERVICE_ACCOUNT_PATH = os.environ.get("FIREBASE_SERVICE_ACCOUNT_PATH")  # ex: /run/secrets/firebase.json
 
 # Option B — contenu JSON du service account en variable d'env (recommandé en prod PaaS)
-_FIREBASE_SERVICE_ACCOUNT_JSON = os.environ.get("FIREBASE_SERVICE_ACCOUNT_JSON")
-FIREBASE_SERVICE_ACCOUNT_DICT = json.loads(_FIREBASE_SERVICE_ACCOUNT_JSON) if _FIREBASE_SERVICE_ACCOUNT_JSON else None
+# FIREBASE_SERVICE_ACCOUNT_JSON = os.environ.get("FIREBASE_SERVICE_ACCOUNT_JSON")  # base64 du JSON
 
-if FIREBASE_SERVICE_ACCOUNT_DICT and not firebase_admin._apps:
-    cred = credentials.Certificate(FIREBASE_SERVICE_ACCOUNT_DICT)
-    firebase_admin.initialize_app(cred)
+# _FIREBASE_SERVICE_ACCOUNT_JSON = os.environ.get("FIREBASE_SERVICE_ACCOUNT_JSON")
+# FIREBASE_SERVICE_ACCOUNT_DICT = json.loads(_FIREBASE_SERVICE_ACCOUNT_JSON) if _FIREBASE_SERVICE_ACCOUNT_JSON else None
+
+FIREBASE_SERVICE_ACCOUNT_PATH = os.getenv("FIREBASE_SERVICE_ACCOUNT_PATH")  # optionnel
+FIREBASE_SERVICE_ACCOUNT_JSON = os.getenv("FIREBASE_SERVICE_ACCOUNT_JSON")  # base64 OU JSON brut
+FIREBASE_SERVICE_ACCOUNT_DICT = None
