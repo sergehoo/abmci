@@ -19,6 +19,7 @@ from django.db import IntegrityError, transaction, models
 from django.db.models import Q, Prefetch
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
+from django.template.defaulttags import comment
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from django.utils.decorators import method_decorator
@@ -40,6 +41,7 @@ from drf_yasg import openapi
 from rest_framework.views import APIView
 from django.contrib.gis.db.models.functions import Distance
 
+from abmci.services.notifications import notify_new_comment
 from api.serializers import UserSerializer, FideleSerializer, FideleCreateUpdateSerializer, \
     UserProfileCompletionSerializer, ParticipationEvenementSerializer, VerseDuJourSerializer, EvenementListSerializer, \
     PrayerCommentSerializer, PrayerCategorySerializer, PrayerRequestSerializer, NotificationSerializer, \
@@ -411,6 +413,7 @@ class PrayerCommentViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         prayer = get_object_or_404(PrayerRequest, pk=self.request.data.get('prayer'))
         serializer.save(user=self.request.user, prayer=prayer)
+        notify_new_comment(comment.prayer, comment)
 
 
 class DeviceViewSet(viewsets.ModelViewSet):
@@ -435,13 +438,54 @@ class DeviceViewSet(viewsets.ModelViewSet):
         resp = super().create(request, *args, **kwargs)
         return resp
 
-
-class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
+class NotificationPagination(PageNumberPagination):
+    page_size = 20
+    page_size_query_param = "page_size"
+    max_page_size = 100
+class NotificationViewSet(viewsets.ModelViewSet):
     serializer_class = NotificationSerializer
     permission_classes = [permissions.IsAuthenticated]
+    pagination_class = NotificationPagination
+    http_method_names = ["get", "post", "delete", "head", "options"]
 
     def get_queryset(self):
-        return Notification.objects.filter(user=self.request.user).order_by('-created_at')
+        qs = Notification.objects.filter(user=self.request.user)
+        # filtres optionnels
+        unread = str(self.request.query_params.get("unread", "")).lower()
+        if unread in ("1", "true", "yes"):
+            qs = qs.filter(is_read=False)
+
+        ntype = self.request.query_params.get("type")
+        if ntype:
+            qs = qs.filter(type=ntype)
+
+        after = self.request.query_params.get("after")
+        before = self.request.query_params.get("before")
+        if after:
+            dt = parse_datetime(after)
+            if dt:
+                qs = qs.filter(created_at__gte=dt)
+        if before:
+            dt = parse_datetime(before)
+            if dt:
+                qs = qs.filter(created_at__lte=dt)
+
+        return qs.order_by("-created_at")
+
+    @action(detail=False, methods=["post"], url_path="mark-all-read")
+    def mark_all_read(self, request):
+        count = self.get_queryset().filter(is_read=False).update(is_read=True)
+        return Response({"updated": count}, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=["post"], url_path="mark-read")
+    def mark_read(self, request, pk=None):
+        notif = self.get_queryset().filter(pk=pk).first()
+        if not notif:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+        if not notif.is_read:
+            notif.is_read = True
+            notif.save(update_fields=["is_read"])
+        return Response({"ok": True}, status=status.HTTP_200_OK)
 
 
 class BibleVersionViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):

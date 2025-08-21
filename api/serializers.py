@@ -669,3 +669,4 @@ class EgliseSerializer(serializers.ModelSerializer):
                 return float(d)
             except Exception:
                 return None
+

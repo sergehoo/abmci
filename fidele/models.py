@@ -1,10 +1,12 @@
+from __future__ import annotations
+
 import random
 from datetime import date
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import User
-from django.db import models
+from django.db import models, transaction
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.text import slugify
@@ -13,6 +15,8 @@ from simple_history.models import HistoricalRecords
 from django_countries.fields import CountryField
 from phonenumber_field.modelfields import PhoneNumberField
 from django.contrib.gis.db import models as gis_models
+
+from abmci.notifications.fcm import send_verse_to_eglise_topic
 
 # Create your models here.
 
@@ -53,7 +57,6 @@ class Device(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     last_seen = models.DateTimeField(auto_now=True)
-
 
 
 class Fonction(models.Model):
@@ -151,33 +154,77 @@ class Eglise(models.Model):
     verse_reference = models.CharField(max_length=100, null=True, blank=True)
     verse_date = models.DateField(default=timezone.now)
 
+    def _verset_changed(self, old_text: str | None, old_ref: str | None) -> bool:
+        """Détecte un changement ‘réel’ (on compacte les espaces)."""
+
+        def _norm(s: str | None) -> str:
+            return " ".join((s or "").split())
+
+        return _norm(old_text) != _norm(self.verse_du_jour) or _norm(old_ref) != _norm(self.verse_reference)
+
     def save(self, *args, **kwargs):
         """
-        Rafraîchit verse_date quand le texte/référence changent via un save() classique.
-        Note: bulk_update ne déclenche pas save(); la commande positionne verse_date elle-même.
+        - Met à jour verse_date si verset ou référence changent.
+        - Envoie une notification FCM APRÈS commit si changement (sauf skip explicite).
+        Note: bulk_update() ne passe pas ici.
         """
+        skip_notify: bool = kwargs.pop("skip_notify", False)
+
+        # Récupérer l'ancien état pour comparer
+        old_text = old_ref = None
+        if self.pk:
+            try:
+                old = Eglise.objects.only("verse_du_jour", "verse_reference").get(pk=self.pk)
+                old_text, old_ref = old.verse_du_jour, old.verse_reference
+            except Eglise.DoesNotExist:
+                pass
+
+        # Mettre à jour verse_date si nécessaire (y compris update_fields)
         update_fields = kwargs.get("update_fields")
         today = timezone.localdate()
-
         if update_fields:
             fields = set(update_fields)
             if {"verse_du_jour", "verse_reference"} & fields:
                 self.verse_date = today
                 kwargs["update_fields"] = list(fields | {"verse_date"})
         else:
-            if self.pk:
-                try:
-                    old = Eglise.objects.only("verse_du_jour", "verse_reference").get(pk=self.pk)
-                    if (old.verse_du_jour or "") != (self.verse_du_jour or "") or \
-                       (old.verse_reference or "") != (self.verse_reference or ""):
-                        self.verse_date = today
-                except Eglise.DoesNotExist:
-                    pass
+            if self.pk and self._verset_changed(old_text, old_ref):
+                self.verse_date = today
 
-        return super().save(*args, **kwargs)
+        # Enregistrement DB
+        super().save(*args, **kwargs)
 
-    def __str__(self):
-        return self.name or "Église sans nom"
+        # Notifier si le verset a changé et que l'on souhaite notifier
+        if self.notify_on_save and not skip_notify and self.pk:
+            try:
+                changed = self._verset_changed(old_text, old_ref)
+            except Exception:
+                changed = False
+
+            if changed and self.verse_du_jour and self.verse_reference:
+                ref = self.verse_reference
+                txt = self.verse_du_jour
+                date_str = str(self.verse_date or today)
+
+                # Envoi APRÈS commit pour éviter les états incohérents
+                def _send():
+                    try:
+                        send_verse_to_eglise_topic(
+                            self.id,
+                            reference=ref,
+                            text=txt,
+                            date_str=date_str,
+                            # si tu stockes une version/lang par église, adapte ici :
+                            version="LSG",
+                            lang="fr",
+                            dry_run=False,
+                        )
+                    except Exception as e:
+                        # remplace par ton logger si besoin
+                        print(f"[FCM][eglise_{self.id}] Échec envoi (save): {e!r}")
+
+                transaction.on_commit(_send)
+
     def __str__(self):
         return self.name or "Église sans nom"
 
@@ -662,7 +709,6 @@ class BibleTag(models.Model):
             self): return f'{self.sender_id}→{self.recipient_id} {self.book} {self.chapter}:{self.verse} ({self.version})'
 
 
-
 class VerseOfDay(models.Model):
     """
     Cache du verset du jour, par église, version et langue.
@@ -686,11 +732,14 @@ class VerseOfDay(models.Model):
 
     def __str__(self):
         return f"{self.date} - {self.eglise_id} - {self.reference}"
+
+
 def banner_upload_to(instance, filename):
     # ex: banners/2025/08/<filename>
     # Utilise created_at si déjà présent (update), sinon "maintenant" (création)
     dt = instance.created_at or timezone.now()
     return f"banners/{dt:%Y/%m}/{filename}"
+
 
 class VerseUsage(models.Model):
     """
@@ -712,6 +761,8 @@ class VerseUsage(models.Model):
 
     def __str__(self):
         return f"{self.eglise_id} - {self.book} {self.chapter}:{self.verse} ({self.used_on})"
+
+
 class Banner(models.Model):
     title = models.CharField(max_length=200, blank=True, default="")
     subtitle = models.CharField(max_length=300, blank=True, default="")
@@ -787,3 +838,5 @@ class AccountDeletionRequest(models.Model):
 
     def __str__(self):
         return f"DeletionRequest(user={self.user_id}, status={self.status})"
+
+

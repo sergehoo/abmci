@@ -10,7 +10,8 @@ from django.dispatch import receiver
 from django.template.loader import get_template
 
 from abmci.notifications.fcm import send_to_topic
-from fidele.models import Fidele, PrayerRequest
+from abmci.services.notifications import notify_new_comment
+from fidele.models import Fidele, PrayerRequest, PrayerComment
 from django.dispatch import Signal
 
 notify = Signal()
@@ -64,3 +65,10 @@ def notify_new_prayer(sender, instance: PrayerRequest, created, **kwargs):
     # In-app (persistante) pour followers/église par ex. (à adapter)
     # for user in <cible>:
     #     Notification.objects.create(user=user, title=title, body=body, data=data)
+
+@receiver(post_save, sender=PrayerComment)
+def on_comment_created(sender, instance: PrayerComment, created: bool, **kwargs):
+    if not created:
+        return
+    # instance.prayer doit être accessible (FK)
+    notify_new_comment(instance.prayer, instance)

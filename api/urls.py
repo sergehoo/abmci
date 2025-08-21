@@ -16,10 +16,11 @@ router.register(r'prayer-categories', PrayerCategoryViewSet, basename='prayer-ca
 router.register(r'prayer-requests', PrayerRequestViewSet, basename='prayerrequest')
 router.register(r'prayer-comments', PrayerCommentViewSet, basename='prayer-comment')
 router.register(r'devices', DeviceViewSet, basename='devices')
-router.register(r'notifications', NotificationViewSet, basename='notifications')
 router.register("versions", BibleVersionViewSet, basename="bible-version")
 router.register("verses", BibleVerseViewSet, basename="bible-verse")
 router.register(r'bible/tags', BibleTagViewSet, basename='bible-tag')
+router.register(r"notifications", NotificationViewSet, basename="notifications")
+
 
 urlpatterns = [
     path('', include(router.urls)),
