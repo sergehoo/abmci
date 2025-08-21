@@ -12,6 +12,7 @@ import requests
 from django.conf import settings
 from django.contrib.gis.geos import Point
 from django.contrib.gis.measure import Distance, D
+
 from django.core.exceptions import ValidationError
 from django.core.mail import send_mail
 from django.db import IntegrityError, transaction, models
@@ -882,7 +883,7 @@ class EgliseProcheListView(generics.ListAPIView):
                 user_pt = Point(float(lon), float(lat), srid=4326)
                 # Distance sphérique en mètres et tri par distance
                 qs = qs.annotate(
-                    distance=DistanceSphere('location', user_pt),
+                    distance=Distance('location', user_pt),
                 ).order_by('distance')
 
                 if not show_all:
