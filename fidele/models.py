@@ -500,15 +500,28 @@ User = get_user_model()
 
 
 class Notification(models.Model):
-    recipient = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications')
-    actor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='actions')
-    verb = models.CharField(max_length=255)
-    target_url = models.URLField(null=True, blank=True)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="notifications",
+    )
+    type = models.CharField(max_length=40, default="GENERIC", db_index=True)
+    title = models.CharField(max_length=200)
+    body = models.TextField()
+    data = models.JSONField(default=dict, blank=True)
     is_read = models.BooleanField(default=False)
-    timestamp = models.DateTimeField(default=now)
+    created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        ordering = ['-timestamp']
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["user", "is_read"]),
+            models.Index(fields=["type"]),
+            models.Index(fields=["-created_at"]),
+        ]
+
+    def __str__(self):
+        return f"{self.user_id} • {self.type} • {self.title[:32]}"
 
     def __str__(self):
         return f"{self.actor} {self.verb}"
