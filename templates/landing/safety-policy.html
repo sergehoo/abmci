@@ -1,60 +1,483 @@
-<!DOCTYPE html>
+{% load static %}
+<!doctype html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <title>Politique de Protection des Enfants</title>
-  <style>
-    body { font-family: Arial, sans-serif; line-height: 1.6; max-width: 800px; margin: auto; padding: 20px; }
-    h1 { color: #2a4d8f; }
-  </style>
+    <base href="./">
+    <meta charset="utf-8">
+    <meta name="author" content="ABMCI-Serge OGAH">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="description" content="Politique de protection des enfants de l'application Alliance Connect">
+    <!-- Fav Icon  -->
+    <link rel="shortcut icon" href="{% static 'images/favicon.png'%}">
+    <!-- Page Title  -->
+    <title>Politique de Protection des Enfants - Alliance Connect</title>
+    <!-- StyleSheets  -->
+    <link rel="stylesheet" href="{% static 'assets/css/dashlite.css'%}">
+    <link id="skin-default" rel="stylesheet" href="{% static 'assets/css/theme.css' %}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css">
+    <!-- Icônes Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Styles spécifiques pour la politique de confidentialité */
+        .privacy-container {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.08);
+            padding: 3rem;
+            margin-bottom: 2rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .privacy-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 6px;
+            background: linear-gradient(90deg, #6576ff, #7987a1, #6576ff);
+            border-radius: 8px 8px 0 0;
+        }
+
+        .privacy-header {
+            border-bottom: 2px solid #f1f2f6;
+            padding-bottom: 2rem;
+            margin-bottom: 3rem;
+            text-align: center;
+            position: relative;
+        }
+
+        .privacy-icon {
+            font-size: 3.5rem;
+            color: #6576ff;
+            margin-bottom: 1.5rem;
+            display: inline-block;
+            background: rgba(101, 118, 255, 0.1);
+            width: 100px;
+            height: 100px;
+            line-height: 100px;
+            border-radius: 50%;
+            text-align: center;
+        }
+
+        .privacy-title {
+            color: #364a63;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            font-size: 2.5rem;
+        }
+
+        .privacy-subtitle {
+            color: #6576ff;
+            font-weight: 500;
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
+        }
+
+        .privacy-date {
+            color: #7987a1;
+            font-size: 1rem;
+            background: #f8f9fa;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            display: inline-block;
+        }
+
+        .privacy-section {
+            margin-bottom: 3rem;
+            position: relative;
+        }
+
+        .privacy-section h2 {
+            color: #364a63;
+            font-weight: 600;
+            font-size: 1.8rem;
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 2px solid #f1f2f6;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .privacy-section h2 i {
+            color: #6576ff;
+            background: rgba(101, 118, 255, 0.1);
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .privacy-section h3 {
+            color: #526484;
+            font-weight: 600;
+            font-size: 1.4rem;
+            margin: 2rem 0 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .privacy-section h3 i {
+            color: #6576ff;
+        }
+
+        .privacy-section p, .privacy-section li {
+            color: #526484;
+            line-height: 1.8;
+            font-size: 1.05rem;
+        }
+
+        .privacy-section ul {
+            padding-left: 1.5rem;
+            margin: 1.5rem 0;
+        }
+
+        .privacy-section li {
+            margin-bottom: 0.75rem;
+            position: relative;
+            padding-left: 0.5rem;
+        }
+
+        .privacy-section li::before {
+            content: '•';
+            color: #6576ff;
+            font-weight: bold;
+            display: inline-block;
+            width: 1em;
+            margin-left: -1em;
+        }
+
+        .highlight-box {
+            background-color: #f8f9fa;
+            border-left: 5px solid #6576ff;
+            padding: 1.75rem;
+            border-radius: 0 12px 12px 0;
+            margin: 2rem 0;
+            position: relative;
+        }
+
+        .highlight-box i {
+            position: absolute;
+            top: -15px;
+            left: -15px;
+            background: #6576ff;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            box-shadow: 0 4px 10px rgba(101, 118, 255, 0.3);
+        }
+
+        .verse-box {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-radius: 12px;
+            padding: 2rem;
+            margin: 2.5rem 0;
+            text-align: center;
+            border-left: 5px solid #ff6b6b;
+            font-style: italic;
+            position: relative;
+        }
+
+        .verse-box::before {
+            content: '"';
+            position: absolute;
+            top: 10px;
+            left: 20px;
+            font-size: 5rem;
+            color: rgba(255, 107, 107, 0.2);
+            font-family: Georgia, serif;
+        }
+
+        .verse-box p {
+            font-size: 1.2rem;
+            color: #364a63;
+            margin: 0;
+            position: relative;
+            z-index: 1;
+        }
+
+        .verse-ref {
+            display: block;
+            text-align: right;
+            margin-top: 1rem;
+            color: #7987a1;
+            font-weight: 500;
+        }
+
+        .contact-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.75rem;
+            background: linear-gradient(135deg, #6576ff 0%, #7987a1 100%);
+            color: white;
+            padding: 1rem 2rem;
+            border-radius: 12px;
+            font-weight: 600;
+            transition: all 0.3s;
+            margin-top: 1rem;
+            box-shadow: 0 4px 15px rgba(101, 118, 255, 0.3);
+            text-decoration: none;
+        }
+
+        .contact-btn:hover {
+            background: linear-gradient(135deg, #4e64ff 0%, #6576ff 100%);
+            text-decoration: none;
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(101, 118, 255, 0.4);
+        }
+
+        .resource-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            border: 1px solid #e5e9f2;
+            transition: all 0.3s;
+        }
+
+        .resource-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        }
+
+        .resource-card a {
+            color: #364a63;
+            font-weight: 500;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .resource-card a:hover {
+            color: #6576ff;
+        }
+
+        .resource-card i {
+            color: #6576ff;
+            font-size: 1.2rem;
+        }
+
+        @media (max-width: 768px) {
+            .privacy-container {
+                padding: 1.5rem;
+            }
+
+            .privacy-title {
+                font-size: 1.75rem;
+            }
+
+            .privacy-section h2 {
+                font-size: 1.5rem;
+            }
+            
+            .privacy-icon {
+                width: 80px;
+                height: 80px;
+                line-height: 80px;
+                font-size: 2.5rem;
+            }
+        }
+    </style>
 </head>
-<body>
-  <h1>Politique de Protection des Enfants</h1>
-  <p>
-    Notre application s’engage à une politique de <strong>tolérance zéro</strong> vis-à-vis de toute
-    forme d’exploitation sexuelle des enfants (CSAE), y compris la production,
-    la possession, la diffusion ou la promotion de contenus d’abus sexuels
-    impliquant des mineurs.
-  </p>
 
-  <h2>Nos engagements</h2>
-  <ul>
-    <li>Interdiction stricte de toute activité liée à l’exploitation sexuelle des mineurs.</li>
-    <li>Suppression immédiate de tout contenu signalé ou identifié comme étant du matériel d’abus sexuel d’enfants (CSAM).</li>
-    <li>Signalement systématique des cas pertinents aux <strong>autorités compétentes</strong> (ex. NCMEC, autorités locales).</li>
-    <li>Mise en place d’un <strong>outil de signalement intégré</strong> dans l’application, accessible à tous les utilisateurs.</li>
-    <li>Collaboration active avec les organisations et plateformes engagées dans la lutte contre le CSAE.</li>
-  </ul>
+<body class="nk-body bg-lighter npc-default has-sidebar">
+    <div class="nk-app-root">
+        <div class="nk-main">
+            <!-- Header -->
+            <div class="nk-header nk-header-fluid is-theme">
+                <div class="container-xl wide-xl">
+                    <div class="nk-header-wrap">
+                        <!-- Menu mobile -->
+                        <div class="nk-menu-trigger mr-sm-2 d-lg-none">
+                            <a href="#" class="nk-nav-toggle nk-quick-nav-icon" data-target="headerNav">
+                                <em class="icon ni ni-menu"></em>
+                            </a>
+                        </div>
 
-  <h2>Signalement d’un contenu ou comportement</h2>
-  <p>
-    Si vous découvrez un contenu ou un comportement suspect sur notre application :
-  </p>
-  <ul>
-    <li>Utilisez l’outil de signalement intégré dans l’application.</li>
-    <li>Ou contactez directement notre équipe via <a href="mailto:safety@tonapp.com">safety@tonapp.com</a>.</li>
-  </ul>
+                        <!-- Logo -->
+                        <div class="nk-header-brand">
+                            <a href="{% url 'home' %}" class="logo-link">
+                                <img class="logo-light logo-img" src="{% static 'images/logo-abmci-min.png' %}" alt="logo">
+                                <img class="logo-dark logo-img" src="{% static 'images/logo-abmci-min.png' %}" alt="logo-dark">
+                            </a>
+                        </div>
+                        <span class="text-sm small text-white">Alliance Biblique <br>Missionnaire | Monde</span>
 
-  <h2>Point de contact sécurité enfant</h2>
-  <p>
-    Pour toute question ou demande liée à la protection des enfants et à la lutte
-    contre l’exploitation sexuelle des mineurs, vous pouvez nous contacter à :
-  </p>
-  <p>
-    📧 <a href="mailto:safety@tonapp.com">safety@tonapp.com</a>
-  </p>
+                        <!-- Menu principal -->
+                        <div class="nk-header-menu" data-content="headerNav">
+                            <div class="nk-header-mobile">
+                                <div class="nk-header-brand">
+                                    <a href="{% url 'home' %}" class="logo-link">
+                                        <img class="logo-light logo-img" src="{% static 'images/logo-abmci-min.png' %}" alt="logo">
+                                        <img class="logo-dark logo-img" src="{% static 'images/logo-abmci-min.png' %}" alt="logo-dark">
+                                    </a>
+                                </div>
+                                <span class="text-sm-center small">Alliance Biblique <br>Missionnaire | Monde</span>
+                                <div class="nk-menu-trigger mr-n2">
+                                    <a href="#" class="nk-nav-toggle nk-quick-nav-icon" data-target="headerNav">
+                                        <em class="icon ni ni-arrow-left"></em>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-  <h2>Ressources utiles</h2>
-  <ul>
-    <li><a href="https://protectingchildren.google/" target="_blank">Google – Protecting Children</a></li>
-    <li><a href="https://report.cybertip.org/" target="_blank">NCMEC CyberTipline</a></li>
-    <li><a href="https://ec.europa.eu/info/policies/justice-and-fundamental-rights/rights-child_fr" target="_blank">Commission Européenne – Droits de l’enfant</a></li>
-  </ul>
+            <!-- Contenu principal -->
+            <div class="nk-content nk-content-fluid">
+                <div class="container-xl wide-xl">
+                    <div class="nk-content-inner">
+                        <div class="nk-content-body">
+                            <div class="privacy-container">
+                                <div class="privacy-header">
+                                    <div class="privacy-icon">
+                                        <i class="fas fa-child"></i>
+                                    </div>
+                                    <h1 class="privacy-title">Politique de Protection des Enfants</h1>
+                                    <p class="privacy-subtitle">Engagement envers la sécurité et le bien-être des enfants</p>
+                                    <div class="privacy-date">Dernière mise à jour: {% now "F Y" %}</div>
+                                </div>
 
-  <p>
-    Nous révisons régulièrement cette politique afin de rester conformes aux
-    meilleures pratiques et exigences internationales en matière de protection
-    des mineurs.
-  </p>
+                                <div class="privacy-section">
+                                    <p>
+                                        En tant qu'application chrétienne dédiée à l'édification spirituelle et au service
+                                        des croyants, nous affirmons notre engagement total envers la protection et la dignité
+                                        des enfants. Inspirés par les valeurs de l'Évangile — amour, respect et justice —
+                                        nous adoptons une politique de <strong>tolérance zéro</strong> face à toute forme
+                                        d'exploitation ou d'abus sexuel sur mineurs (CSAE).
+                                    </p>
+                                </div>
+
+                                <div class="privacy-section">
+                                    <h2><i class="fas fa-handshake"></i> Nos Engagements</h2>
+                                    
+                                    <div class="highlight-box">
+                                        <i class="fas fa-shield-alt"></i>
+                                        <h3><i class="fas fa-heart"></i> Respect de la dignité humaine</h3>
+                                        <p>Aucun contenu lié à l'exploitation sexuelle des enfants n'est toléré.</p>
+                                    </div>
+                                    
+                                    <div class="highlight-box">
+                                        <i class="fas fa-ban"></i>
+                                        <h3><i class="fas fa-trash-alt"></i> Suppression immédiate</h3>
+                                        <p>Tout contenu ou comportement suspect sera supprimé sans délai.</p>
+                                    </div>
+                                    
+                                    <div class="highlight-box">
+                                        <i class="fas fa-exclamation-triangle"></i>
+                                        <h3><i class="fas fa-flag"></i> Signalement aux autorités</h3>
+                                        <p>Nous coopérons activement avec les organismes compétents pour signaler tout matériel d'abus sexuel sur enfants (CSAM).</p>
+                                    </div>
+                                    
+                                    <div class="highlight-box">
+                                        <i class="fas fa-tools"></i>
+                                        <h3><i class="fas fa-bell"></i> Outil de signalement</h3>
+                                        <p>Chaque utilisateur peut signaler un contenu ou comportement inapproprié directement dans l'application.</p>
+                                    </div>
+                                    
+                                    <div class="highlight-box">
+                                        <i class="fas fa-book-open"></i>
+                                        <h3><i class="fas fa-info-circle"></i> Prévention & sensibilisation</h3>
+                                        <p>Nous encourageons une utilisation saine et chrétienne de la technologie, au service de la vie et de la foi.</p>
+                                    </div>
+                                </div>
+
+                                <div class="privacy-section">
+                                    <h2><i class="fas fa-flag"></i> Signalement d'un contenu ou comportement</h2>
+                                    <p>
+                                        Si vous êtes témoin d'un comportement ou contenu contraire à cette politique, vous pouvez :
+                                    </p>
+                                    <ul>
+                                        <li>Utiliser la fonction de signalement intégrée à l'application.</li>
+                                        <li>Nous écrire directement à l'adresse ci-dessous.</li>
+                                        <li>Contacter les autorités compétentes si la situation l'exige.</li>
+                                    </ul>
+                                </div>
+
+                                <div class="privacy-section">
+                                    <h2><i class="fas fa-envelope"></i> Point de contact dédié</h2>
+                                    <p>
+                                        Pour toute question ou préoccupation concernant la protection des mineurs au sein de notre application chrétienne, vous pouvez nous contacter :
+                                    </p>
+                                    <a href="mailto:contact@abmci.com" class="contact-btn">
+                                        <i class="fas fa-envelope"></i> contact@abmci.com
+                                    </a>
+                                </div>
+
+                                <div class="privacy-section">
+                                    <h2><i class="fas fa-book"></i> Ressources chrétiennes et internationales</h2>
+                                    
+                                    <div class="resource-card">
+                                        <a href="https://protectingchildren.google/" target="_blank">
+                                            <i class="fab fa-google"></i> Google – Protecting Children
+                                        </a>
+                                    </div>
+                                    
+                                    <div class="resource-card">
+                                        <a href="https://report.cybertip.org/" target="_blank">
+                                            <i class="fas fa-exclamation-circle"></i> NCMEC CyberTipline
+                                        </a>
+                                    </div>
+                                    
+                                    <div class="resource-card">
+                                        <a href="https://www.unicef.org/fr/protection-enfants" target="_blank">
+                                            <i class="fas fa-globe"></i> UNICEF – Protection des enfants
+                                        </a>
+                                    </div>
+                                    
+                                    <div class="resource-card">
+                                        <a href="https://www.biblegateway.com/passage/?search=Matthieu+18%3A6&version=LSG" target="_blank">
+                                            <i class="fas fa-bible"></i> Matthieu 18:6 – Jésus et la protection des enfants
+                                        </a>
+                                    </div>
+                                </div>
+
+                                <div class="verse-box">
+                                    <p>
+                                        « Laissez venir à moi les petits enfants, et ne les empêchez pas ; car le royaume de Dieu est pour ceux qui leur ressemblent. »
+                                        <span class="verse-ref">Marc 10:14</span>
+                                    </p>
+                                </div>
+
+                                <div class="privacy-section">
+                                    <p>
+                                        Nous révisons régulièrement cette politique afin de rester conformes aux
+                                        meilleures pratiques internationales et aux valeurs chrétiennes de respect
+                                        et de protection des plus vulnérables.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="{% static 'assets/js/bundle.js' %}"></script>
+    <script src="{% static 'assets/js/scripts.js' %}"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.9.0/js/bootstrap-datepicker.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.9.0/locales/bootstrap-datepicker.fr.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            $('.form-select[multiple], select[multiple]').select2({ width: '100%' });
+            $('select.form-select, select.form-control').not('[multiple]').select2({ width: '100%', minimumResultsForSearch: 6 });
+        });
+    </script>
 </body>
 </html>
