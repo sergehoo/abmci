@@ -44,6 +44,9 @@ class Politique(TemplateView):
     # context_object_name = 'politique'
     template_name = 'landing/politique.html'
 
+class SaftyChildren(TemplateView):
+    # context_object_name = 'politique'
+    template_name = 'landing/safety-policy.html'
 
 class HomePageView(LoginRequiredMixin, TemplateView):
     login_url = 'login/'
