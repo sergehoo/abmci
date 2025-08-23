@@ -706,19 +706,26 @@ class DonationListView(LoginRequiredMixin, ListView):
     context_object_name = 'donations'
     paginate_by = 10
 
-    # on évite de recalculer le queryset
-    _qs = None
+    _qs = None  # évite recalculs
+
+    def get_base_queryset(self):
+        user = self.request.user
+        # Par défaut: uniquement les dons de l’utilisateur courant
+        qs = Donation.objects.select_related('category')
+        if user.is_staff and self.request.GET.get('all') == '1':
+            # Admin + ?all=1 -> tout voir
+            return qs
+        return qs.filter(user=user)
 
     def get_queryset(self):
         if self._qs is not None:
             return self._qs
 
-        user = self.request.user
-        qs = Donation.objects.filter(user=user).select_related('category')
+        qs = self.get_base_queryset()
 
         # --- Filtres ---
-        status = self.request.GET.get('status') or ''
-        category = self.request.GET.get('category') or ''  # code ou id
+        status = (self.request.GET.get('status') or '').strip()
+        category = (self.request.GET.get('category') or '').strip()  # code ou id
         date_from = parse_date(self.request.GET.get('date_from') or '')
         date_to = parse_date(self.request.GET.get('date_to') or '')
 
@@ -743,13 +750,14 @@ class DonationListView(LoginRequiredMixin, ListView):
         ctx = super().get_context_data(**kwargs)
         qs = self.get_queryset()
 
-        # Agrégats
+        # Agrégats pour stats
         aggs = qs.aggregate(
             total_amount=Sum('amount'),
             success_amount=Sum('amount', filter=Q(status='success')),
             pending_amount=Sum('amount', filter=Q(status='pending')),
             success_count=Count('id', filter=Q(status='success')),
             pending_count=Count('id', filter=Q(status='pending')),
+            failed_count=Count('id', filter=Q(status='failed')),
         )
 
         ctx['total_amount'] = aggs['total_amount'] or 0
@@ -757,8 +765,9 @@ class DonationListView(LoginRequiredMixin, ListView):
         ctx['pending_amount'] = aggs['pending_amount'] or 0
         ctx['successful_count'] = aggs['success_count'] or 0
         ctx['pending_count'] = aggs['pending_count'] or 0
+        ctx['failed_count'] = aggs['failed_count'] or 0
 
-        # Filtres (pour pré-remplir le formulaire sur le template)
+        # Filtres pour le template
         ctx['categories'] = DonationCategory.objects.all().order_by('name')
         ctx['current_filters'] = {
             'status': self.request.GET.get('status', ''),
@@ -767,17 +776,20 @@ class DonationListView(LoginRequiredMixin, ListView):
             'date_to': self.request.GET.get('date_to', ''),
         }
 
-        # Si ton champ status a des choices sur le modèle, on peut les exposer :
+        # Si le champ 'status' n’a pas de choices définis sur le modèle,
+        # on fournit un fallback lisible.
         status_field = Donation._meta.get_field('status')
-        ctx['status_choices'] = getattr(status_field, 'choices', ()) or (
-            ('pending', 'Pending'),
-            ('success', 'Success'),
-            ('failed', 'Failed'),
-            ('abandoned', 'Abandoned'),
+        choices = getattr(status_field, 'choices', None)
+        ctx['status_choices'] = choices or (
+            ('pending', 'En attente'),
+            ('success', 'Réussi'),
+            ('failed', 'Échoué'),
+            ('abandoned', 'Abandonné'),
         )
 
+        # Pour l’admin: savoir si “all=1” est actif
+        ctx['showing_all'] = self.request.user.is_staff and self.request.GET.get('all') == '1'
         return ctx
-
 
 class DonationDetailView(LoginRequiredMixin, DetailView):
     model = Donation
