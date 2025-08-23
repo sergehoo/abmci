@@ -1,165 +1,684 @@
 {# templates/donations/donation_list.html #}
 {% extends 'layout/base.html' %}
 {% load humanize %}
+{% load custom_filters %}
 
-{% block title %}Mes dons{% endblock %}
+{% block title %}Gestion des Dons{% endblock %}
 
 {% block content %}
-<div class="max-w-7xl mx-auto px-4 py-6">
+<div class="nk-content nk-content-fluid">
+    <div class="container-xl wide-xl">
+        <div class="nk-content-inner">
+            <div class="nk-content-body">
+                <!-- Header amélioré avec statistiques -->
+                <div class="nk-block-head nk-block-head-sm">
+                    <div class="nk-block-between">
+                        <div class="nk-block-head-content">
+                            <h3 class="nk-block-title page-title">Historique des Dons</h3>
+                            <div class="nk-block-des">
+                                <p class="lead-text">
+                                    Vue d'ensemble de tous vos dons et contributions
+                                    {% if showing_all %}
+                                        <span class="text-primary">(Tous les dons - Mode administrateur)</span>
+                                    {% endif %}
+                                </p>
+                            </div>
+                        </div>
+                        <div class="nk-block-head-content">
+                            <div class="toggle-wrap nk-block-tools-toggle">
+                                <a href="#" class="btn btn-icon btn-trigger toggle-expand" data-target="pageMenu">
+                                    <em class="icon ni ni-menu-alt-r"></em>
+                                </a>
+                                <div class="toggle-expand-content" data-content="pageMenu">
+                                    <ul class="nk-block-tools g-3">
+                                        <li>
+                                            <a href="{% url 'make-donation' %}" class="btn btn-primary">
+                                                <em class="icon ni ni-plus"></em>
+                                                <span>Nouveau don</span>
+                                            </a>
+                                        </li>
+                                        {% if request.user.is_staff %}
+                                        <li>
+                                            <a href="?{% if showing_all %}{% else %}all=1{% endif %}{% for k,v in request.GET.items %}{% if k != 'all' %}&{{ k }}={{ v }}{% endif %}{% endfor %}"
+                                               class="btn btn-outline-secondary">
+                                                {% if showing_all %}Voir mes dons{% else %}Voir tous les dons{% endif %}
+                                            </a>
+                                        </li>
+                                        {% endif %}
+                                        <li>
+                                            <div class="dropdown">
+                                                <a href="#" class="dropdown-toggle btn btn-outline-light" data-toggle="dropdown">
+                                                    <em class="icon ni ni-download-cloud"></em>
+                                                    <span>Exporter</span>
+                                                </a>
+                                                <div class="dropdown-menu dropdown-menu-right">
+                                                    <ul class="link-list-opt no-bdr">
+                                                        <li><a href="#" onclick="exportToPDF()"><em class="icon ni ni-file-pdf"></em><span>PDF</span></a></li>
+                                                        <li><a href="#" onclick="exportToExcel()"><em class="icon ni ni-file-excel"></em><span>Excel</span></a></li>
+                                                        <li><a href="#" onclick="exportToCSV()"><em class="icon ni ni-file-text"></em><span>CSV</span></a></li>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                        </li>
+                                        <li>
+                                            <button type="button" class="btn btn-outline-info" onclick="showStatsModal()">
+                                                <em class="icon ni ni-bar-chart-fill"></em>
+                                                <span>Statistiques</span>
+                                            </button>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
-  <!-- Titre + bascule admin -->
-  <div class="mb-6 flex items-center justify-between">
-    <h1 class="text-2xl md:text-3xl font-bold text-gray-900">Mes Dons</h1>
-    {% if request.user.is_staff %}
-      <a href="?{% if showing_all %}{% else %}all=1{% endif %}{% for k,v in request.GET.items %}{% if k != 'all' %}&{{ k }}={{ v }}{% endif %}{% endfor %}"
-        class="text-sm px-3 py-2 rounded-md border border-gray-300 hover:bg-gray-50">
-        {% if showing_all %}Afficher seulement les miens{% else %}Voir tous (admin){% endif %}
-      </a>
-    {% endif %}
-  </div>
+                <!-- Cartes de statistiques -->
+                <div class="nk-block mb-4">
+                    <div class="row g-gs">
+                        <div class="col-md-3">
+                            <div class="card card-stat bg-gradient-primary">
+                                <div class="card-body">
+                                    <div class="card-stat-head">
+                                        <h6 class="title">Total Donné</h6>
+                                        <em class="icon ni ni-coins"></em>
+                                    </div>
+                                    <div class="card-stat-body">
+                                        <h3 class="amount">{{ total_amount|floatformat:0|intcomma }} XOF</h3>
+                                        <span class="change up">Tous statuts</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card card-stat bg-gradient-success">
+                                <div class="card-body">
+                                    <div class="card-stat-head">
+                                        <h6 class="title">Dons Réussis</h6>
+                                        <em class="icon ni ni-check-circle"></em>
+                                    </div>
+                                    <div class="card-stat-body">
+                                        <h3 class="amount">{{ success_amount|floatformat:0|intcomma }} XOF</h3>
+                                        <span class="change up">{{ successful_count }} transaction(s)</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card card-stat bg-gradient-warning">
+                                <div class="card-body">
+                                    <div class="card-stat-head">
+                                        <h6 class="title">En Attente</h6>
+                                        <em class="icon ni ni-clock"></em>
+                                    </div>
+                                    <div class="card-stat-body">
+                                        <h3 class="amount">{{ pending_amount|floatformat:0|intcomma }} XOF</h3>
+                                        <span class="change down">{{ pending_count }} transaction(s)</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card card-stat bg-gradient-info">
+                                <div class="card-body">
+                                    <div class="card-stat-head">
+                                        <h6 class="title">Dons Moyens</h6>
+                                        <em class="icon ni ni-grid-alt"></em>
+                                    </div>
+                                    <div class="card-stat-body">
+                                        <h3 class="amount">
+                                            {% if donations.count > 0 %}
+                                                {{ total_amount|floatformat:0|div:donations.count|floatformat:0|intcomma }} XOF
+                                            {% else %}
+                                                0 XOF
+                                            {% endif %}
+                                        </h3>
+                                        <span class="change up">Par transaction</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
-  <!-- Stats -->
-  <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-    <div class="rounded-lg p-5 text-white" style="background: linear-gradient(135deg,#2563eb,#38bdf8);">
-      <div class="text-sm opacity-90">Total donné</div>
-      <div class="text-2xl font-extrabold">{{ total_amount|intcomma }} XOF</div>
-    </div>
-    <div class="rounded-lg p-5 text-white" style="background: linear-gradient(135deg,#16a34a,#34d399);">
-      <div class="text-sm opacity-90">Montant réussi</div>
-      <div class="text-2xl font-extrabold">{{ success_amount|intcomma }} XOF</div>
-      <div class="text-xs opacity-90 mt-1">{{ successful_count }} paiement(s)</div>
-    </div>
-    <div class="rounded-lg p-5 text-white" style="background: linear-gradient(135deg,#f59e0b,#fbbf24);">
-      <div class="text-sm opacity-90">En attente</div>
-      <div class="text-2xl font-extrabold">{{ pending_amount|intcomma }} XOF</div>
-      <div class="text-xs opacity-90 mt-1">{{ pending_count }} paiement(s)</div>
-    </div>
-    <div class="rounded-lg p-5 text-white" style="background: linear-gradient(135deg,#ef4444,#fb7185);">
-      <div class="text-sm opacity-90">Échoués</div>
-      <div class="text-2xl font-extrabold">{{ failed_count }}</div>
-    </div>
-  </div>
+                <!-- Filtres avancés -->
+                <div class="nk-block mb-4">
+                    <div class="card card-bordered">
+                        <div class="card-inner">
+                            <form method="get" action="{% url 'donation-list' %}" class="row g-3" id="donationFilterForm">
+                                <div class="col-md-3">
+                                    <label class="form-label">Statut</label>
+                                    <select name="status" class="form-select" data-search="on">
+                                        <option value="">Tous les statuts</option>
+                                        {% for value, label in status_choices %}
+                                        <option value="{{ value }}" {% if current_filters.status == value %}selected{% endif %}>{{ label }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Catégorie</label>
+                                    <select name="category" class="form-select" data-search="on">
+                                        <option value="">Toutes les catégories</option>
+                                        {% for category in categories %}
+                                        <option value="{{ category.code }}" {% if current_filters.category == category.code %}selected{% endif %}>{{ category.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">Date de début</label>
+                                    <input type="date" name="date_from" value="{{ current_filters.date_from }}" class="form-control">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">Date de fin</label>
+                                    <input type="date" name="date_to" value="{{ current_filters.date_to }}" class="form-control">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">Montant min</label>
+                                    <input type="number" name="amount_min" value="{{ current_filters.amount_min }}" class="form-control" placeholder="Min">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">Montant max</label>
+                                    <input type="number" name="amount_max" value="{{ current_filters.amount_max }}" class="form-control" placeholder="Max">
+                                </div>
+                                <div class="col-md-12">
+                                    <div class="form-group mt-4">
+                                        <button type="submit" class="btn btn-primary">
+                                            <em class="icon ni ni-filter"></em>
+                                            <span>Appliquer les filtres</span>
+                                        </button>
+                                        <a href="{% url 'donation-list' %}" class="btn btn-outline-light">
+                                            <em class="icon ni ni-reload"></em>
+                                            <span>Réinitialiser</span>
+                                        </a>
+                                        <div class="form-check form-check-sm form-check-inline ml-3">
+                                            <input class="form-check-input" type="checkbox" id="showAdvanced" onclick="toggleAdvancedFilters()">
+                                            <label class="form-check-label" for="showAdvanced">Filtres avancés</label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
 
-  <!-- Filtres -->
-  <form method="get" class="bg-white rounded-xl shadow-sm p-4 mb-6 grid grid-cols-1 md:grid-cols-5 gap-4">
-    <div>
-      <label class="block text-sm font-medium text-gray-700 mb-1">Statut</label>
-      <select name="status" class="w-full rounded-lg border-gray-300">
-        <option value="">Tous</option>
-        {% for value, label in status_choices %}
-          <option value="{{ value }}" {% if current_filters.status == value %}selected{% endif %}>
-            {{ label }}
-          </option>
-        {% endfor %}
-      </select>
-    </div>
+                <!-- Tableau des dons -->
+                <div class="nk-block">
+                    <div class="card card-bordered card-stretch">
+                        <div class="card-inner-group">
+                            <div class="card-inner position-relative">
+                                <div class="card-title-group">
+                                    <div class="card-tools">
+                                        <div class="form-inline flex-nowrap gx-3">
+                                            <div class="form-wrap">
+                                                <div class="custom-control custom-control-sm custom-checkbox">
+                                                    <input type="checkbox" class="custom-control-input" id="selectAllDonations">
+                                                    <label class="custom-control-label" for="selectAllDonations">Tout sélectionner</label>
+                                                </div>
+                                            </div>
+                                            <div class="btn-wrap">
+                                                <button class="btn btn-outline-light btn-sm" id="batchDonationActionsBtn" disabled>
+                                                    <em class="icon ni ni-tool"></em>
+                                                    <span>Actions groupées</span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="card-tools mr-n1">
+                                        <div class="dropdown">
+                                            <a href="#" class="btn btn-trigger btn-icon dropdown-toggle" data-toggle="dropdown">
+                                                <em class="icon ni ni-setting"></em>
+                                            </a>
+                                            <div class="dropdown-menu dropdown-menu-right">
+                                                <ul class="link-list-opt no-bdr">
+                                                    <li><a href="#" onclick="exportVisibleToExcel()"><span>Exporter visible</span></a></li>
+                                                    <li><a href="#" onclick="printTable()"><span>Imprimer la liste</span></a></li>
+                                                    <li class="divider"></li>
+                                                    <li><a href="#" data-toggle="modal" data-target="#columnsModal"><span>Colonnes visibles</span></a></li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
 
-    <div>
-      <label class="block text-sm font-medium text-gray-700 mb-1">Catégorie</label>
-      <select name="category" class="w-full rounded-lg border-gray-300">
-        <option value="">Toutes</option>
-        {% for c in categories %}
-          <option value="{{ c.code }}" {% if current_filters.category == c.code or current_filters.category == c.id|stringformat:"s" %}selected{% endif %}>
-            {{ c.name }}
-          </option>
-        {% endfor %}
-      </select>
-    </div>
+                            <div class="card-inner p-0">
+                                <div class="table-responsive">
+                                    <table class="table table-hover nk-tb-list" id="donationsTable">
+                                        <thead>
+                                            <tr class="nk-tb-item nk-tb-head">
+                                                <th class="nk-tb-col" width="40px"><span class="sub-text">#</span></th>
+                                                <th class="nk-tb-col"><span class="sub-text">Référence</span></th>
+                                                <th class="nk-tb-col"><span class="sub-text">Donateur</span></th>
+                                                <th class="nk-tb-col"><span class="sub-text">Catégorie</span></th>
+                                                <th class="nk-tb-col"><span class="sub-text">Montant</span></th>
+                                                <th class="nk-tb-col"><span class="sub-text">Statut</span></th>
+                                                <th class="nk-tb-col"><span class="sub-text">Date</span></th>
+                                                <th class="nk-tb-col text-end"><span class="sub-text">Actions</span></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for donation in donations %}
+                                            <tr class="nk-tb-item" data-id="{{ donation.id }}">
+                                                <td class="nk-tb-col">
+                                                    <div class="custom-control custom-control-sm custom-checkbox">
+                                                        <input type="checkbox" class="custom-control-input donation-checkbox" id="cb{{ donation.id }}">
+                                                        <label class="custom-control-label" for="cb{{ donation.id }}"></label>
+                                                    </div>
+                                                </td>
+                                                <td class="nk-tb-col">
+                                                    <div class="user-info">
+                                                        <span class="tb-lead">{{ donation.reference|truncatechars:12 }}</span>
+                                                        <span class="text-soft">Transaction</span>
+                                                    </div>
+                                                </td>
+                                                <td class="nk-tb-col">
+                                                    {% if donation.user %}
+                                                    <a href="#" class="user-card">
+                                                        <div class="user-avatar bg-primary">
+                                                            {% if donation.user.profile.photo %}
+                                                                <img src="{{ donation.user.profile.photo.url }}" alt="{{ donation.user.get_full_name }}">
+                                                            {% else %}
+                                                                <span>{{ donation.user.get_initials }}</span>
+                                                            {% endif %}
+                                                        </div>
+                                                        <div class="user-info">
+                                                            <span class="tb-lead">{{ donation.user.get_full_name }}</span>
+                                                            <span>{{ donation.user.email }}</span>
+                                                        </div>
+                                                    </a>
+                                                    {% else %}
+                                                    <span class="text-soft">Anonyme</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td class="nk-tb-col">
+                                                    <span class="badge badge-dim bg-outline-primary">{{ donation.category.name|default:"Général" }}</span>
+                                                </td>
+                                                <td class="nk-tb-col">
+                                                    <span class="tb-amount">{{ donation.amount|floatformat:0|intcomma }} {{ donation.currency }}</span>
+                                                </td>
+                                                <td class="nk-tb-col">
+                                                    {% if donation.status == 'success' %}
+                                                    <span class="badge badge-dim bg-success">Réussi</span>
+                                                    {% elif donation.status == 'pending' %}
+                                                    <span class="badge badge-dim bg-warning">En attente</span>
+                                                    {% elif donation.status == 'failed' %}
+                                                    <span class="badge badge-dim bg-danger">Échoué</span>
+                                                    {% elif donation.status == 'abandoned' %}
+                                                    <span class="badge badge-dim bg-secondary">Abandonné</span>
+                                                    {% else %}
+                                                    <span class="badge badge-dim bg-gray">{{ donation.status }}</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td class="nk-tb-col">
+                                                    <span>{{ donation.created_at|date:"d/m/Y H:i" }}</span>
+                                                </td>
+                                                <td class="nk-tb-col nk-tb-col-tools text-end">
+                                                    <ul class="nk-tb-actions gx-1">
+                                                        <li>
+                                                            <a href="{% url 'donation-detail' donation.pk %}" class="btn btn-trigger btn-icon" data-toggle="tooltip" data-placement="top" title="Voir détails">
+                                                                <em class="icon ni ni-eye"></em>
+                                                            </a>
+                                                        </li>
+                                                        {% if donation.status == 'pending' and donation.authorization_url %}
+                                                        <li>
+                                                            <a href="{{ donation.authorization_url }}" class="btn btn-trigger btn-icon" data-toggle="tooltip" data-placement="top" title="Payer" target="_blank" rel="noopener">
+                                                                <em class="icon ni ni-external"></em>
+                                                            </a>
+                                                        </li>
+                                                        {% endif %}
+                                                        <li>
+                                                            <div class="drodown">
+                                                                <a href="#" class="dropdown-toggle btn btn-icon btn-trigger" data-toggle="dropdown">
+                                                                    <em class="icon ni ni-more-h"></em>
+                                                                </a>
+                                                                <div class="dropdown-menu dropdown-menu-right">
+                                                                    <ul class="link-list-opt no-bdr">
+                                                                        <li><a href="{% url 'donation-detail' donation.pk %}"><em class="icon ni ni-eye"></em><span>Voir détails</span></a></li>
+                                                                        <li><a href="#"><em class="icon ni ni-receipt"></em><span>Télécharger reçu</span></a></li>
+                                                                        {% if donation.status == 'pending' and donation.authorization_url %}
+                                                                        <li><a href="{{ donation.authorization_url }}" target="_blank" rel="noopener"><em class="icon ni ni-external"></em><span>Payer</span></a></li>
+                                                                        {% endif %}
+                                                                        <li class="divider"></li>
+                                                                        <li><a href="#" class="text-danger"><em class="icon ni ni-na"></em><span>Signaler problème</span></a></li>
+                                                                    </ul>
+                                                                </div>
+                                                            </div>
+                                                        </li>
+                                                    </ul>
+                                                </td>
+                                            </tr>
+                                            {% empty %}
+                                            <tr class="nk-tb-item">
+                                                <td class="nk-tb-col text-center" colspan="8">
+                                                    <div class="nk-block-content p-4">
+                                                        <em class="icon ni ni-coins text-soft" style="font-size: 2rem;"></em>
+                                                        <h5 class="mt-3">Aucun don trouvé</h5>
+                                                        <p class="text-soft">Aucun don ne correspond à vos critères de recherche</p>
+                                                        <a href="{% url 'make-donation' %}" class="btn btn-primary btn-sm">Faire un don</a>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
 
-    <div>
-      <label class="block text-sm font-medium text-gray-700 mb-1">Du</label>
-      <input type="date" name="date_from" value="{{ current_filters.date_from }}" class="w-full rounded-lg border-gray-300">
-    </div>
+                            <!-- Pagination améliorée -->
+                            {% if is_paginated %}
+                            <div class="card-inner">
+                                <div class="nk-block-between-md g-3">
+                                    <div class="g">
+                                        <div class="pagination-goto d-flex justify-content-center justify-content-md-start gx-3">
+                                            <div>Afficher</div>
+                                            <div>
+                                                <select class="form-select form-select-sm" onchange="updatePerPage(this.value)">
+                                                    <option value="10" {% if paginate_by == 10 %}selected{% endif %}>10</option>
+                                                    <option value="25" {% if paginate_by == 25 %}selected{% endif %}>25</option>
+                                                    <option value="50" {% if paginate_by == 50 %}selected{% endif %}>50</option>
+                                                    <option value="100" {% if paginate_by == 100 %}selected{% endif %}>100</option>
+                                                </select>
+                                            </div>
+                                            <div>sur {{ page_obj.paginator.count }} dons</div>
+                                        </div>
+                                    </div>
+                                    <div class="g">
+                                        <ul class="pagination justify-content-center justify-content-md-start">
+                                            {% if page_obj.has_previous %}
+                                                <li class="page-item">
+                                                    <a class="page-link" href="?page=1{% for key,value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                                        <em class="icon ni ni-chevrons-left"></em>
+                                                    </a>
+                                                </li>
+                                                <li class="page-item">
+                                                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% for key,value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                                        <em class="icon ni ni-chevron-left"></em>
+                                                    </a>
+                                                </li>
+                                            {% endif %}
 
-    <div>
-      <label class="block text-sm font-medium text-gray-700 mb-1">Au</label>
-      <input type="date" name="date_to" value="{{ current_filters.date_to }}" class="w-full rounded-lg border-gray-300">
-    </div>
+                                            {% for page_num in page_obj.paginator.page_range %}
+                                                {% if page_obj.number == page_num %}
+                                                    <li class="page-item active">
+                                                        <a class="page-link" href="#">{{ page_num }}</a>
+                                                    </li>
+                                                {% elif page_num > page_obj.number|add:'-3' and page_num < page_obj.number|add:'3' %}
+                                                    <li class="page-item">
+                                                        <a class="page-link" href="?page={{ page_num }}{% for key,value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">{{ page_num }}</a>
+                                                    </li>
+                                                {% endif %}
+                                            {% endfor %}
 
-    <div class="flex items-end gap-2">
-      <button type="submit" class="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700">Filtrer</button>
-      <a href="{% url 'donation-list' %}" class="px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-50">Réinitialiser</a>
-    </div>
-  </form>
-
-  <!-- Tableau -->
-  <div class="bg-white rounded-xl shadow-sm overflow-hidden">
-    <div class="overflow-x-auto">
-      <table class="min-w-full">
-        <thead class="bg-gray-50">
-          <tr>
-            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500">Référence</th>
-            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500">Catégorie</th>
-            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500">Montant</th>
-            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500">Statut</th>
-            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500">Créé le</th>
-            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500">Actions</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-gray-200">
-          {% for d in donations %}
-            <tr class="hover:bg-gray-50">
-              <td class="px-6 py-4 text-sm font-mono">
-                {{ d.reference|truncatechars:16 }}
-              </td>
-              <td class="px-6 py-4 text-sm">
-                <span class="inline-flex items-center px-2 py-1 rounded-full bg-blue-100 text-blue-800 text-xs font-semibold">
-                  {{ d.category.name }}
-                </span>
-              </td>
-              <td class="px-6 py-4 text-sm font-semibold">
-                {{ d.amount|intcomma }} {{ d.currency }}
-              </td>
-              <td class="px-6 py-4 text-sm">
-                {% if d.status == 'success' %}
-                  <span class="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">Réussi</span>
-                {% elif d.status == 'pending' %}
-                  <span class="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">En attente</span>
-                {% elif d.status == 'failed' %}
-                  <span class="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">Échoué</span>
-                {% else %}
-                  <span class="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">{{ d.status }}</span>
-                {% endif %}
-              </td>
-              <td class="px-6 py-4 text-sm text-gray-600">
-                {{ d.created_at|date:"d/m/Y H:i" }}
-              </td>
-              <td class="px-6 py-4 text-sm">
-                <a href="{% url 'donation-detail' d.pk %}" class="text-blue-600 hover:underline mr-3">Détails</a>
-                {% if d.status == 'pending' and d.authorization_url %}
-                  <a href="{{ d.authorization_url }}" class="text-indigo-600 hover:underline" target="_blank" rel="noopener">Payer</a>
-                {% endif %}
-              </td>
-            </tr>
-          {% empty %}
-            <tr>
-              <td colspan="6" class="px-6 py-10 text-center text-gray-500">
-                Aucun don trouvé. Effectuez votre premier don depuis l’application mobile.
-              </td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-
-    <!-- Pagination -->
-    {% if is_paginated %}
-      <div class="px-6 py-4 bg-gray-50 border-t border-gray-200 flex items-center justify-between">
-        <div class="text-sm text-gray-600">
-          Page {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}
+                                            {% if page_obj.has_next %}
+                                                <li class="page-item">
+                                                    <a class="page-link" href="?page={{ page_obj.next_page_number }}{% for key,value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                                        <em class="icon ni ni-chevron-right"></em>
+                                                    </a>
+                                                </li>
+                                                <li class="page-item">
+                                                    <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% for key,value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                                        <em class="icon ni ni-chevrons-right"></em>
+                                                    </a>
+                                                </li>
+                                            {% endif %}
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
-        <div class="flex gap-2">
-          {% if page_obj.has_previous %}
-            <a class="px-3 py-1 border rounded-md text-sm" href="?page=1{% for k,v in request.GET.items %}{% if k != 'page' %}&{{ k }}={{ v }}{% endif %}{% endfor %}">Première</a>
-            <a class="px-3 py-1 border rounded-md text-sm" href="?page={{ page_obj.previous_page_number }}{% for k,v in request.GET.items %}{% if k != 'page' %}&{{ k }}={{ v }}{% endif %}{% endfor %}">Précédent</a>
-          {% endif %}
-          {% if page_obj.has_next %}
-            <a class="px-3 py-1 border rounded-md text-sm" href="?page={{ page_obj.next_page_number }}{% for k,v in request.GET.items %}{% if k != 'page' %}&{{ k }}={{ v }}{% endif %}{% endfor %}">Suivant</a>
-            <a class="px-3 py-1 border rounded-md text-sm" href="?page={{ page_obj.paginator.num_pages }}{% for k,v in request.GET.items %}{% if k != 'page' %}&{{ k }}={{ v }}{% endif %}{% endfor %}">Dernière</a>
-          {% endif %}
-        </div>
-      </div>
-    {% endif %}
-  </div>
+    </div>
 </div>
+
+<!-- Modal pour les statistiques détaillées -->
+<div class="modal fade" tabindex="-1" id="donationStatsModal">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Statistiques détaillées des dons</h5>
+                <a href="#" class="close" data-dismiss="modal" aria-label="Close">
+                    <em class="icon ni ni-cross"></em>
+                </a>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card card-bordered">
+                            <div class="card-inner">
+                                <h6 class="title">Répartition par statut</h6>
+                                <div class="pie-chart-container">
+                                    <canvas id="statusChart" height="200"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card card-bordered">
+                            <div class="card-inner">
+                                <h6 class="title">Répartition par catégorie</h6>
+                                <div class="pie-chart-container">
+                                    <canvas id="categoryChart" height="200"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row mt-4">
+                    <div class="col-md-12">
+                        <div class="card card-bordered">
+                            <div class="card-inner">
+                                <h6 class="title">Évolution mensuelle</h6>
+                                <div class="chart-container">
+                                    <canvas id="monthlyTrendChart" height="100"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Fermer</button>
+                <button type="button" class="btn btn-primary" onclick="exportChartsToCSV()">Exporter les données</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .card-stat {
+        border: none;
+        border-radius: 10px;
+        color: white;
+        overflow: hidden;
+        transition: transform 0.3s, box-shadow 0.3s;
+    }
+
+    .card-stat:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+    }
+
+    .card-stat .card-body {
+        padding: 20px;
+    }
+
+    .card-stat-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+    }
+
+    .card-stat-head .icon {
+        font-size: 1.5rem;
+        opacity: 0.7;
+    }
+
+    .card-stat-body .amount {
+        font-size: 1.8rem;
+        font-weight: 600;
+        margin-bottom: 5px;
+    }
+
+    .card-stat-body .change {
+        font-size: 0.875rem;
+    }
+
+    .bg-gradient-primary {
+        background: linear-gradient(135deg, #6576ff 0%, #6a11cb 100%);
+    }
+
+    .bg-gradient-success {
+        background: linear-gradient(135deg, #2dce89 0%, #1aae6f 100%);
+    }
+
+    .bg-gradient-warning {
+        background: linear-gradient(135deg, #fb6340 0%, #fbb140 100%);
+    }
+
+    .bg-gradient-info {
+        background: linear-gradient(135deg, #11cdef 0%, #1171ef 100%);
+    }
+
+    .tb-amount {
+        font-weight: 600;
+        color: #6576ff;
+    }
+
+    .chart-container, .pie-chart-container {
+        position: relative;
+        height: 200px;
+    }
+
+    .user-avatar {
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+    }
+
+    .user-card {
+        display: flex;
+        align-items: center;
+    }
+
+    .user-info {
+        margin-left: 10px;
+    }
+
+    .user-info .tb-lead {
+        display: block;
+        font-weight: 500;
+    }
+
+    .badge-dim {
+        opacity: 0.9;
+    }
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Initialisation des graphiques
+    document.addEventListener('DOMContentLoaded', function() {
+        // Graphique de répartition par statut
+        const statusCtx = document.getElementById('statusChart').getContext('2d');
+        const statusChart = new Chart(statusCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Réussis', 'En attente', 'Échoués', 'Abandonnés'],
+                datasets: [{
+                    data: [{{ successful_count }}, {{ pending_count }}, 
+                           {{ failed_count }}, {{ abandoned_count }}],
+                    backgroundColor: ['#2dce89', '#fb6340', '#f5365c', '#8392a5'],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        });
+
+        // Gestion de la sélection multiple
+        const selectAllDonations = document.getElementById('selectAllDonations');
+        const donationCheckboxes = document.querySelectorAll('.donation-checkbox');
+        const batchDonationActionsBtn = document.getElementById('batchDonationActionsBtn');
+
+        selectAllDonations.addEventListener('change', function() {
+            donationCheckboxes.forEach(checkbox => {
+                checkbox.checked = selectAllDonations.checked;
+            });
+            updateBatchDonationActionsBtn();
+        });
+
+        donationCheckboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                updateBatchDonationActionsBtn();
+                selectAllDonations.checked = [...donationCheckboxes].every(cb => cb.checked);
+            });
+        });
+
+        function updateBatchDonationActionsBtn() {
+            const checkedCount = [...donationCheckboxes].filter(cb => cb.checked).length;
+            batchDonationActionsBtn.disabled = checkedCount === 0;
+            if (checkedCount > 0) {
+                batchDonationActionsBtn.innerHTML = `<em class="icon ni ni-tool"></em><span>Actions (${checkedCount})</span>`;
+            } else {
+                batchDonationActionsBtn.innerHTML = `<em class="icon ni ni-tool"></em><span>Actions groupées</span>`;
+            }
+        }
+    });
+
+    // Fonctions utilitaires
+    function showStatsModal() {
+        $('#donationStatsModal').modal('show');
+    }
+
+    function updatePerPage(value) {
+        const url = new URL(window.location.href);
+        url.searchParams.set('per_page', value);
+        window.location.href = url.toString();
+    }
+
+    function exportToPDF() {
+        alert('Export PDF en cours de développement');
+    }
+
+    function exportToExcel() {
+        alert('Export Excel en cours de développement');
+    }
+
+    function exportToCSV() {
+        alert('Export CSV en cours de développement');
+    }
+
+    function exportVisibleToExcel() {
+        alert('Export des données visibles en cours de développement');
+    }
+
+    function printTable() {
+        window.print();
+    }
+
+    function exportChartsToCSV() {
+        alert('Export des graphiques en CSV en cours de développement');
+    }
+
+    function toggleAdvancedFilters() {
+        const advancedFilters = document.querySelectorAll('#donationFilterForm .col-md-2:nth-child(n+3)');
+        advancedFilters.forEach(filter => {
+            filter.style.display = filter.style.display === 'none' ? 'block' : 'none';
+        });
+    }
+</script>
 {% endblock %}
