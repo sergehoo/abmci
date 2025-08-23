@@ -149,10 +149,16 @@ class Eglise(models.Model):
     pasteur = models.CharField(max_length=250, null=True, blank=True)
 
     # 📍 géométrie: SRID=4326 (WGS84), ordres (lon, lat) !
-    location = gis_models.PointField(srid=4326, null=True, blank=True)
+    location = gis_models.PointField(srid=4326, null=True, blank=True,spatial_index=True)
     verse_du_jour = models.TextField(null=True, blank=True)
     verse_reference = models.CharField(max_length=100, null=True, blank=True)
     verse_date = models.DateField(default=timezone.now)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["name"]),
+            # Django 5.1+ ; sinon: models.Index + db_index via migration
+        ]
 
     def _verset_changed(self, old_text: str | None, old_ref: str | None) -> bool:
         """Détecte un changement ‘réel’ (on compacte les espaces)."""

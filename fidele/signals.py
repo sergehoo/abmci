@@ -10,6 +10,7 @@ from django.dispatch import receiver
 from django.template.loader import get_template
 
 from abmci.notifications.fcm import send_to_topic
+from abmci.services.nearest_church import assign_nearest_eglise_if_missing
 from abmci.services.notifications import notify_new_comment
 from fidele.models import Fidele, PrayerRequest, PrayerComment
 from django.dispatch import Signal
@@ -26,6 +27,7 @@ def qlook():
 def create_fidele(sender, instance, created, **kwargs):
     if created:
         fidele = Fidele.objects.create(user=instance)
+
 
 @receiver(user_signed_up)
 def create_user_profile_completion(sender, request, user, **kwargs):
@@ -66,9 +68,28 @@ def notify_new_prayer(sender, instance: PrayerRequest, created, **kwargs):
     # for user in <cible>:
     #     Notification.objects.create(user=user, title=title, body=body, data=data)
 
+
 @receiver(post_save, sender=PrayerComment)
 def on_comment_created(sender, instance: PrayerComment, created: bool, **kwargs):
     if not created:
         return
     # instance.prayer doit être accessible (FK)
     notify_new_comment(instance.prayer, instance)
+
+
+@receiver(post_save, sender=Fidele)
+def set_nearest_church_on_create(sender, instance: Fidele, created: bool, **kwargs):
+    """
+    Après création (ou update), si aucune église et qu’on a des coordonnées,
+    on affecte la plus proche. On limite aux créations (ou seulement si encore vide).
+    """
+    # Tu peux restreindre à 'created is True' si tu veux éviter les updates :
+    # if not created: return
+    try:
+        updated = assign_nearest_eglise_if_missing(instance, max_radius_km=50)  # par ex. 50 km
+        # Optionnel: logger si updated
+        # if updated:
+        #     logger.info("Fidele %s affecté à l’église %s", instance.pk, instance.eglise_id)
+    except Exception as e:
+        # Evite que le signal casse la transaction ; remplace par un logger
+        print(f"[signals] assign_nearest_eglise_if_missing error: {e!r}")

@@ -955,6 +955,7 @@ class EgliseProcheListView(generics.ListAPIView):
         ctx['user_point'] = getattr(self.request, '_user_point', None)
         ctx['radius_m'] = getattr(self.request, '_radius_m', None)
         return ctx
+
 @api_view(['GET'])
 def eglises_avec_verset_du_jour(request):
     """API personnalisée pour les églises avec leur verset du jour"""

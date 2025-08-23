@@ -9,7 +9,8 @@ from simple_history.admin import SimpleHistoryAdmin
 from django.contrib.gis import admin as gis_admin
 from fidele.models import Department, MembreType, Fidele, Location, TypeLocation, Fonction, OuvrierPermanence, \
     Permanence, Eglise, Familles, SujetPriere, ProblemeParticulier, UserProfileCompletion, PrayerLike, PrayerComment, \
-    PrayerRequest, PrayerCategory, BibleVersion, BibleVerse, Banner, DonationCategory, Donation, VerseOfDay
+    PrayerRequest, PrayerCategory, BibleVersion, BibleVerse, Banner, DonationCategory, Donation, VerseOfDay, \
+    FidelePosition
 from django.contrib.gis.db import models
 
 # Register your models here.
@@ -389,3 +390,35 @@ class VerseOfDayAdmin(admin.ModelAdmin):
         self.message_user(request, f"{queryset.count()} verset(s) dupliqué(s) avec succès.")
 
     duplicate_verse.short_description = "Dupliquer les versets sélectionnés (date +1 jour)"
+
+
+@admin.register(FidelePosition)
+class FidelePositionAdmin(admin.ModelAdmin):
+    # ... configuration existante ...
+
+    actions = ['export_positions_csv']
+
+    def export_positions_csv(self, request, queryset):
+        """Action pour exporter les positions sélectionnées en CSV"""
+        import csv
+        from django.http import HttpResponse
+
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename="positions.csv"'
+
+        writer = csv.writer(response)
+        writer.writerow(['Fidèle', 'Latitude', 'Longitude', 'Précision', 'Date', 'Source'])
+
+        for position in queryset:
+            writer.writerow([
+                str(position.fidele),
+                position.latitude,
+                position.longitude,
+                position.accuracy or '',
+                position.captured_at,
+                position.source
+            ])
+
+        return response
+
+    export_positions_csv.short_description = "Exporter les positions sélectionnées en CSV"
