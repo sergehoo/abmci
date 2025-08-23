@@ -639,21 +639,21 @@ class CreateIntentView(generics.GenericAPIView):
         except DonationCategory.DoesNotExist:
             return Response({'detail': 'Catégorie inconnue'}, status=400)
 
-        # Référence unique
         reference = f"DON-{uuid.uuid4().hex[:16].upper()}"
 
-        # Init transaction Paystack
         init_url = "https://api.paystack.co/transaction/initialize"
-        # amount en kobo si NGN; pour XOF Paystack accepte amount * 100 en "base unit".
-        # Si tu veux rester en XOF entiers côté app, convertis ici en *100 si requis.
+        currency = data.get('currency', 'XOF')
+
         payload = {
-            "amount": data['amount'] * 100,  # <- adapte selon ta config Paystack/money
+            # Paystack attend les "base units" -> *100
+            "amount": int(data['amount']) * 100,
             "email": request.user.email or "noreply@example.com",
             "reference": reference,
-            "callback_url": settings.SITE_URL + "/donations/thanks/",  # ou deep-link
-            "currency": "XOF",  # adapte si besoin
+            "callback_url": settings.SITE_URL.rstrip('/') + "/donations/thanks/",
+            "currency": currency,
         }
         headers = {"Authorization": f"Bearer {PAYSTACK_SECRET}"}
+
         r = requests.post(init_url, json=payload, headers=headers, timeout=30)
         if r.status_code not in (200, 201):
             return Response({'detail': 'Erreur Paystack', 'body': r.text}, status=502)
@@ -664,14 +664,13 @@ class CreateIntentView(generics.GenericAPIView):
 
         auth_url = resp['data']['authorization_url']
 
-        # Crée le Donation local
         Donation.objects.create(
             user=request.user if not data['anonymous'] else None,
             anonymous=data['anonymous'],
             category=category,
-            amount=data['amount'],
-            recurrence=data['recurrence'],
-            payment_method=data['payment_method'],
+            amount=int(data['amount']),
+            recurrence=data.get('recurrence', 'none'),
+            payment_method=data.get('payment_method', 'paystack'),
             reference=reference,
             authorization_url=auth_url,
             status='pending',
@@ -679,9 +678,8 @@ class CreateIntentView(generics.GenericAPIView):
 
         return Response({
             'reference': reference,
-            'authorization_url': auth_url
+            'authorization_url': auth_url,
         }, status=status.HTTP_201_CREATED)
-
 
 class PaystackWebhookView(generics.GenericAPIView):
     authentication_classes = []  # tu peux vérifier la signature Paystack (x-paystack-signature)

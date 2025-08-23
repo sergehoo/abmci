@@ -531,20 +531,19 @@ class DonationCategorySerializer(serializers.ModelSerializer):
 
 
 class CreateIntentSerializer(serializers.Serializer):
-    category_id = serializers.IntegerField()
-    amount = serializers.IntegerField(min_value=50)  # garde une barrière
-    currency = serializers.ChoiceField(choices=[('XOF', 'XOF'), ('NGN', 'NGN')], default='XOF')
+    category_id = serializers.CharField()
+    amount = serializers.IntegerField(min_value=1)  # XOF entiers
+    anonymous = serializers.BooleanField(required=False, default=False)
     recurrence = serializers.ChoiceField(
         choices=['none', 'weekly', 'monthly', 'quarterly', 'semiannual'],
-        default='none'
+        required=False, default='none'
     )
-    anonymous = serializers.BooleanField(default=False)
-
-    def validate_amount(self, v):
-        # borne haute raisonnable
-        if v > 50000000:
-            raise serializers.ValidationError("Montant trop élevé.")
-        return v
+    payment_method = serializers.ChoiceField(
+        choices=['paystack'], required=False, default='paystack'
+    )
+    currency = serializers.ChoiceField(
+        choices=['XOF', 'NGN', 'GHS', 'ZAR', 'USD'], required=False, default='XOF'
+    )
 
 
 class DonationIntentResponseSerializer(serializers.Serializer):
