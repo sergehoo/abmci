@@ -8,14 +8,15 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.core.mail import send_mail
 from django.db import transaction
-from django.db.models import Count, Q, Case, When, IntegerField
+from django.db.models import Count, Q, Case, When, IntegerField, Sum
 from django.shortcuts import render, get_object_or_404, redirect
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
+from django.utils.dateparse import parse_date
 from django.views import View
 from django.views.generic import TemplateView, ListView, DetailView, UpdateView, FormView, DeleteView, CreateView
 from fidele.models import Fidele, Department, Permanence, Eglise, ProblemeParticulier, Fonction, MembreType, \
-    TransferHistory, Notification, UserProfileCompletion, AccountDeletionRequest
+    TransferHistory, Notification, UserProfileCompletion, AccountDeletionRequest, Donation, DonationCategory
 from fidele.form import PermanenceForm, FideleUpdateForm, FideleTransferForm, ProfileCompletionForm, ConfirmDeleteForm
 from event.models import ParticipationEvenement
 
@@ -697,3 +698,91 @@ class AccountDeleteDoneView(View):
 
     def get(self, request, *args, **kwargs):
         return render(request, self.template_name)
+
+
+class DonationListView(LoginRequiredMixin, ListView):
+    model = Donation
+    template_name = 'donations/donation_list.html'
+    context_object_name = 'donations'
+    paginate_by = 10
+
+    # on évite de recalculer le queryset
+    _qs = None
+
+    def get_queryset(self):
+        if self._qs is not None:
+            return self._qs
+
+        user = self.request.user
+        qs = Donation.objects.filter(user=user).select_related('category')
+
+        # --- Filtres ---
+        status = self.request.GET.get('status') or ''
+        category = self.request.GET.get('category') or ''  # code ou id
+        date_from = parse_date(self.request.GET.get('date_from') or '')
+        date_to = parse_date(self.request.GET.get('date_to') or '')
+
+        if status:
+            qs = qs.filter(status=status)
+
+        if category:
+            if category.isdigit():
+                qs = qs.filter(category_id=int(category))
+            else:
+                qs = qs.filter(category__code=category)
+
+        if date_from:
+            qs = qs.filter(created_at__date__gte=date_from)
+        if date_to:
+            qs = qs.filter(created_at__date__lte=date_to)
+
+        self._qs = qs.order_by('-created_at')
+        return self._qs
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        qs = self.get_queryset()
+
+        # Agrégats
+        aggs = qs.aggregate(
+            total_amount=Sum('amount'),
+            success_amount=Sum('amount', filter=Q(status='success')),
+            pending_amount=Sum('amount', filter=Q(status='pending')),
+            success_count=Count('id', filter=Q(status='success')),
+            pending_count=Count('id', filter=Q(status='pending')),
+        )
+
+        ctx['total_amount'] = aggs['total_amount'] or 0
+        ctx['success_amount'] = aggs['success_amount'] or 0
+        ctx['pending_amount'] = aggs['pending_amount'] or 0
+        ctx['successful_count'] = aggs['success_count'] or 0
+        ctx['pending_count'] = aggs['pending_count'] or 0
+
+        # Filtres (pour pré-remplir le formulaire sur le template)
+        ctx['categories'] = DonationCategory.objects.all().order_by('name')
+        ctx['current_filters'] = {
+            'status': self.request.GET.get('status', ''),
+            'category': self.request.GET.get('category', ''),
+            'date_from': self.request.GET.get('date_from', ''),
+            'date_to': self.request.GET.get('date_to', ''),
+        }
+
+        # Si ton champ status a des choices sur le modèle, on peut les exposer :
+        status_field = Donation._meta.get_field('status')
+        ctx['status_choices'] = getattr(status_field, 'choices', ()) or (
+            ('pending', 'Pending'),
+            ('success', 'Success'),
+            ('failed', 'Failed'),
+            ('abandoned', 'Abandoned'),
+        )
+
+        return ctx
+
+
+class DonationDetailView(LoginRequiredMixin, DetailView):
+    model = Donation
+    template_name = 'donations/donation_detail.html'
+    context_object_name = 'donation'
+
+    def get_queryset(self):
+        return Donation.objects.filter(user=self.request.user).select_related('category')

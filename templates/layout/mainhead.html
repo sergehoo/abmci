@@ -47,10 +47,10 @@
                         <a href="#" class="dropdown-toggle nk-quick-nav-icon" data-toggle="dropdown">
                             <div class="icon-status icon-status-info">
                                 <em class="icon ni ni-bell"></em>
-                                {% unread_notifs_count user as unread_count %}
-                                {% if unread_count > 0 %}
-                                <span class="notification-count">{{ unread_count }}</span>
-                                {% endif %}
+{#                                {% unread_notifs_count user as unread_count %}#}
+{#                                {% if unread_count > 0 %}#}
+{#                                <span class="notification-count">{{ unread_count }}</span>#}
+{#                                {% endif %}#}
                             </div>
                         </a>
                         <div class="dropdown-menu dropdown-menu-xl dropdown-menu-right dropdown-menu-s1">
@@ -60,34 +60,34 @@
                             </div>
                             <div class="dropdown-body">
                                 <div class="nk-notification">
-                                    {% user_notifs user as notifications %}
-                                    {% for notification in notifications|slice:":5" %}
-                                    <div class="nk-notification-item dropdown-inner {% if not notification.read %}unread{% endif %}">
-                                        <div class="nk-notification-icon">
-                                            <em class="icon icon-circle bg-{{ notification.data.color|default:'primary' }}-dim ni ni-{{ notification.data.icon|default:'info' }}"></em>
-                                        </div>
-                                        <div class="nk-notification-content">
-                                            <a href="{% url 'mark_read' notification.id %}{% if notification.data.url %}?next={{ notification.data.url|urlencode }}{% endif %}"
-                                               class="notification-link">
-                                                <div class="nk-notification-text">
-                                                    {{ notification.message }}
-                                                    {% if notification.data.details %}
-                                                    <small class="text-soft">{{ notification.data.details }}</small>
-                                                    {% endif %}
-                                                </div>
-                                                <div class="nk-notification-time">
-                                                    {{ notification.created|timesince }}
-                                                </div>
-                                            </a>
-                                        </div>
-                                    </div>
-                                    {% empty %}
-                                    <div class="nk-notification-item dropdown-inner">
-                                        <div class="nk-notification-content text-center py-3">
-                                            Aucune notification
-                                        </div>
-                                    </div>
-                                    {% endfor %}
+{#                                    {% user_notifs user as notifications %}#}
+{#                                    {% for notification in notifications|slice:":5" %}#}
+{#                                    <div class="nk-notification-item dropdown-inner {% if not notification.read %}unread{% endif %}">#}
+{#                                        <div class="nk-notification-icon">#}
+{#                                            <em class="icon icon-circle bg-{{ notification.data.color|default:'primary' }}-dim ni ni-{{ notification.data.icon|default:'info' }}"></em>#}
+{#                                        </div>#}
+{#                                        <div class="nk-notification-content">#}
+{#                                            <a href="{% url 'mark_read' notification.id %}{% if notification.data.url %}?next={{ notification.data.url|urlencode }}{% endif %}"#}
+{#                                               class="notification-link">#}
+{#                                                <div class="nk-notification-text">#}
+{#                                                    {{ notification.message }}#}
+{#                                                    {% if notification.data.details %}#}
+{#                                                    <small class="text-soft">{{ notification.data.details }}</small>#}
+{#                                                    {% endif %}#}
+{#                                                </div>#}
+{#                                                <div class="nk-notification-time">#}
+{#                                                    {{ notification.created|timesince }}#}
+{#                                                </div>#}
+{#                                            </a>#}
+{#                                        </div>#}
+{#                                    </div>#}
+{#                                    {% empty %}#}
+{#                                    <div class="nk-notification-item dropdown-inner">#}
+{#                                        <div class="nk-notification-content text-center py-3">#}
+{#                                            Aucune notification#}
+{#                                        </div>#}
+{#                                    </div>#}
+{#                                    {% endfor %}#}
                                 </div>
                             </div>
                             <div class="dropdown-foot center">

@@ -28,7 +28,10 @@ urlpatterns = [
                   path('<int:pk>/statut_social/', StatutSocialListView.as_view(), name='statut_social'),
                   path('<int:pk>/messagerie/', MessagerieListView.as_view(), name='messagerie'),
                   path('direction/<int:pk>', DirectionDetailView.as_view(), name='direction'),
-                  path('createpermanence/<int:pk>', views.permanencecreate, name='createpermanence')
+                  path('createpermanence/<int:pk>', views.permanencecreate, name='createpermanence'),
+
+                  path('donations/', views.DonationListView.as_view(), name='donation-list'),
+                  path('donations/<int:pk>/', views.DonationDetailView.as_view(), name='donation-detail'),
               ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
