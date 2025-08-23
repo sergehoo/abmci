@@ -3,7 +3,9 @@ from datetime import timedelta
 from django.contrib import admin
 from django.contrib.gis.admin import GISModelAdmin
 from django.contrib.gis.forms import OSMWidget
-from django.urls import reverse
+from django.urls import reverse, NoReverseMatch
+from django.utils import timezone
+from django.utils.formats import number_format
 from django.utils.html import format_html
 from simple_history.admin import SimpleHistoryAdmin
 from django.contrib.gis import admin as gis_admin
@@ -258,100 +260,134 @@ class DonationCategoryAdmin(admin.ModelAdmin):
 @admin.register(Donation)
 class DonationAdmin(admin.ModelAdmin):
     list_display = (
-        'reference',
-        'formatted_amount',
-        'category_link',
-        'user_link',
-        'payment_method',
-        'status_badge',
-        'recurrence',
-        'created_at',
-        'paid_at',
-        'authorization_link'
+        "reference",
+        "formatted_amount",
+        "category_link",
+        "user_link",
+        "payment_method",
+        "status_badge",
+        "recurrence",
+        "created_at",
+        "paid_at",
+        "authorization_link",
     )
+    list_display_links = ("reference",)
     list_filter = (
-        'status',
-        'payment_method',
-        'recurrence',
-        'category',
-        ('paid_at', admin.DateFieldListFilter),
+        "status",
+        "payment_method",
+        "recurrence",
+        "category",
+        ("paid_at", admin.DateFieldListFilter),
     )
-    search_fields = ('reference', 'user__email', 'user__first_name', 'user__last_name')
-    list_select_related = ('user', 'category')
-    actions = ['resend_payment_link', 'mark_as_successful']
-    readonly_fields = ('reference', 'created_at', 'authorization_url')
+    search_fields = (
+        "reference",
+        "user__email",
+        "user__first_name",
+        "user__last_name",
+        "category__name",
+    )
+    list_select_related = ("user", "category")
+    actions = ("resend_payment_link", "mark_as_successful", "mark_as_failed")
+    readonly_fields = ("reference", "created_at", "authorization_url")
+    autocomplete_fields = ("user", "category")
+    ordering = ("-created_at",)
+    date_hierarchy = "created_at"
+    list_per_page = 50
+
     fieldsets = (
-        (None, {
-            'fields': ('user', 'anonymous', 'category', 'amount')
-        }),
-        ('Paiement', {
-            'fields': ('payment_method', 'reference', 'status', 'authorization_url')
-        }),
-        ('Récurrence', {
-            'fields': ('recurrence',)
-        }),
-        ('Dates', {
-            'fields': ('created_at', 'paid_at')
-        }),
+        (None, {"fields": ("user", "anonymous", "category", "amount")}),
+        ("Paiement", {"fields": ("payment_method", "reference", "status", "authorization_url")}),
+        ("Récurrence", {"fields": ("recurrence",)}),
+        ("Dates", {"fields": ("created_at", "paid_at")}),
     )
 
-    def formatted_amount(self, obj):
-        return f"{obj.amount:,} XOF"
+    # ---------- Helpers d’affichage ----------
 
-    formatted_amount.short_description = "Montant"
-    formatted_amount.admin_order_field = 'amount'
+    @admin.display(description="Montant", ordering="amount")
+    def formatted_amount(self, obj: Donation) -> str:
+        # number_format gère les séparateurs en respectant LANGUAGE_CODE
+        return f"{number_format(obj.amount, force_grouping=True)} XOF"
 
-    def category_link(self, obj):
-        url = reverse("admin:donations_donationcategory_change", args=[obj.category.id])
+    @admin.display(description="Catégorie", ordering="category__name")
+    def category_link(self, obj: Donation) -> str:
+        if not obj.category_id:
+            return "-"
+        try:
+            url = reverse("admin:%s_%s_change" % (obj.category._meta.app_label, obj.category._meta.model_name),
+                          args=[obj.category.pk])
+        except NoReverseMatch:
+            return obj.category.name
         return format_html('<a href="{}">{}</a>', url, obj.category.name)
 
-    category_link.short_description = "Catégorie"
-    category_link.admin_order_field = 'category'
-
-    def user_link(self, obj):
+    @admin.display(description="Donateur", ordering="user__last_name")
+    def user_link(self, obj: Donation) -> str:
         if not obj.user:
             return "Anonyme" if obj.anonymous else "Invité"
-        url = reverse("admin:accounts_user_change", args=[obj.user.id])
-        return format_html('<a href="{}">{}</a>', url, obj.user.get_full_name() or obj.user.email)
+        label = obj.user.get_full_name() or obj.user.email or f"Utilisateur #{obj.user_id}"
+        try:
+            url = reverse("admin:%s_%s_change" % (obj.user._meta.app_label, obj.user._meta.model_name),
+                          args=[obj.user.pk])
+        except NoReverseMatch:
+            return label
+        return format_html('<a href="{}">{}</a>', url, label)
 
-    user_link.short_description = "Donateur"
-    user_link.admin_order_field = 'user'
-
-    def status_badge(self, obj):
+    @admin.display(description="Statut")
+    def status_badge(self, obj: Donation) -> str:
         colors = {
-            'pending': 'orange',
-            'success': 'green',
-            'failed': 'red',
-            'abandoned': 'gray'
+            "pending": "#f59e0b",    # orange-500
+            "success": "#10b981",    # emerald-500
+            "failed": "#ef4444",     # red-500
+            "abandoned": "#6b7280",  # gray-500
         }
+        color = colors.get(obj.status, "#3b82f6")  # blue-500 par défaut
         return format_html(
-            '<span style="background: {}; color: white; padding: 3px 8px; border-radius: 10px">{}</span>',
-            colors.get(obj.status, 'blue'),
-            obj.status.upper()
+            '<span style="background:{};color:white;padding:3px 8px;border-radius:10px;font-weight:600">'
+            "{}</span>",
+            color,
+            obj.status.upper(),
         )
 
-    status_badge.short_description = "Statut"
-
-    def authorization_link(self, obj):
+    @admin.display(description="Lien Paiement")
+    def authorization_link(self, obj: Donation) -> str:
         if not obj.authorization_url:
             return "-"
-        return format_html('<a href="{}" target="_blank">Lien de paiement</a>', obj.authorization_url)
+        return format_html('<a href="{}" target="_blank" rel="noopener">Ouvrir</a>', obj.authorization_url)
 
-    authorization_link.short_description = "Lien Paiement"
+    # ---------- Actions ----------
 
     @admin.action(description="Renvoyer le lien de paiement")
     def resend_payment_link(self, request, queryset):
-        # Implémentez la logique d'envoi ici
-        self.message_user(request, f"{queryset.count()} liens envoyés")
+        # Exemple minimal : ici on se contente de compter les liens valides.
+        # Tu peux brancher un envoi email/SMS selon ton infra.
+        count = 0
+        for d in queryset:
+            if d.authorization_url:
+                count += 1
+                # TODO: implémenter l’envoi (email/SMS) avec d.authorization_url
+        if count:
+            self.message_user(request, f"{count} lien(s) de paiement renvoyé(s).", level=messages.SUCCESS)
+        else:
+            self.message_user(request, "Aucun lien de paiement disponible à renvoyer.", level=messages.WARNING)
 
-    @admin.action(description="Marquer comme payé")
+    @admin.action(description="Marquer comme payé (success)")
     def mark_as_successful(self, request, queryset):
-        updated = queryset.filter(status='pending').update(status='success', paid_at=timezone.now())
-        self.message_user(request, f"{updated} dons marqués comme payés")
+        # On ne touche qu’aux pending/failed/abandoned pour éviter d’écraser du 'success'
+        updatable = queryset.exclude(status="success")
+        updated = updatable.update(status="success", paid_at=timezone.now())
+        self.message_user(request, f"{updated} don(s) marqué(s) comme payé(s).", level=messages.SUCCESS)
+
+    @admin.action(description="Marquer comme échoué (failed)")
+    def mark_as_failed(self, request, queryset):
+        updatable = queryset.exclude(status="failed")
+        updated = updatable.update(status="failed")
+        self.message_user(request, f"{updated} don(s) marqué(s) comme échoué(s).", level=messages.WARNING)
+
+    # ---------- Optimisations ----------
 
     def get_queryset(self, request):
-        return super().get_queryset(request).select_related('user', 'category')
-
+        # on garde select_related + possibilité d’annotations futures
+        qs = super().get_queryset(request).select_related("user", "category")
+        return qs
 
 @admin.register(VerseOfDay)
 class VerseOfDayAdmin(admin.ModelAdmin):

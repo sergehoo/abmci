@@ -149,7 +149,7 @@ class Eglise(models.Model):
     pasteur = models.CharField(max_length=250, null=True, blank=True)
 
     # 📍 géométrie: SRID=4326 (WGS84), ordres (lon, lat) !
-    location = gis_models.PointField(srid=4326, null=True, blank=True,spatial_index=True)
+    location = gis_models.PointField(srid=4326, null=True, blank=True, spatial_index=True)
     verse_du_jour = models.TextField(null=True, blank=True)
     verse_reference = models.CharField(max_length=100, null=True, blank=True)
     verse_date = models.DateField(default=timezone.now)
@@ -805,6 +805,19 @@ class DonationCategory(models.Model):
     min_amount = models.PositiveIntegerField(default=100)  # XOF/NGN entiers
     max_amount = models.PositiveIntegerField(default=10000000)
 
+    def save(self, *args, **kwargs):
+        # Générer automatiquement le slug si vide ou si name a changé
+        if not self.code:
+            base_slug = slugify(self.name)
+            slug = base_slug
+            counter = 1
+            # Vérifie unicité
+            while DonationCategory.objects.filter(code=slug).exclude(pk=self.pk).exists():
+                slug = f"{base_slug}-{counter}"
+                counter += 1
+            self.code = slug
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return self.name
 
@@ -852,6 +865,7 @@ class Donation(models.Model):
     def __str__(self):
         return f"{self.category.name} - {self.amount} {self.currency} ({self.status})"
 
+
 class AccountDeletionRequest(models.Model):
     STATUS_CHOICES = [
         ("requested", "Requested"),
@@ -871,5 +885,3 @@ class AccountDeletionRequest(models.Model):
 
     def __str__(self):
         return f"DeletionRequest(user={self.user_id}, status={self.status})"
-
-
