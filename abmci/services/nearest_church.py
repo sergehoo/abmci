@@ -4,7 +4,7 @@ from typing import Optional
 
 from django.utils import timezone
 from django.contrib.gis.geos import Point
-from django.contrib.gis.db.models.functions import Distance, DistanceSphere  # ✅ mètres
+from django.contrib.gis.db.models.functions import Distance  # ✅ mètres
 
 from fidele.models import Fidele, Eglise, FidelePosition
 
