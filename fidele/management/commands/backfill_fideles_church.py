@@ -1,27 +1,59 @@
-# fidele/management/commands/backfill_fideles_church.py
 from django.core.management.base import BaseCommand
-from django.db import transaction
+from django.utils import timezone
 
 from abmci.services.nearest_church import assign_nearest_eglise_if_missing
-from fidele.models import Fidele
-
+from fidele.models import Fidele, FidelePosition
 
 class Command(BaseCommand):
-    help = "Affecte l’église la plus proche pour les fidèles sans église, si possible."
+    help = "Assigne l’église la plus proche aux fidèles sans église, en se basant sur leur dernière position connue."
 
     def add_arguments(self, parser):
-        parser.add_argument("--radius-km", type=float, default=50.0, help="Rayon max (km)")
+        parser.add_argument("--max-radius-km", type=float, default=50,
+            help="Rayon max en km (par défaut 50 km)")
+        parser.add_argument("--max-age-hours", type=int, default=72,
+            help="Âge max des positions (heures)")
+        parser.add_argument("--max-accuracy-m", type=float, default=1000,
+            help="Précision max en mètres (par défaut 1000m)")
+        parser.add_argument("--verbose", action="store_true",
+            help="Affiche les détails des assignations")
 
     def handle(self, *args, **opts):
-        radius = opts["radius_km"]
-        qs = Fidele.objects.filter(eglise__isnull=True)
-        total = qs.count()
-        done = 0
-        self.stdout.write(f"À traiter: {total} fidèle(s)")
+        radius_km = opts["max_radius_km"]
+        max_age_hours = opts["max_age_hours"]
+        max_accuracy_m = opts["max_accuracy_m"]
+        verbose = opts["verbose"]
 
-        with transaction.atomic():
-            for f in qs.iterator(chunk_size=500):
-                if assign_nearest_eglise_if_missing(f, max_radius_km=radius):
-                    done += 1
+        cutoff = timezone.now() - timezone.timedelta(hours=max_age_hours)
 
-        self.stdout.write(self.style.SUCCESS(f"Assignations effectuées: {done}/{total}"))
+        fideles = Fidele.objects.filter(eglise__isnull=True)
+        self.stdout.write(f"À traiter: {fideles.count()} fidèle(s)")
+
+        assigned = 0
+        for f in fideles:
+            pos = FidelePosition.objects.filter(
+                fidele=f,
+                captured_at__gte=cutoff,
+                accuracy__lte=max_accuracy_m
+            ).order_by("-captured_at").first()
+
+            if not pos:
+                if verbose:
+                    self.stdout.write(f"- Fidele {f.id}: aucune position valable")
+                continue
+
+            ok = assign_nearest_eglise_if_missing(f, max_radius_km=radius_km)
+            if ok:
+                assigned += 1
+                if verbose:
+                    self.stdout.write(
+                        f"✓ Fidele {f.id}: assigné à {f.eglise_id}"
+                    )
+            else:
+                if verbose:
+                    self.stdout.write(f"- Fidele {f.id}: pas d’église trouvée")
+
+        self.stdout.write(
+            self.style.SUCCESS(
+                f"Assignations effectuées: {assigned}/{fideles.count()}"
+            )
+        )
