@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <title>Retour de paiement</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <!-- CSP simple (assouplissez si vous servez des assets externes) -->
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self';
+                 img-src 'self' data:;
+                 style-src 'self' 'unsafe-inline';
+                 script-src 'self' 'unsafe-inline';
+                 connect-src 'self';">
+
+  <style>
+    :root { color-scheme: light dark; }
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 0; background: #f6f7fb; }
+    .wrap { max-width: 620px; margin: 0 auto; padding: 20px; }
+    .card {
+      background: #fff; border-radius: 14px; padding: 22px; margin-top: 18px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.07);
+    }
+    h1 { margin: 0 0 6px; font-size: 1.25rem; }
+    .muted { color: #555; }
+    .status { margin-top: 8px; font-weight: 700; }
+    .ok { color: #0a7f2e; }
+    .ko { color: #b00020; }
+    .row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
+    .btn {
+      display: inline-block; padding: 12px 16px; border-radius: 10px; text-decoration: none; font-weight: 700;
+      transition: transform .06s ease-in-out;
+    }
+    .btn:active { transform: scale(.98); }
+    .btn-primary { background: #1a73e8; color: #fff; }
+    .btn-ghost { border: 1px solid rgba(0,0,0,.12); color: #111; background: #fff; }
+    .small { font-size: .92rem; color: #666; margin-top: 14px; }
+    .code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; padding: .2em .45em; background: #f0f3f7; border-radius: 6px;}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>Merci de votre don 🙏</h1>
+      {% if status_ok %}
+        <div class="status ok">Statut: confirmé</div>
+      {% else %}
+        <div class="status ko">Statut: {{ status|default:"inconnu" }}</div>
+      {% endif %}
+      <p class="muted">
+        Référence: <span class="code">{{ reference|default:"(inconnue)" }}</span>
+      </p>
+
+      <p class="muted">Nous essayons d’ouvrir l’application…</p>
+
+      <div class="row">
+        <!-- Ouvrir l’app manuellement -->
+        <a class="btn btn-primary" id="btnOpenApp" href="{{ deeplink_url|default:'#' }}">Ouvrir l’app</a>
+
+        <!-- Lien universel (utile si iOS + associé au domaine) -->
+        <a class="btn btn-ghost" href="{{ universal_link }}">Ouvrir via lien sécurisé</a>
+
+        <!-- Vérifier côté web (optionnel) -->
+        <a class="btn btn-ghost" href="{{ verify_url }}" target="_blank" rel="noopener">Vérifier le paiement</a>
+      </div>
+
+      <p class="small">
+        Si l’app ne s’ouvre pas, installez-la :
+        <a href="{{ android_store }}" rel="noopener">Android</a> —
+        <a href="{{ ios_store }}" rel="noopener">iOS</a>
+      </p>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      // Heuristique simple pour détecter la plateforme
+      var ua = navigator.userAgent || "";
+      var isAndroid = /Android/i.test(ua);
+      var isIOS = /iPhone|iPad|iPod/i.test(ua);
+
+      var deeplink = "{{ deeplink_url|escapejs }}";
+      var storeAndroid = "{{ android_store|escapejs }}";
+      var storeIOS = "{{ ios_store|escapejs }}";
+
+      // 1) Tentative d’ouverture de l’app
+      var opened = false;
+      function tryOpen() {
+        opened = true;
+        // location.href fonctionne bien pour les schémas custom
+        window.location.href = deeplink;
+      }
+
+      // 2) Si l’app ne s’est pas ouverte, on propose le store après timeout
+      function fallback() {
+        if (!opened) {
+          if (isAndroid) {
+            window.location.href = storeAndroid;
+          } else if (isIOS) {
+            window.location.href = storeIOS;
+          }
+        }
+      }
+
+      // Déclenchement
+      setTimeout(tryOpen, 180);     // petit délai pour le rendu
+      setTimeout(fallback, 1600);   // délai suffisant pour laisser une chance d’ouvrir l’app
+
+      // Bouton manuel
+      document.getElementById("btnOpenApp").addEventListener("click", function (e) {
+        opened = true; // l’utilisateur a cliqué « ouvrir l’app »
+      });
+    })();
+  </script>
+</body>
+</html>

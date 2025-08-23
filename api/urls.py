@@ -8,7 +8,7 @@ from api.views import VerifyEmailView, UserDetailView, FideleDetailView, FideleL
     UpcomingEventsHomeView, PrayerCategoryViewSet, PrayerRequestViewSet, PrayerCommentViewSet, DeviceViewSet, \
     NotificationViewSet, BibleVersionViewSet, BibleVerseViewSet, BibleTagViewSet, BannerListView, CategoryListView, \
     CreateIntentView, PaystackWebhookView, DonationVerifyAPIView, EgliseListView, EgliseDetailView, \
-    EgliseProcheListView, eglises_avec_verset_du_jour
+    EgliseProcheListView, eglises_avec_verset_du_jour, paystack_return_view
 from event.views import FirebaseLoginView
 
 router = DefaultRouter()
@@ -38,6 +38,7 @@ urlpatterns = [
     path('donations/intents/', CreateIntentView.as_view()),
     path('paystack/webhook/', PaystackWebhookView.as_view()),
     path('donations/verify/<str:reference>/', DonationVerifyAPIView.as_view(), name='donation-verify'),
+    path("donations/thanks/", paystack_return_view, name="donations-thanks"),
 
     path("banners/", BannerListView.as_view(), name="banner-list"),
 

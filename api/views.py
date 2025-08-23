@@ -7,6 +7,7 @@ import json
 import os
 import uuid
 from datetime import timedelta
+from urllib.parse import urlencode
 
 import requests
 from django.conf import settings
@@ -17,12 +18,13 @@ from django.core.exceptions import ValidationError
 from django.core.mail import send_mail
 from django.db import IntegrityError, transaction, models
 from django.db.models import Q, Prefetch
-from django.http import JsonResponse
-from django.shortcuts import get_object_or_404
+from django.http import JsonResponse, HttpRequest, HttpResponseRedirect
+from django.shortcuts import get_object_or_404, render
 from django.template.defaulttags import comment
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from django.utils.decorators import method_decorator
+from django.utils.html import escape
 from django.utils.http import http_date
 from django.utils.timezone import now
 from django.views import View
@@ -745,7 +747,49 @@ class DonationVerifyAPIView(APIView):
             donation.save(update_fields=['status'])
             return Response({'status': 'failed', 'paystack': data}, status=400)
 
+def paystack_return_view(request: HttpRequest):
+    """
+    Page de retour Paystack (callback utilisateur, PAS webhook).
+    Essaie d’ouvrir l’app via deep link / universal link.
+    Si l’app n’est pas installée, affiche une page fallback avec actions utiles.
+    """
+    ref = request.GET.get("reference", "") or ""
+    status = request.GET.get("status", "") or ""  # 'success' | 'failed' | 'abandoned' (selon Paystack)
 
+    # 1) Deep link custom (Android Intent Filter + iOS URL Types)
+    deeplink_scheme = getattr(settings, "DEEPLINK_SCHEME", "allianceconnect")
+    deeplink_host = "donations"
+    deeplink_path = "/thanks"   # => allianceconnect://donations/thanks?...
+    deeplink_qs = urlencode({"reference": ref, "status": status})
+    deeplink_url = f"{deeplink_scheme}://{deeplink_host}{deeplink_path}?{deeplink_qs}"
+
+    # 2) Universal link HTTPS (si vous l’avez configuré)
+    # Exemple: https://administration.abmci.com/donations/thanks-app?...
+    # (Peut être le même endpoint; ici on distingue pour clarté)
+    site = getattr(settings, "SITE_URL_PUBLIC", "https://administration.abmci.com").rstrip("/")
+    universal_path = "/donations/thanks-app"
+    universal_link = f"{site}{universal_path}?{deeplink_qs}"
+
+    # 3) Lien “vérifier paiement” côté web (purement informatif)
+    verify_api_base = getattr(settings, "SITE_URL_API", "https://administration.abmci.com/api").rstrip("/")
+    verify_url = f"{verify_api_base}/donations/verify/{escape(ref)}"
+
+    # 4) Stores (remplacez par vos vrais IDs)
+    android_store = getattr(settings, "PLAYSTORE_URL", "https://play.google.com/store/apps/details?id=com.your.app")
+    ios_store = getattr(settings, "APPSTORE_URL", "https://apps.apple.com/app/idXXXXXXXXXX")
+
+    ctx = {
+        "reference": ref,
+        "status": status,
+        "deeplink_url": deeplink_url,
+        "universal_link": universal_link,
+        "verify_url": verify_url,
+        "android_store": android_store,
+        "ios_store": ios_store,
+        # Optionnel: affiche une bannière “succès/échec”
+        "status_ok": status.lower() == "success",
+    }
+    return render(request, "landing/payments/return.html", ctx)
 class UserDetailView(generics.RetrieveUpdateAPIView):
     serializer_class = UserSerializer
     permission_classes = [permissions.IsAuthenticated]
