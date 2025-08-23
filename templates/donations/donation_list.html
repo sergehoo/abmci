@@ -11,10 +11,8 @@
   <div class="mb-6 flex items-center justify-between">
     <h1 class="text-2xl md:text-3xl font-bold text-gray-900">Mes Dons</h1>
     {% if request.user.is_staff %}
-      <a
-        href="?{% if showing_all %}{% else %}all=1{% endif %}{% for k,v in request.GET.items %}{% if k != 'all' %}&{{ k }}={{ v }}{% endif %}{% endfor %}"
-        class="text-sm px-3 py-2 rounded-md border border-gray-300 hover:bg-gray-50"
-      >
+      <a href="?{% if showing_all %}{% else %}all=1{% endif %}{% for k,v in request.GET.items %}{% if k != 'all' %}&{{ k }}={{ v }}{% endif %}{% endfor %}"
+        class="text-sm px-3 py-2 rounded-md border border-gray-300 hover:bg-gray-50">
         {% if showing_all %}Afficher seulement les miens{% else %}Voir tous (admin){% endif %}
       </a>
     {% endif %}

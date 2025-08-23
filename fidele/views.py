@@ -796,5 +796,3 @@ class DonationDetailView(LoginRequiredMixin, DetailView):
     template_name = 'donations/donation_detail.html'
     context_object_name = 'donation'
 
-    def get_queryset(self):
-        return Donation.objects.filter(user=self.request.user).select_related('category')
