@@ -267,8 +267,12 @@ PAYSTACK_SECRET_KEY = os.getenv('PAYSTACK_SECRET_KEY')
 # settings.py
 PAYSTACK_PUBLIC_KEY = 'pk_live_xxx'
 PAYSTACK_BASE_URL = 'https://api.paystack.co'
-PAYSTACK_CURRENCY = 'XOF'  # vérifie la devise Paystack supportée pour ton compte/pays
-PAYSTACK_CALLBACK_URL = 'https://administration.abmci.com/payments/callback/'
+PAYSTACK_ALLOWED_CURRENCIES = {"XOF", "NGN"}  # adapte
+SITE_URL = os.environ.get("SITE_URL", "https://administration.abmci.com/api/")  # pour callback web
+PAYSTACK_IPS_WHITELIST = {
+    # Optionnel: adresses IP Paystack (si tu sécurises par IP à l’ELB/Nginx)
+}
+
 # Option A — chemin vers le fichier de service account (recommandé en local/Docker)
 # FIREBASE_SERVICE_ACCOUNT_PATH = os.environ.get("FIREBASE_SERVICE_ACCOUNT_PATH")  # ex: /run/secrets/firebase.json
 

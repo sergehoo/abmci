@@ -802,6 +802,8 @@ class Banner(models.Model):
 class DonationCategory(models.Model):
     code = models.SlugField(unique=True)  # 'offering', 'tithe', 'special'
     name = models.CharField(max_length=120)
+    min_amount = models.PositiveIntegerField(default=100)  # XOF/NGN entiers
+    max_amount = models.PositiveIntegerField(default=10000000)
 
     def __str__(self):
         return self.name
@@ -815,28 +817,40 @@ class Donation(models.Model):
         ('quarterly', 'Quarterly'),
         ('semiannual', 'Semiannual'),
     ]
-    PAYMENT_METHODS = [
-        ('paystack', 'Paystack'),
-    ]
+    PAYMENT_METHODS = [('paystack', 'Paystack')]
 
     user = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL)
     anonymous = models.BooleanField(default=False)
 
     category = models.ForeignKey(DonationCategory, on_delete=models.PROTECT)
-    amount = models.IntegerField()  # en XOF (pas de centimes)
+    amount = models.PositiveIntegerField()  # en XOF/NGN (unités entières, pas de centimes)
+    currency = models.CharField(max_length=3, default="XOF")
+
     recurrence = models.CharField(max_length=16, choices=RECURRENCE_CHOICES, default='none')
 
     payment_method = models.CharField(max_length=20, choices=PAYMENT_METHODS, default='paystack')
-    reference = models.CharField(max_length=100, unique=True)
-    status = models.CharField(max_length=20, default='pending')  # pending|success|failed|abandoned
+    reference = models.CharField(max_length=100, unique=True, db_index=True)
 
+    status = models.CharField(max_length=20, default='pending')  # pending|success|failed|abandoned
     authorization_url = models.URLField(blank=True, default='')
     created_at = models.DateTimeField(auto_now_add=True)
     paid_at = models.DateTimeField(null=True, blank=True)
 
-    def __str__(self):
-        return f"{self.category.name} - {self.amount} XOF ({self.status})"
+    meta = models.JSONField(default=dict, blank=True)  # optionnel
 
+    def mark_success(self):
+        if self.status != 'success':
+            self.status = 'success'
+            self.paid_at = timezone.now()
+            self.save(update_fields=['status', 'paid_at'])
+
+    def mark_failed(self, status='failed'):
+        if self.status not in ('success', 'failed', 'abandoned'):
+            self.status = status
+            self.save(update_fields=['status'])
+
+    def __str__(self):
+        return f"{self.category.name} - {self.amount} {self.currency} ({self.status})"
 
 class AccountDeletionRequest(models.Model):
     STATUS_CHOICES = [

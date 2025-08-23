@@ -42,6 +42,7 @@ from rest_framework.views import APIView
 from django.contrib.gis.db.models.functions import Distance
 
 from abmci.services.notifications import notify_new_comment
+from abmci.services.paystack import ps_verify
 from api.serializers import UserSerializer, FideleSerializer, FideleCreateUpdateSerializer, \
     UserProfileCompletionSerializer, ParticipationEvenementSerializer, VerseDuJourSerializer, EvenementListSerializer, \
     PrayerCommentSerializer, PrayerCategorySerializer, PrayerRequestSerializer, NotificationSerializer, \
@@ -824,6 +825,43 @@ class AccountDeletePerformWebhook(View):
 
         # déconnexion côté web ; pour mobile, renvoie 200 et laisse le client purger son token
         return JsonResponse({"status": "requested"})
+
+class DonationVerifyAPIView(APIView):
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+
+    def get(self, request, reference: str):
+        try:
+            donation = Donation.objects.get(reference=reference)
+        except Donation.DoesNotExist:
+            return Response({'detail': 'Référence introuvable'}, status=404)
+
+        # Déjà OK ? renvoie immédiatement
+        if donation.status == "success":
+            return Response({'status': 'success'})
+
+        r = ps_verify(reference)
+        try:
+            payload = r.json()
+        except Exception:
+            payload = {"status": False, "message": r.text}
+
+        if r.status_code == 200 and payload.get("status") and payload.get("data", {}).get("status") == "success":
+            donation.mark_success()
+            return Response({'status': 'success'})
+
+        if payload.get("data", {}).get("status") in ("failed", "abandoned"):
+            donation.mark_failed(payload["data"]["status"])
+
+        return Response({'status': donation.status, 'paystack': payload}, status=400)
+
+class UserDetailView(generics.RetrieveUpdateAPIView):
+    serializer_class = UserSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    parser_classes = [JSONParser, MultiPartParser, FormParser]
+
+    def get_object(self):
+        return self.request.user
+
 
 # ------- Helpers -------
 def _get_float(request, name):

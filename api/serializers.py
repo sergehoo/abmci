@@ -447,17 +447,20 @@ class NotificationSerializer(serializers.ModelSerializer):
         fields = ['id', 'title', 'body', 'data', 'is_read', 'created_at']
         read_only_fields = ['id', 'created_at']
 
-class BibleVersionSerializer(serializers.ModelSerializer):
 
+class BibleVersionSerializer(serializers.ModelSerializer):
     class Meta:
         model = BibleVersion
         fields = ("id", "code", "name", "language", "total_verses", "etag", "updated_at")
 
+
 class BibleVerseSerializer(serializers.ModelSerializer):
     version = serializers.SlugRelatedField(slug_field="code", read_only=True)
+
     class Meta:
         model = BibleVerse
         fields = ("version", "book", "chapter", "verse", "text", "updated_at")
+
 
 class BibleTagCreateSerializer(serializers.ModelSerializer):
     # au choix: passer "recipient" comme email/username
@@ -520,21 +523,34 @@ class BannerSerializer(serializers.ModelSerializer):
             return request.build_absolute_uri(url)
         return url
 
+
 class DonationCategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = DonationCategory
         fields = ['id', 'code', 'name']
 
+
 class CreateIntentSerializer(serializers.Serializer):
     category_id = serializers.IntegerField()
-    amount = serializers.IntegerField(min_value=1)
+    amount = serializers.IntegerField(min_value=50)  # garde une barrière
+    currency = serializers.ChoiceField(choices=[('XOF', 'XOF'), ('NGN', 'NGN')], default='XOF')
+    recurrence = serializers.ChoiceField(
+        choices=['none', 'weekly', 'monthly', 'quarterly', 'semiannual'],
+        default='none'
+    )
     anonymous = serializers.BooleanField(default=False)
-    payment_method = serializers.ChoiceField(choices=[('paystack', 'paystack')])
-    recurrence = serializers.ChoiceField(choices=['none','weekly','monthly','quarterly','semiannual'], default='none')
+
+    def validate_amount(self, v):
+        # borne haute raisonnable
+        if v > 50000000:
+            raise serializers.ValidationError("Montant trop élevé.")
+        return v
+
 
 class DonationIntentResponseSerializer(serializers.Serializer):
     reference = serializers.CharField()
     authorization_url = serializers.URLField()
+
 
 # class FideleSerializer(serializers.ModelSerializer):
 #     class Meta:
@@ -624,6 +640,7 @@ class EgliseListSerializer(serializers.ModelSerializer):
             return None  # inconnu
         return d <= radius_m
 
+
 class EgliseSerializer(serializers.ModelSerializer):
     """
     Serializer “détail”.
@@ -669,4 +686,3 @@ class EgliseSerializer(serializers.ModelSerializer):
                 return float(d)
             except Exception:
                 return None
-

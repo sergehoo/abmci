@@ -34,8 +34,8 @@ urlpatterns = [
     path('eglises/proches/', EgliseProcheListView.as_view(), name='eglise-proches'),
     path('api/eglises/avec-verset/', eglises_avec_verset_du_jour, name='eglise-avec-verset'),
 
-    path('categories/', CategoryListView.as_view()),
-    path('intents/', CreateIntentView.as_view()),
+    path('donations/categories/', CategoryListView.as_view()),
+    path('donations/intents/', CreateIntentView.as_view()),
     path('paystack/webhook/', PaystackWebhookView.as_view()),
     path('donations/verify/<str:reference>/', DonationVerifyAPIView.as_view(), name='donation-verify'),
 
