@@ -75,6 +75,7 @@ INSTALLED_APPS = [
     "phonenumber_field",
     "drf_yasg",
     'celery',
+    'mathfilters',
     "django_celery_beat",  # optionnel mais recommandé
 
 ]

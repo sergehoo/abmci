@@ -30,6 +30,7 @@ django-countries==7.6.1
 django-crispy-forms==2.4
 django-filter==25.1
 django-jsonfield-backport==1.0.5
+django-mathfilters==1.0.0
 django-model-utils==5.0.0
 django-notifs==4.0.0
 django-phonenumber-field==8.1.0
@@ -104,4 +105,3 @@ uritemplate==4.2.0
 urllib3==2.5.0
 vine==5.1.0
 wcwidth==0.2.13
-django-filter

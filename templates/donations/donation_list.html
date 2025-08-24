@@ -33,12 +33,12 @@
                                 </a>
                                 <div class="toggle-expand-content" data-content="pageMenu">
                                     <ul class="nk-block-tools g-3">
-                                        <li>
-                                            <a href="{% url 'make-donation' %}" class="btn btn-primary">
-                                                <em class="icon ni ni-plus"></em>
-                                                <span>Nouveau don</span>
-                                            </a>
-                                        </li>
+{#                                        <li>#}
+{#                                            <a href="{% url 'make-donation' %}" class="btn btn-primary">#}
+{#                                                <em class="icon ni ni-plus"></em>#}
+{#                                                <span>Nouveau don</span>#}
+{#                                            </a>#}
+{#                                        </li>#}
                                         {% if request.user.is_staff %}
                                         <li>
                                             <a href="?{% if showing_all %}{% else %}all=1{% endif %}{% for k,v in request.GET.items %}{% if k != 'all' %}&{{ k }}={{ v }}{% endif %}{% endfor %}"
@@ -595,7 +595,7 @@
             data: {
                 labels: ['Réussis', 'En attente', 'Échoués', 'Abandonnés'],
                 datasets: [{
-                    data: [{{ successful_count }}, {{ pending_count }}, 
+                    data: [{{ successful_count }}, {{ pending_count }},
                            {{ failed_count }}, {{ abandoned_count }}],
                     backgroundColor: ['#2dce89', '#fb6340', '#f5365c', '#8392a5'],
                     borderWidth: 0
