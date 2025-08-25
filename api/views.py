@@ -18,7 +18,7 @@ from django.core.exceptions import ValidationError
 from django.core.mail import send_mail
 from django.db import IntegrityError, transaction, models
 from django.db.models import Q, Prefetch
-from django.http import JsonResponse, HttpRequest, HttpResponseRedirect
+from django.http import JsonResponse, HttpRequest, HttpResponseRedirect, HttpResponse
 from django.shortcuts import get_object_or_404, render
 from django.template.defaulttags import comment
 from django.utils import timezone
@@ -129,7 +129,37 @@ class VerifyEmailView(generics.GenericAPIView):
             return Response({'detail': 'Email vérifié avec succès.'}, status=status.HTTP_200_OK)
         return Response({'detail': 'Lien de vérification invalide.'}, status=status.HTTP_400_BAD_REQUEST)
 
+class PasswordResetConfirmRedirectView(View):
+    """
+    Vue ultra-légère :
+    - satisfait reverse('password_reset_confirm') pour dj-rest-auth
+    - redirige vers le deeplink mobile (app links) sinon fallback web
+    """
+    def get(self, request, uidb64, token):
+        # Deep link mobile (schéma custom ou app links)
+        mobile_deeplink = f"allianceconnect://reset-password?uid={uidb64}&token={token}"
 
+        # Fallback web (peut être ta page React/Vue/Template ou une route Flutter Web)
+        web_fallback = f"https://administration.abmci.com/app/reset-password?uid={uidb64}&token={token}"
+
+        html = f"""
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <title>Réinitialisation du mot de passe</title>
+  <meta http-equiv="refresh" content="0; url={mobile_deeplink}">
+  <script>
+    // Tentative immédiate vers l'app, puis fallback web si rien n’ouvre
+    setTimeout(function(){{ window.location = "{web_fallback}"; }}, 600);
+  </script>
+</head>
+<body>
+  <p>Redirection en cours… Si rien ne se passe, <a href="{web_fallback}">cliquez ici</a>.</p>
+</body>
+</html>
+"""
+        return HttpResponse(html)
 def _verify_signed_qr(payload_b64: str) -> str | None:
     """
     FACULTATIF : si vous décidez d’encoder dans le QR un payload signé plutôt que le simple code.

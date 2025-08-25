@@ -154,6 +154,9 @@ REST_AUTH = {
     "USE_JWT": True,
     "JWT_AUTH_COOKIE": None,  # pas de cookie JWT en mobile
     "JWT_AUTH_REFRESH_COOKIE": None,
+    "PASSWORD_RESET_USE_SITES_DOMAIN": True,
+    "PASSWORD_RESET_CONFIRM_URL": "auth/password/reset/confirm/{uid}/{token}/",
+
     "USER_DETAILS_SERIALIZER": "api.serializers.CustomUserDetailsSerializer",
     'REGISTER_SERIALIZER': 'api.serializers.CustomRegisterSerializer',
 

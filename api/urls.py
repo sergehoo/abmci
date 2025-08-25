@@ -8,7 +8,7 @@ from api.views import VerifyEmailView, UserDetailView, FideleDetailView, FideleL
     UpcomingEventsHomeView, PrayerCategoryViewSet, PrayerRequestViewSet, PrayerCommentViewSet, DeviceViewSet, \
     NotificationViewSet, BibleVersionViewSet, BibleVerseViewSet, BibleTagViewSet, BannerListView, CategoryListView, \
     CreateIntentView, PaystackWebhookView, DonationVerifyAPIView, EgliseListView, EgliseDetailView, \
-    EgliseProcheListView, eglises_avec_verset_du_jour, paystack_return_view
+    EgliseProcheListView, eglises_avec_verset_du_jour, paystack_return_view, PasswordResetConfirmRedirectView
 from event.views import FirebaseLoginView
 
 router = DefaultRouter()
@@ -28,6 +28,7 @@ urlpatterns = [
     path('auth/firebase/', FirebaseLoginView.as_view(), name='firebase-login'),
     path('auth/registration/', include('dj_rest_auth.registration.urls')),
     path('auth/verify-email/<str:key>/', VerifyEmailView.as_view(), name='verify_email'),
+    path("auth/password/reset/confirm/<uidb64>/<token>/", PasswordResetConfirmRedirectView.as_view(),  name="password_reset_confirm"),
 
     path('eglises/', EgliseListView.as_view(), name='eglise-list'),
     path('eglises/<int:pk>/', EgliseDetailView.as_view(), name='eglise-detail'),
