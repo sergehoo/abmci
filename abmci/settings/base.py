@@ -272,7 +272,7 @@ PAYSTACK_SECRET_KEY = os.getenv('PAYSTACK_SECRET_KEY')
 PAYSTACK_PUBLIC_KEY = 'pk_live_xxx'
 PAYSTACK_BASE_URL = 'https://api.paystack.co'
 PAYSTACK_ALLOWED_CURRENCIES = {"XOF", "NGN"}  # adapte
-SITE_URL = os.environ.get("SITE_URL", "https://administration.abmci.com/api/")  # pour callback web
+SITE_URL = os.environ.get("SITE_URL", "https://administration.abmci.com/api")  # pour callback web
 PAYSTACK_IPS_WHITELIST = {
     # Optionnel: adresses IP Paystack (si tu sécurises par IP à l’ELB/Nginx)
 }

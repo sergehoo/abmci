@@ -21,6 +21,7 @@ from django.conf.urls.static import static
 from django.contrib import admin
 from django.template.defaulttags import url
 from django.urls import path, include
+from django.views.generic import TemplateView
 
 from api.views import schema_view, AccountDeletePerformWebhook
 from fidele.views import HomePageView, FideleListView, mark_all_read, mark_read, all_notifications, \
@@ -36,6 +37,10 @@ urlpatterns = [
                   path('notify', all_notifications, name='all'),
                   path('read/<int:pk>/', mark_read, name='mark_read'),
                   path('read/all/', mark_all_read, name='mark_all_read'),
+                  path("app/reset-password",
+                            TemplateView.as_view(template_name="app/reset_password.html"),
+                            name="app-reset-password",
+                        ),
 
                   path('fidele/', include('fidele.urls')),
                   path('evenements/', include('event.urls')),
