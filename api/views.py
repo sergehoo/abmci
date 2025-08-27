@@ -180,7 +180,6 @@ def _verify_signed_qr(payload_b64: str) -> str | None:
     except Exception:
         return None
 
-
 class ScanQRCodeAPIView(APIView):
     """
     POST /api/scan-qr/<event_code>/

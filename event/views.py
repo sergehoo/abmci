@@ -3,13 +3,16 @@ from __future__ import annotations
 import json
 from datetime import timedelta, datetime
 
+from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import User
 from django.core.serializers.json import DjangoJSONEncoder
+from django.db.models import Q
 from django.http import HttpResponse, Http404
 from django.shortcuts import render, redirect
-from django.views.generic import ListView, DetailView, TemplateView
-from django.views.generic.edit import CreateView
+from django.utils.http import urlencode
+from django.views.generic import ListView, DetailView, TemplateView, DeleteView
+from django.views.generic.edit import CreateView, UpdateView
 from django.urls import reverse_lazy, reverse
 from django.utils import timezone
 import qrcode
@@ -20,7 +23,8 @@ from reportlab.lib.colors import HexColor, black
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.utils import ImageReader
 
-from event.models import Evenement, ParticipationEvenement
+from event.eventForm import EvenementForm
+from event.models import Evenement, ParticipationEvenement, TypeEvent
 from reportlab.pdfgen import canvas
 from django.db import transaction
 from rest_framework.views import APIView
@@ -29,6 +33,7 @@ from rest_framework import permissions
 from rest_framework_simplejwt.tokens import RefreshToken
 from firebase_admin import auth as fb_auth, _auth_utils
 import phonenumbers
+from abmci.tasks import generate_recurrences_task
 
 def generate_qr_code(data):
     qr = qrcode.QRCode(
@@ -197,36 +202,76 @@ class EventCalendarView(TemplateView):
 class EventListView(LoginRequiredMixin, ListView):
     model = Evenement
     template_name = "event/eventview.html"
-    context_object_name = 'ivent'
+    context_object_name = "ivent"
+    paginate_by = 12
 
     def get_queryset(self):
-        queryset = super().get_queryset()
-        queryset = queryset.filter(date_debut__gt=timezone.now() - timedelta(days=7))
-        return queryset
+        qs = super().get_queryset()
 
-    # def get_queryset(self):
-    #     # Filtrer les événements dont la date de fin est ultérieure à la date actuelle
-    #     return Evenement.objects.filter(date_fin__gt=timezone.now())
+        search_query = self.request.GET.get("search") or ""
+        if search_query:
+            qs = qs.filter(
+                Q(titre__icontains=search_query) |
+                Q(lieu__icontains=search_query) |
+                Q(description__icontains=search_query)
+            )
 
-    # def get_queryset(self):
-    #     # Calculer la date actuelle
-    #     current_date = timezone.now()
-    #
-    #     # Calculer la date dans 7 jours
-    #     seven_days_later = current_date + timedelta(days=7)
-    #
-    #     # Filtrer les événements dont la date de fin est dans les 7 jours suivants
-    #     return Evenement.objects.filter(date_fin__gt=current_date, date_fin__lte=seven_days_later)
+        type_filter = self.request.GET.get("type") or ""
+        if type_filter:
+            qs = qs.filter(type_id=type_filter)
+
+        status_filter = self.request.GET.get("status") or ""
+        now = timezone.now()
+        if status_filter == "upcoming":
+            qs = qs.filter(date_debut__gt=now)
+        elif status_filter == "past":
+            qs = qs.filter(date_fin__lt=now)
+        elif status_filter == "current":
+            qs = qs.filter(date_debut__lte=now, date_fin__gte=now)
+        else:
+            qs = qs.filter(date_fin__gt=now - timedelta(days=7))
+
+        date_filter = self.request.GET.get("date") or ""
+        if date_filter:
+            try:
+                d = timezone.datetime.strptime(date_filter, "%Y-%m-%d").date()
+                qs = qs.filter(date_debut__date__lte=d, date_fin__date__gte=d)
+            except ValueError:
+                pass
+
+        sort_by = self.request.GET.get("sort") or "date_debut"
+        if sort_by in ["date_debut", "date_fin", "titre", "lieu"]:
+            qs = qs.order_by(sort_by)
+
+        return qs
+
+    def paginate_queryset(self, queryset, page_size):
+        """
+        Utilise get_page() → jamais de 404 : renvoie 1ère/dernière page si invalide.
+        """
+        paginator = self.get_paginator(
+            queryset, page_size,
+            orphans=self.get_paginate_orphans(),
+            allow_empty_first_page=self.get_allow_empty(),
+        )
+        page_number = self.request.GET.get("page")
+        page_obj = paginator.get_page(page_number)
+        return paginator, page_obj, page_obj.object_list, page_obj.has_other_pages()
 
     def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
+        ctx = super().get_context_data(**kwargs)
 
-        # Récupérer le nombre total de membres
-        context['nombre_event'] = Evenement.objects.count()
+        # Compte total sur le queryset **filtré**
+        ctx["nombre_event"] = self.get_queryset().count()
 
-        return context
+        # Types d’événements pour le filtre
+        ctx["event_types"] = TypeEvent.objects.all()
 
-
+        # Construit un querystring SANS 'page' pour le réinjecter dans les liens de pagination
+        qd = self.request.GET.copy()
+        qd.pop("page", None)
+        ctx["querystring_no_page"] = urlencode(qd)  # ex: "search=...&type=1"
+        return ctx
 class EventDetailView(LoginRequiredMixin, DetailView):
     model = Evenement
     template_name = "event/event-detail.html"
@@ -335,19 +380,86 @@ END:VCALENDAR
 
 class EvenementCreateView(CreateView):
     model = Evenement
-    template_name = 'evenement_create.html'
-    fields = ['titre', 'date_debut', 'date_fin', 'lieu', 'description', 'type', 'banner', 'qr_code']
+    template_name = 'event/evenement_create.html'
+    form_class = EvenementForm
+    success_url = reverse_lazy('event-list')
+
+    def form_valid(self, form):
+        # Associer l'église de l'utilisateur connecté
+        eglise = None
+        if hasattr(self.request.user, "fidele") and getattr(self.request.user.fidele, "eglise_id", None):
+            eglise = self.request.user.fidele.eglise
+        elif getattr(self.request.user, "eglise_id", None):
+            eglise = self.request.user.eglise
+        if eglise:
+            form.instance.eglise = eglise
+
+        # 1) on crée le parent
+        response = super().form_valid(form)
+
+        # 2) si récurrent -> déclenche la génération en arrière-plan
+        parent = self.object
+        if parent.is_recurrent and parent.recurrence_rule:
+            generate_recurrences_task.delay(parent.id)
+            messages.success(self.request, "Événement créé. Génération des occurrences en cours…")
+
+        return response
+
+class EvenementUpdateView(UpdateView):
+    model = Evenement
+    template_name = 'evenement_update.html'
+    fields = ['titre', 'date_debut', 'date_fin', 'lieu', 'description',
+              'type', 'banner', 'is_recurrent', 'recurrence_rule', 'end_recurrence']
+
+    def get_success_url(self):
+        return reverse_lazy('evenement_detail', kwargs={'pk': self.object.pk})
+
+    def form_valid(self, form):
+        # Si on passe d'un événement non récurrent à récurrent
+        original_event = self.get_object()
+        was_recurrent = original_event.is_recurrent
+
+        response = super().form_valid(form)
+
+        # Si l'événement est maintenant récurrent, créer les occurrences
+        if form.instance.is_recurrent and form.instance.recurrence_rule and not was_recurrent:
+            try:
+                with transaction.atomic():
+                    events = form.instance.generate_events()
+                    # Sauvegarder toutes les occurrences
+                    for event in events:
+                        event.save()
+                messages.success(self.request, f"Événement modifié et occurrences créées: {len(events)} occurrences.")
+            except Exception as e:
+                messages.error(self.request, f"Erreur lors de la création des occurrences: {str(e)}")
+
+        return response
+
+
+class EvenementDeleteView(DeleteView):
+    model = Evenement
+    template_name = 'evenement_confirm_delete.html'
     success_url = reverse_lazy('evenement_list')
 
-    # def form_valid(self, form):
-    #     # Appel à la méthode form_valid de la classe parente pour enregistrer le modèle
-    #     response = super().form_valid(form)
-    #
-    #     # Génération du code QR
-    #     data = f'Event: {self.object.titre}, Date: {self.object.date_debut}'
-    #     qr_code_data = generate_qr_code(data)
-    #
-    #     # Enregistrement du code QR dans l'objet Evenement
-    #     self.object.qr_code.save('qrcode.png', ContentFile(qr_code_data), save=True)
-    #
-    #     return response
+    def delete(self, request, *args, **kwargs):
+        event = self.get_object()
+        # Supprimer également les occurrences si c'est un événement récurrent
+        if event.is_recurrent:
+            # Ici, vous pourriez ajouter une logique pour supprimer toutes les occurrences
+            pass
+
+        messages.success(request, f"L'événement '{event.titre}' a été supprimé.")
+        return super().delete(request, *args, **kwargs)
+
+
+# Vue pour gérer les occurrences d'un événement récurrent
+class EvenementOccurrencesView(DetailView):
+    model = Evenement
+    template_name = 'evenement_occurrences.html'
+    context_object_name = 'event'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        if self.object.is_recurrent:
+            context['occurrences'] = self.object.generate_events()
+        return context

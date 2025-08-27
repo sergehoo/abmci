@@ -38,3 +38,11 @@ SECURE_SSL_REDIRECT = True
 SECURE_HSTS_SECONDS = 31536000         # 1 an
 SECURE_HSTS_INCLUDE_SUBDOMAINS = True  # uniquement si tous les sous-domaines sont HTTPS
 SECURE_HSTS_PRELOAD = True             # si tu soumets au preload HSTS
+
+CELERY_BROKER_URL = os.getenv("REDIS_URL", "redis://abmciredis:6379/0")
+CELERY_RESULT_BACKEND = os.getenv("REDIS_URL", "redis://abmciredis:6379/0")
+
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_SERIALIZER = "json"
+CELERY_TIMEZONE = TIME_ZONE

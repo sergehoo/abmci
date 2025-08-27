@@ -1,6 +1,7 @@
 import datetime
 import os
 import random
+import uuid
 from io import BytesIO
 
 import qrcode
@@ -11,6 +12,7 @@ from django.db import models
 from django.utils import timezone
 from dateutil.rrule import rrule, DAILY, WEEKLY, MONTHLY, YEARLY
 from recurrence.fields import RecurrenceField
+
 
 from fidele.models import User
 
@@ -43,95 +45,136 @@ class TypeEvent(models.Model):
     def __str__(self):
         return f'{self.name}  '
 
+WEEKDAYS_MAP = {"MO":0, "TU":1, "WE":2, "TH":3, "FR":4, "SA":5, "SU":6}
+WEEKDAYS_FR2EN = {"LU":"MO", "MA":"TU", "ME":"WE", "JE":"TH", "VE":"FR", "SA":"SA", "DI":"SU"}
 
 class Evenement(models.Model):
     code = models.CharField(max_length=300, default=eventcode, unique=True, editable=False)
+
+    # 🎯 clé de “série” pour grouper les occurrences et assurer l’idempotence
+    series_id = models.UUIDField(default=uuid.uuid4, db_index=True, editable=False)
+
     eglise = models.ForeignKey('fidele.Eglise', on_delete=models.CASCADE, null=True, blank=True)
     titre = models.CharField(max_length=200)
     date_debut = models.DateTimeField(default=timezone.now)
-    date_fin = models.DateTimeField(default=timezone.now)
+    date_fin= models.DateTimeField(default=timezone.now)
     lieu = models.CharField(max_length=100)
     description = models.TextField()
     type = models.ForeignKey('TypeEvent', on_delete=models.CASCADE, null=True, blank=True)
     banner = models.ImageField(upload_to='event/banner/', null=True, blank=True)
     qr_code = models.ImageField(upload_to='qrcodes/', null=True, blank=True, editable=True)
+
     is_recurrent = models.BooleanField(default=False)
-    recurrence_rule = models.TextField(null=True, blank=True)  # Pour stocker la règle de récurrence
-    end_recurrence = models.DateTimeField(null=True, blank=True)  # Date de fin de récurrence
+    recurrence_rule = models.TextField(null=True, blank=True)     # "WEEKLY:SU,WE" | "DAILY" | "MONTHLY" | "YEARLY"
+    end_recurrence = models.DateTimeField(null=True, blank=True)  # fin de récurrence
+
+    # Lien optionnel vers le parent (l’événement source) pour naviguer
+    parent = models.ForeignKey('self', null=True, blank=True, on_delete=models.CASCADE, related_name='children')
+
 
     class Meta:
         indexes = [
             models.Index(fields=["eglise", "date_debut"]),
             models.Index(fields=["date_fin"]),
+            models.Index(fields=["series_id"]),
+        ]
+        # ⚠️ Unicité par série + fenêtres de temps
+        constraints = [
+            models.UniqueConstraint(
+                fields=["series_id", "date_debut", "date_fin"],
+                name="uniq_event_series_window"
+            )
         ]
 
-    # recurrence = RecurrenceField(null=True, blank=True)
-    def generate_events(self):
-        if not self.is_recurrent or not self.recurrence_rule:
-            return [self]
+        # ---------- Validation ----------
 
-        events = []
-        start_date = self.date_debut
-        end_recurrence = self.end_recurrence or (start_date + datetime.timedelta(days=365))  # Par défaut 1 an
+    def clean(self):
+        if self.is_recurrent:
+            if not self.recurrence_rule:
+                raise ValidationError("Pour un événement récurrent, 'recurrence_rule' est requis.")
+            if not self.end_recurrence:
+                # défaut robuste : +1 an
+                self.end_recurrence = (self.date_debut + datetime.timedelta(days=365))
+            if self.end_recurrence <= self.date_debut:
+                raise ValidationError("'end_recurrence' doit être postérieure à 'date_debut'.")
+        super().clean()
+        # ---------- Parsing règle ----------
 
-        # Exemple de règle: "WEEKLY:SU" pour tous les dimanches
-        freq, days = self.recurrence_rule.split(':')
-        freq = freq.upper()
-        days = days.upper()
+    def _parse_rule(self):
+        rule = (self.recurrence_rule or "").strip().upper()
+        if not rule:
+            return DAILY, None
 
-        if freq == 'WEEKLY':
-            freq = WEEKLY
-            byweekday = []
-            if 'SU' in days: byweekday.append(6)  # Dimanche
-            if 'MO' in days: byweekday.append(0)  # Lundi
-            if 'TU' in days: byweekday.append(1)  # Mardi
-            if 'WE' in days: byweekday.append(2)  # Mercredi
-            if 'TH' in days: byweekday.append(3)  # Jeudi
-            if 'FR' in days: byweekday.append(4)  # Vendredi
-            if 'SA' in days: byweekday.append(5)  # Samedi
-        elif freq == 'MONTHLY':
-            freq = MONTHLY
-        elif freq == 'YEARLY':
-            freq = YEARLY
+        if ":" in rule:
+            freq_str, days_str = rule.split(":", 1)
+            raw_days = [d.strip() for d in days_str.split(",") if d.strip()]
         else:
-            freq = DAILY
+            freq_str, raw_days = rule, []
 
-        rule = rrule(
-            freq=freq,
-            dtstart=start_date,
-            until=end_recurrence,
-            byweekday=byweekday if 'byweekday' in locals() else None
-        )
+        days = []
+        for d in raw_days:
+            if d in WEEKDAYS_MAP:
+                days.append(d)
+            elif d in WEEKDAYS_FR2EN:
+                days.append(WEEKDAYS_FR2EN[d])
 
-        for i, occurrence in enumerate(rule):
-            # Créer un nouvel événement pour chaque occurrence
-            new_event = Evenement(
+        if freq_str == "WEEKLY":
+            byweekday = [WEEKDAYS_MAP[d] for d in days if d in WEEKDAYS_MAP]
+            if not byweekday:
+                byweekday = [self.date_debut.weekday()]
+            return WEEKLY, byweekday
+        if freq_str == "MONTHLY":
+            return MONTHLY, None
+        if freq_str == "YEARLY":
+            return YEARLY, None
+        return DAILY, None
+    # recurrence = RecurrenceField(null=True, blank=True)
+    # ---------- Génération des occurrences (en mémoire) ----------
+    def build_occurrences(self):
+        """
+        Construit les objets Evenement (non sauvegardés) de la série.
+        - saute la première occurrence (celle-ci)
+        - conserve la durée
+        - copie les champs utiles
+        """
+        if not self.is_recurrent or not self.recurrence_rule or not self.end_recurrence:
+            return []
+
+        start = self.date_debut
+        end_limit = self.end_recurrence
+        if timezone.is_naive(start):
+            start = timezone.make_aware(start, timezone.get_current_timezone())
+        if timezone.is_naive(end_limit):
+            end_limit = timezone.make_aware(end_limit, timezone.get_current_timezone())
+
+        freq, byweekday = self._parse_rule()
+        rule = rrule(freq=freq, dtstart=start, until=end_limit,
+                     byweekday=byweekday if byweekday is not None else None)
+
+        duration = self.date_fin - self.date_debut
+        occurrences = []
+        for occ in rule:
+            if occ == start:
+                continue
+            ev = Evenement(
+                series_id=self.series_id,  # ⚠️ même série
+                parent=self,  # lien parent
+                eglise=self.eglise,
                 titre=self.titre,
-                date_debut=occurrence,
-                date_fin=occurrence + (self.date_fin - self.date_debut),
+                date_debut=occ,
+                date_fin=occ + duration,
                 lieu=self.lieu,
                 description=self.description,
                 type=self.type,
                 is_recurrent=False,
                 recurrence_rule=None,
-                end_recurrence=None
+                end_recurrence=None,
             )
-            events.append(new_event)
+            if self.banner:
+                ev.banner = self.banner  # même fichier
+            occurrences.append(ev)
+        return occurrences
 
-        return events
-
-    # def save(self, *args, **kwargs):
-    #     # Générer le QR code seulement si l'événement n'est pas récurrent
-    #     if not self.is_recurrent:
-    #         self.generate_and_save_qr_code('data')
-    #
-    #     super().save(*args, **kwargs)
-    #
-    #     if self.banner:
-    #         img = Image.open(self.banner.path)
-    #         new_size = (1420, 560)
-    #         img = img.resize(new_size, Image.LANCZOS)
-    #         img.save(self.banner.path)
     def generate_and_save_qr_code(self, data):
         image_data = generate_qr_code(self.code)
         image = Image.open(BytesIO(image_data))
@@ -153,20 +196,19 @@ class Evenement(models.Model):
         return self.date_debut.date() == self.date_fin.date()
 
     def save(self, *args, **kwargs):
-        if not self.qr_code:  # ne régénère pas si déjà présent
+        if not self.qr_code:
             self.generate_and_save_qr_code(self.code)
         super().save(*args, **kwargs)
 
         if self.banner:
-            img = Image.open(self.banner.path)
-
-            # Redimensionnez l'image en 1420x560
-            new_size = (1420, 560)
-            img = img.resize(new_size, Image.LANCZOS)
-
-            # Sauvegardez l'image redimensionnée
-            img.save(self.banner.path)
-
+            try:
+                img = Image.open(self.banner.path)
+                new_size = (1420, 560)
+                img = img.resize(new_size, Image.LANCZOS)
+                img.save(self.banner.path)
+            except Exception:
+                # évite de crasher si le fichier n'existe pas encore en FS (ex: storage distant)
+                pass
     def __str__(self):
         return f'{self.titre} {self.date_debut} {self.code}'
 

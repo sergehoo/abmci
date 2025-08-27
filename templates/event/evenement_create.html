@@ -1,0 +1,395 @@
+{% extends 'layout/base.html' %}
+{% load static %}
+{% load crispy_forms_tags %}
+{% block content %}
+<!-- content @s -->
+<div class="nk-content nk-content-fluid">
+    <div class="container-xl wide-xl">
+        <div class="nk-content-inner">
+            <div class="nk-content-body">
+                <div class="nk-block-head nk-block-head-sm">
+                    <div class="nk-block-between">
+                        <div class="nk-block-head-content">
+                            <h3 class="nk-block-title page-title">Créer un nouvel événement</h3>
+                            <div class="nk-block-des text-soft">
+                                <p>Remplissez le formulaire pour planifier un nouvel événement</p>
+                            </div>
+                        </div>
+                        <div class="nk-block-head-content">
+                            <a href="{% url 'event-list' %}" class="btn btn-outline-light">
+                                <em class="icon ni ni-arrow-left"></em> Retour à la liste
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="nk-block">
+                    <div class="card card-bordered">
+                        <div class="card-inner">
+                            <form method="post" enctype="multipart/form-data" class="form" id="eventForm">
+                                {% csrf_token %}
+                                
+                                <div class="row g-3">
+                                    <!-- Titre et Type -->
+                                    <div class="col-md-8">
+                                        <div class="form-group">
+                                            <label for="{{ form.titre.id_for_label }}" class="form-label">{{ form.titre.label }} *</label>
+                                            {{ form.titre }}
+                                            {% if form.titre.errors %}
+                                                <div class="invalid-feedback d-block">
+                                                    {{ form.titre.errors }}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="form-group">
+                                            <label for="{{ form.type.id_for_label }}" class="form-label">{{ form.type.label }}</label>
+                                            {{ form.type }}
+                                            {% if form.type.errors %}
+                                                <div class="invalid-feedback d-block">
+                                                    {{ form.type.errors }}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Dates de début et fin -->
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label for="{{ form.date_debut.id_for_label }}" class="form-label">Date et heure de début *</label>
+                                            {{ form.date_debut }}
+                                            {% if form.date_debut.errors %}
+                                                <div class="invalid-feedback d-block">
+                                                    {{ form.date_debut.errors }}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label for="{{ form.date_fin.id_for_label }}" class="form-label">Date et heure de fin *</label>
+                                            {{ form.date_fin }}
+                                            {% if form.date_fin.errors %}
+                                                <div class="invalid-feedback d-block">
+                                                    {{ form.date_fin.errors }}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Lieu -->
+                                    <div class="col-12">
+                                        <div class="form-group">
+                                            <label for="{{ form.lieu.id_for_label }}" class="form-label">{{ form.lieu.label }} *</label>
+                                            {{ form.lieu }}
+                                            {% if form.lieu.errors %}
+                                                <div class="invalid-feedback d-block">
+                                                    {{ form.lieu.errors }}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Description -->
+                                    <div class="col-12">
+                                        <div class="form-group">
+                                            <label for="{{ form.description.id_for_label }}" class="form-label">{{ form.description.label }}</label>
+                                            {{ form.description }}
+                                            {% if form.description.errors %}
+                                                <div class="invalid-feedback d-block">
+                                                    {{ form.description.errors }}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Bannière -->
+                                    <div class="col-12">
+                                        <div class="form-group">
+                                            <label for="{{ form.banner.id_for_label }}" class="form-label">{{ form.banner.label }}</label>
+                                            <div class="form-control-wrap">
+                                                <div class="form-file">
+                                                    {{ form.banner }}
+                                                    <label class="form-file-label" for="{{ form.banner.id_for_label }}">Choisir une image</label>
+                                                </div>
+                                            </div>
+                                            <small class="form-text text-muted">Format recommandé: 1420x560 pixels. Taille max: 5MB</small>
+                                            <div id="bannerPreview" class="mt-2" style="display: none;">
+                                                <img id="previewImage" class="img-thumbnail" style="max-height: 200px;">
+                                            </div>
+                                            {% if form.banner.errors %}
+                                                <div class="invalid-feedback d-block">
+                                                    {{ form.banner.errors }}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Section Récurrence -->
+                                    <div class="col-12">
+                                        <hr>
+                                        <h5 class="title">Paramètres de récurrence</h5>
+                                        <p class="text-soft">Définissez si cet événement se répète dans le temps</p>
+                                    </div>
+                                    
+                                    <div class="col-md-6">
+                                        <div class="form-check form-switch">
+                                            {{ form.is_recurrent }}
+                                            <label class="form-check-label" for="{{ form.is_recurrent.id_for_label }}">Événement récurrent</label>
+                                        </div>
+                                        <small class="form-text text-muted">Cocher si cet événement se répète périodiquement</small>
+                                    </div>
+                                    
+                                    <div class="col-md-6 recurrence-options" style="display: none;">
+                                        <div class="form-group">
+                                            <label for="{{ form.recurrence_rule.id_for_label }}" class="form-label">Règle de récurrence *</label>
+                                            {{ form.recurrence_rule }}
+                                            <small class="form-text text-muted">Ex: WEEKLY:MO,WE,FR pour les lundis, mercredis, vendredis</small>
+                                            {% if form.recurrence_rule.errors %}
+                                                <div class="invalid-feedback d-block">
+                                                    {{ form.recurrence_rule.errors }}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="col-md-6 recurrence-options" style="display: none;">
+                                        <div class="form-group">
+                                            <label for="{{ form.end_recurrence.id_for_label }}" class="form-label">Fin de la récurrence</label>
+                                            {{ form.end_recurrence }}
+                                            <small class="form-text text-muted">Laisser vide pour une récurrence sans fin définie (1 an par défaut)</small>
+                                            {% if form.end_recurrence.errors %}
+                                                <div class="invalid-feedback d-block">
+                                                    {{ form.end_recurrence.errors }}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="col-12 recurrence-options" style="display: none;">
+                                        <div class="alert alert-info">
+                                            <div class="alert-icon">
+                                                <em class="icon ni ni-info"></em>
+                                            </div>
+                                            <div class="alert-text">
+                                                <h6>Instructions pour la récurrence</h6>
+                                                <p>Utilisez le format suivant pour définir la récurrence:</p>
+                                                <ul class="list list-sm">
+                                                    <li><strong>Quotidien:</strong> DAILY</li>
+                                                    <li><strong>Hebdomadaire:</strong> WEEKLY:JOURS (ex: WEEKLY:MO,WE,FR pour les lundis, mercredis, vendredis)</li>
+                                                    <li><strong>Mensuel:</strong> MONTHLY</li>
+                                                    <li><strong>Annuel:</strong> YEARLY</li>
+                                                </ul>
+                                                <p class="mb-0">Codes des jours: MO (Lundi), TU (Mardi), WE (Mercredi), TH (Jeudi), FR (Vendredi), SA (Samedi), SU (Dimanche)</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="col-12">
+                                        <hr>
+                                        <div class="form-group">
+                                            <button type="submit" class="btn btn-lg btn-primary">Créer l'événement</button>
+                                            <a href="{% url 'event-list' %}" class="btn btn-lg btn-outline-light">Annuler</a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- content @e -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Gestion de l'affichage des options de récurrence
+    const isRecurrentCheckbox = document.getElementById('{{ form.is_recurrent.id_for_label }}');
+    const recurrenceOptions = document.querySelectorAll('.recurrence-options');
+    
+    function toggleRecurrenceOptions() {
+        if (isRecurrentCheckbox.checked) {
+            recurrenceOptions.forEach(el => el.style.display = 'block');
+            // Rendre le champ recurrence_rule requis
+            document.getElementById('{{ form.recurrence_rule.id_for_label }}').setAttribute('required', 'required');
+        } else {
+            recurrenceOptions.forEach(el => el.style.display = 'none');
+            // Retirer l'attribut requis
+            document.getElementById('{{ form.recurrence_rule.id_for_label }}').removeAttribute('required');
+        }
+    }
+    
+    // Initial state
+    toggleRecurrenceOptions();
+    
+    // On change event
+    isRecurrentCheckbox.addEventListener('change', toggleRecurrenceOptions);
+    
+    // Validation des dates
+    const dateDebutInput = document.getElementById('{{ form.date_debut.id_for_label }}');
+    const dateFinInput = document.getElementById('{{ form.date_fin.id_for_label }}');
+    
+    function validateDates() {
+        if (dateDebutInput.value && dateFinInput.value) {
+            const debut = new Date(dateDebutInput.value);
+            const fin = new Date(dateFinInput.value);
+            
+            if (fin <= debut) {
+                dateFinInput.setCustomValidity('La date de fin doit être postérieure à la date de début');
+            } else {
+                dateFinInput.setCustomValidity('');
+            }
+        }
+    }
+    
+    dateDebutInput.addEventListener('change', validateDates);
+    dateFinInput.addEventListener('change', validateDates);
+    
+    // Prévisualisation de la bannière
+    const bannerInput = document.getElementById('{{ form.banner.id_for_label }}');
+    const bannerPreview = document.getElementById('bannerPreview');
+    const previewImage = document.getElementById('previewImage');
+    
+    bannerInput.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                previewImage.src = e.target.result;
+                bannerPreview.style.display = 'block';
+            }
+            reader.readAsDataURL(file);
+            
+            // Mettre à jour le label avec le nom du fichier
+            const fileName = file.name;
+            const label = bannerInput.nextElementSibling;
+            label.textContent = fileName;
+        }
+    });
+    
+    // Ajouter des placeholders et aides
+    document.getElementById('{{ form.recurrence_rule.id_for_label }}').placeholder = 'Ex: WEEKLY:MO,WE,FR';
+    
+    // Validation du formulaire
+    const form = document.getElementById('eventForm');
+    form.addEventListener('submit', function(e) {
+        let isValid = true;
+        
+        // Validation de base des champs requis
+        const requiredFields = form.querySelectorAll('[required]');
+        requiredFields.forEach(field => {
+            if (!field.value.trim()) {
+                isValid = false;
+                field.classList.add('is-invalid');
+            } else {
+                field.classList.remove('is-invalid');
+            }
+        });
+        
+        if (!isValid) {
+            e.preventDefault();
+            // Afficher un message d'erreur général
+            alert('Veuillez remplir tous les champs obligatoires.');
+        }
+    });
+});
+</script>
+
+<style>
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-label {
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+    color: #526484;
+}
+
+.form-control, .form-select {
+    border: 1px solid #dbdfea;
+    border-radius: 4px;
+    padding: 0.75rem 1rem;
+    transition: all 0.3s ease;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: #6576ff;
+    box-shadow: 0 0 0 3px rgba(101, 118, 255, 0.1);
+}
+
+.form-check-input {
+    width: 2.5rem;
+    height: 1.25rem;
+}
+
+.form-check-input:checked {
+    background-color: #6576ff;
+    border-color: #6576ff;
+}
+
+.form-file-input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    border: 0;
+}
+
+.form-file-label {
+    display: inline-block;
+    padding: 0.75rem 1rem;
+    background-color: #f5f6fa;
+    border: 1px dashed #dbdfea;
+    border-radius: 4px;
+    cursor: pointer;
+    width: 100%;
+    text-align: center;
+    transition: all 0.3s ease;
+}
+
+.form-file-label:hover {
+    background-color: #e5e9f2;
+    border-color: #6576ff;
+}
+
+.invalid-feedback {
+    display: block;
+    color: #f56b6b;
+    font-size: 0.875rem;
+    margin-top: 0.25rem;
+}
+
+.is-invalid {
+    border-color: #f56b6b !important;
+}
+
+.alert-info {
+    background-color: #e1f0ff;
+    border-color: #b8dcff;
+    color: #2c5282;
+}
+
+.title {
+    border-bottom: 1px solid #e5e9f2;
+    padding-bottom: 10px;
+    margin-bottom: 20px;
+    color: #364a63;
+}
+
+.recurrence-options {
+    transition: all 0.3s ease;
+}
+
+.img-thumbnail {
+    max-width: 100%;
+    height: auto;
+}
+</style>
+{% endblock %}
