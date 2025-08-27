@@ -135,6 +135,7 @@ services:
 
 volumes:
   postgres_data:
+  static_volume:
   grafana_data:
 
 networks:
