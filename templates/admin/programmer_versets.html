@@ -1,0 +1,167 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block extrastyle %}
+<style>
+  .form-row { margin-bottom: 12px; }
+  .help { color: #666; font-size: 12px; margin-top: 4px; }
+  .actions-bar { display:flex; gap:8px; align-items:center; }
+  .summary { background:#fafafa; border:1px solid #eee; padding:12px; border-radius:6px; margin-bottom:16px; }
+  .errors { color:#b94a48; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div id="content-main">
+  <h1>Programmer des versets du jour</h1>
+
+  {% if form.non_field_errors %}
+    <div class="errors">
+      {{ form.non_field_errors }}
+    </div>
+  {% endif %}
+
+  <div class="summary">
+    <p>
+      Sélectionnez les églises, une période, une version et (facultatif) une thématique
+      pour pré-enregistrer les <strong>Versets du jour</strong>.
+    </p>
+    <ul>
+      <li><strong>Idempotent :</strong> aucun doublon (clé unique par (date, église)).</li>
+      <li><strong>Éviter les répétitions :</strong> configurable via “Éviter les N derniers jours”.</li>
+      <li><strong>Asynchrone :</strong> recommandé pour de longues périodes (via Celery).</li>
+    </ul>
+  </div>
+
+  <form method="post" novalidate>
+    {% csrf_token %}
+    {{ form.media }}
+
+    <fieldset class="module aligned">
+      <div class="form-row">
+        <div>
+          <label for="{{ form.eglises.id_for_label }}"><strong>Églises</strong></label><br>
+          {{ form.eglises }}
+          {% if form.eglises.help_text %}<div class="help">{{ form.eglises.help_text }}</div>{% endif %}
+          {% for e in form.eglises.errors %}<div class="errors">{{ e }}</div>{% endfor %}
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div style="display:flex; gap:12px; align-items:flex-start; flex-wrap:wrap;">
+          <div>
+            <label for="{{ form.start_date.id_for_label }}"><strong>Début</strong></label><br>
+            {{ form.start_date }}
+            {% for e in form.start_date.errors %}<div class="errors">{{ e }}</div>{% endfor %}
+          </div>
+          <div>
+            <label for="{{ form.end_date.id_for_label }}"><strong>Fin</strong></label><br>
+            {{ form.end_date }}
+            {% for e in form.end_date.errors %}<div class="errors">{{ e }}</div>{% endfor %}
+          </div>
+          <div>
+            <label><strong>Jours dans la période</strong></label><br>
+            <input id="days-count" type="text" value="—" class="vTextField" style="width:110px;" readonly>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div style="display:flex; gap:12px; align-items:flex-start; flex-wrap:wrap;">
+          <div>
+            <label for="{{ form.version.id_for_label }}"><strong>Version</strong></label><br>
+            {{ form.version }}
+            {% for e in form.version.errors %}<div class="errors">{{ e }}</div>{% endfor %}
+          </div>
+          <div>
+            <label for="{{ form.language.id_for_label }}"><strong>Langue</strong></label><br>
+            {{ form.language }}
+            {% for e in form.language.errors %}<div class="errors">{{ e }}</div>{% endfor %}
+          </div>
+          <div>
+            <label for="{{ form.context_key.id_for_label }}"><strong>Contexte</strong></label><br>
+            {{ form.context_key }}
+            {% if form.context_key.help_text %}<div class="help">{{ form.context_key.help_text }}</div>{% endif %}
+            {% for e in form.context_key.errors %}<div class="errors">{{ e }}</div>{% endfor %}
+          </div>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div style="display:flex; gap:12px; align-items:flex-start; flex-wrap:wrap; width:100%;">
+          <div style="flex:1 1 320px;">
+            <label for="{{ form.keywords.id_for_label }}"><strong>Mots-clés / Thématique</strong></label><br>
+            {{ form.keywords }}
+            {% if form.keywords.help_text %}<div class="help">{{ form.keywords.help_text }}</div>{% endif %}
+            {% for e in form.keywords.errors %}<div class="errors">{{ e }}</div>{% endfor %}
+          </div>
+          <div style="flex:1 1 320px;">
+            <label for="{{ form.books.id_for_label }}"><strong>Livres (optionnel)</strong></label><br>
+            {{ form.books }}
+            {% if form.books.help_text %}<div class="help">{{ form.books.help_text }}</div>{% endif %}
+            {% for e in form.books.errors %}<div class="errors">{{ e }}</div>{% endfor %}
+          </div>
+        </div>
+      </div>
+
+      <div class="form-row" style="display:flex; gap:24px; flex-wrap:wrap;">
+        <div>
+          <label for="{{ form.avoid_recent_days.id_for_label }}"><strong>Éviter les N derniers jours</strong></label><br>
+          {{ form.avoid_recent_days }}
+          {% if form.avoid_recent_days.help_text %}<div class="help">{{ form.avoid_recent_days.help_text }}</div>{% endif %}
+          {% for e in form.avoid_recent_days.errors %}<div class="errors">{{ e }}</div>{% endfor %}
+        </div>
+        <div>
+          <label><strong>Options</strong></label><br>
+          <label style="display:block;">{{ form.shuffle }} Mélanger les versets</label>
+          <label style="display:block;">{{ form.overwrite_existing }} Remplacer existants</label>
+          <label style="display:block;">{{ form.run_async }} Traiter en arrière-plan (Celery)</label>
+          {% for e in form.shuffle.errors %}<div class="errors">{{ e }}</div>{% endfor %}
+          {% for e in form.overwrite_existing.errors %}<div class="errors">{{ e }}</div>{% endfor %}
+          {% for e in form.run_async.errors %}<div class="errors">{{ e }}</div>{% endfor %}
+        </div>
+      </div>
+    </fieldset>
+
+    <div class="submit-row actions-bar">
+      <input type="submit" value="Programmer" class="default">
+      <a href=".." class="button">Annuler</a>
+    </div>
+  </form>
+</div>
+
+<script>
+(function(){
+  function parseDateInput(input){
+    if(!input || !input.value) return null;
+    // yyyy-mm-dd
+    const parts = input.value.split("-");
+    if(parts.length !== 3) return null;
+    const y = parseInt(parts[0],10), m = parseInt(parts[1],10)-1, d = parseInt(parts[2],10);
+    const dt = new Date(Date.UTC(y,m,d));
+    return isNaN(dt.getTime()) ? null : dt;
+  }
+  function daysBetween(d1, d2){
+    const MS = 24*3600*1000;
+    const n = Math.floor((d2 - d1)/MS) + 1;
+    return n;
+  }
+  const startEl = document.getElementById("{{ form.start_date.id_for_label }}");
+  const endEl   = document.getElementById("{{ form.end_date.id_for_label }}");
+  const outEl   = document.getElementById("days-count");
+  function refresh(){
+    const d1 = parseDateInput(startEl), d2 = parseDateInput(endEl);
+    if(d1 && d2 && d2 >= d1){
+      outEl.value = String(daysBetween(d1, d2));
+    } else {
+      outEl.value = "—";
+    }
+  }
+  if(startEl && endEl && outEl){
+    startEl.addEventListener("change", refresh);
+    endEl.addEventListener("change", refresh);
+    refresh();
+  }
+})();
+</script>
+{% endblock %}

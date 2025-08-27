@@ -10,7 +10,7 @@ from django_countries import countries
 
 from eden.models import Fiancailles, Mariage
 from fidele.models import Fidele, Fonction, OuvrierPermanence, Permanence, BAPTEME_CHOICES, SEXE_CHOICES, \
-    MARITAL_CHOICES, MembreType, Location, Department, Eglise
+    MARITAL_CHOICES, MembreType, Location, Department, Eglise, BibleVersion
 
 from event.models import Evenement
 
@@ -479,3 +479,60 @@ class ConfirmDeleteForm(forms.Form):
         if value != "SUPPRIMER":
             raise forms.ValidationError("Vous devez taper exactement SUPPRIMER.")
         return value
+
+class ScheduleVODForm(forms.Form):
+    eglises = forms.ModelMultipleChoiceField(
+        queryset=Eglise.objects.all(),
+        required=True,
+        widget=forms.SelectMultiple(attrs={"class": "form-control", "size": 8}),
+        label="Églises"
+    )
+    start_date = forms.DateField(
+        initial=timezone.localdate,
+        widget=forms.DateInput(attrs={"type": "date", "class": "form-control"}),
+        label="Début"
+    )
+    end_date = forms.DateField(
+        widget=forms.DateInput(attrs={"type": "date", "class": "form-control"}),
+        label="Fin"
+    )
+    version = forms.ModelChoiceField(
+        queryset=BibleVersion.objects.all().order_by("code"),
+        required=True,
+        widget=forms.Select(attrs={"class": "form-control"})
+    )
+    language = forms.CharField(
+        initial="fr",
+        widget=forms.TextInput(attrs={"class": "form-control"})
+    )
+    # thématique: liste de mots-clés (OR)
+    keywords = forms.CharField(
+        required=False,
+        help_text="Mots-clés séparés par des virgules (recherche plein texte simple).",
+        widget=forms.TextInput(attrs={"class": "form-control"})
+    )
+    # facultatif: limiter à certains livres
+    books = forms.CharField(
+        required=False,
+        help_text="Noms de livres séparés par des virgules (ex: Psaumes,Proverbes).",
+        widget=forms.TextInput(attrs={"class": "form-control"})
+    )
+    context_key = forms.CharField(
+        required=False, initial="DEFAULT",
+        widget=forms.TextInput(attrs={"class": "form-control"}),
+        help_text="Clé de contexte (segment d'audience, campus, etc.)"
+    )
+    # options
+    shuffle = forms.BooleanField(initial=True, required=False, label="Mélanger les versets")
+    avoid_recent_days = forms.IntegerField(
+        initial=90, min_value=0, required=False,
+        help_text="Éviter de réutiliser un verset déjà utilisé dans les N derniers jours (par église).",
+        widget=forms.NumberInput(attrs={"class": "form-control"})
+    )
+    run_async = forms.BooleanField(
+        initial=True, required=False, label="Traiter en arrière-plan (Celery)"
+    )
+    overwrite_existing = forms.BooleanField(
+        initial=False, required=False,
+        help_text="Si coché: remplace le VOD déjà programmé pour un jour donné."
+    )

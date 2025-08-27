@@ -16,7 +16,7 @@ from abmci.utils.notifications import send_fcm_multicast
 from event.models import ParticipationEvenement, TypeEvent, Evenement
 from fidele.models import Fidele, UserProfileCompletion, Eglise, SEXE_CHOICES, MARITAL_CHOICES, Location, \
     FidelePosition, PrayerComment, PrayerLike, PrayerCategory, PrayerRequest, Device, Notification, BibleVersion, \
-    BibleVerse, BibleTag, Banner, DonationCategory
+    BibleVerse, BibleTag, Banner, DonationCategory, VerseOfDay
 from phonenumber_field.serializerfields import PhoneNumberField as DRFPhoneNumberField
 
 # from .models import Fidele, UserProfileCompletion
@@ -291,7 +291,7 @@ class VerseDuJourSerializer(serializers.ModelSerializer):
     date = serializers.DateField(source='verse_date', required=False)
 
     class Meta:
-        model = Eglise
+        model = VerseOfDay
         fields = ('text', 'reference', 'date')
 
 

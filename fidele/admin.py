@@ -1,19 +1,25 @@
 from datetime import timedelta
 
-from django.contrib import admin
+from django.contrib import admin, messages
 from django.contrib.gis.admin import GISModelAdmin
 from django.contrib.gis.forms import OSMWidget
-from django.urls import reverse, NoReverseMatch
+from django.shortcuts import redirect, render
+from django.urls import reverse, NoReverseMatch, path
 from django.utils import timezone
 from django.utils.formats import number_format
 from django.utils.html import format_html
 from simple_history.admin import SimpleHistoryAdmin
 from django.contrib.gis import admin as gis_admin
+
+from event.services.scheduling_verse import pick_candidate_verses, schedule_vod_for_period
+from fidele.form import ScheduleVODForm
 from fidele.models import Department, MembreType, Fidele, Location, TypeLocation, Fonction, OuvrierPermanence, \
     Permanence, Eglise, Familles, SujetPriere, ProblemeParticulier, UserProfileCompletion, PrayerLike, PrayerComment, \
     PrayerRequest, PrayerCategory, BibleVersion, BibleVerse, Banner, DonationCategory, Donation, VerseOfDay, \
     FidelePosition
 from django.contrib.gis.db import models
+from event.services.scheduling_verse import pick_candidate_verses, schedule_vod_for_period
+from abmci.tasks import schedule_vod_task
 
 # Register your models here.
 admin.site.site_header = 'BACK-END ABMCI'
@@ -92,24 +98,24 @@ class CustomOSMWidget(OSMWidget):
     default_zoom = 15
 
 
-@admin.register(Eglise)
-class EgliseAdmin(GISModelAdmin):
-    list_display = ("name", "ville", "pasteur")
-    search_fields = ("name", "ville", "pasteur")
-    list_filter = ("ville",)
-
-    # Configuration du widget de carte
-    formfield_overrides = {
-        models.PointField: {
-            "widget": CustomOSMWidget(
-                attrs={
-                    'map_width': 1000,
-                    'map_height': 500,
-                    'display_raw': True,
-                }
-            )
-        }
-    }
+# @admin.register(Eglise)
+# class EgliseAdmin(GISModelAdmin):
+#     list_display = ("name", "ville", "pasteur")
+#     search_fields = ("name", "ville", "pasteur")
+#     list_filter = ("ville",)
+#
+#     # Configuration du widget de carte
+#     formfield_overrides = {
+#         models.PointField: {
+#             "widget": CustomOSMWidget(
+#                 attrs={
+#                     'map_width': 1000,
+#                     'map_height': 500,
+#                     'display_raw': True,
+#                 }
+#             )
+#         }
+#     }
 
 
 @admin.register(Fidele)
@@ -389,43 +395,96 @@ class DonationAdmin(admin.ModelAdmin):
         qs = super().get_queryset(request).select_related("user", "category")
         return qs
 
+
 @admin.register(VerseOfDay)
 class VerseOfDayAdmin(admin.ModelAdmin):
-    # Configuration de l'affichage dans la liste
-    list_display = ('date', 'eglise', 'reference', 'version', 'language', 'context_key', 'created_at')
-    list_filter = ('eglise', 'version', 'language', 'context_key', 'date')
-    search_fields = ('reference', 'text', 'context_key', 'eglise__nom')
-    ordering = ('-date', 'eglise')
-    date_hierarchy = 'date'
+    list_display = ("date", "eglise", "reference", "version", "language", "context_key", "created_at")
+    list_filter = ("date", "eglise", "version", "language", "context_key")
+    search_fields = ("reference", "text")
 
-    # Configuration du formulaire d'édition
-    fieldsets = (
-        (None, {
-            'fields': ('date', 'eglise', 'version', 'language', 'context_key')
-        }),
-        ('Contenu du verset', {
-            'fields': ('reference', 'text')
-        }),
-        ('Métadonnées', {
-            'fields': ('created_at',),
-            'classes': ('collapse',)
-        })
-    )
+class EgliseAdmin(admin.ModelAdmin):
+    list_display = ("id", "name", "ville", "pasteur")
+    search_fields = ("name", "ville", "pasteur")
+    actions = ["programmer_versets"]
 
-    # Champs en lecture seule
-    readonly_fields = ('created_at',)
+    def get_urls(self):
+        urls = super().get_urls()
+        my = [
+            path("programmer-versets/", self.admin_site.admin_view(self.programmer_versets_view), name="eglise_programmer_versets"),
+        ]
+        return my + urls
 
-    # Actions personnalisées
-    actions = ['duplicate_verse']
+    def programmer_versets(self, request, queryset):
+        # redirige vers une page avec formulaire (on passe les IDs sélectionnés)
+        ids = ",".join(str(pk) for pk in queryset.values_list("pk", flat=True))
+        return redirect(f"programmer-versets/?ids={ids}")
 
-    def duplicate_verse(self, request, queryset):
-        for verse in queryset:
-            verse.pk = None
-            verse.date = verse.date + timedelta(days=1)
-            verse.save()
-        self.message_user(request, f"{queryset.count()} verset(s) dupliqué(s) avec succès.")
+    programmer_versets.short_description = "Programmer des versets du jour…"
 
-    duplicate_verse.short_description = "Dupliquer les versets sélectionnés (date +1 jour)"
+    def programmer_versets_view(self, request):
+        # églises pré-sélectionnées depuis la selection admin
+        pre_ids = request.GET.get("ids", "")
+        initial = {}
+        if pre_ids:
+            initial["eglises"] = Eglise.objects.filter(id__in=[int(x) for x in pre_ids.split(",") if x])
+
+        if request.method == "POST":
+            form = ScheduleVODForm(request.POST)
+            if form.is_valid():
+                eglises = list(form.cleaned_data["eglises"])
+                start = form.cleaned_data["start_date"]
+                end = form.cleaned_data["end_date"]
+                version = form.cleaned_data["version"]
+                language = form.cleaned_data["language"]
+                context_key = form.cleaned_data["context_key"] or "DEFAULT"
+                keywords = [k.strip() for k in (form.cleaned_data["keywords"] or "").split(",") if k.strip()]
+                books = [b.strip() for b in (form.cleaned_data["books"] or "").split(",") if b.strip()]
+                shuffle = form.cleaned_data["shuffle"]
+                avoid_recent_days = form.cleaned_data["avoid_recent_days"] or 0
+                overwrite_existing = form.cleaned_data["overwrite_existing"]
+
+                payload = {
+                    "eglise_ids": [e.id for e in eglises],
+                    "start": start.isoformat(),
+                    "end": end.isoformat(),
+                    "version_id": version.id,
+                    "language": language,
+                    "context_key": context_key,
+                    "keywords": keywords,
+                    "books": books,
+                    "shuffle": shuffle,
+                    "avoid_recent_days": int(avoid_recent_days),
+                    "overwrite_existing": bool(overwrite_existing),
+                }
+
+                if form.cleaned_data["run_async"]:
+                    schedule_vod_task.delay(payload)
+                    messages.success(request, f"Planification envoyée à Celery pour {len(eglises)} église(s) du {start} au {end}.")
+                else:
+                    # synchrone
+                    candidates = pick_candidate_verses(version, language, keywords, books, limit=None, shuffle=shuffle)
+                    res = schedule_vod_for_period(
+                        eglises=eglises,
+                        start=start, end=end, version=version, language=language,
+                        candidates=candidates, context_key=context_key,
+                        avoid_recent_days=int(avoid_recent_days), overwrite_existing=overwrite_existing
+                    )
+                    total = sum(res.values())
+                    messages.success(request, f"Programmation terminée: {total} verset(s) créé(s).")
+
+                return redirect("..")  # retour à la liste des églises
+
+        else:
+            form = ScheduleVODForm(initial=initial)
+
+        context = dict(
+            self.admin_site.each_context(request),
+            title="Programmer des versets du jour",
+            form=form,
+        )
+        return render(request, "admin/programmer_versets.html", context)
+
+admin.site.register(Eglise, EgliseAdmin)
 
 
 @admin.register(FidelePosition)

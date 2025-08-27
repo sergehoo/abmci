@@ -32,6 +32,7 @@ from django.views.decorators.cache import cache_page
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework import generics, permissions, status, viewsets, mixins, pagination, filters
 from rest_framework.decorators import action, api_view
+from rest_framework.exceptions import NotFound
 from rest_framework.pagination import PageNumberPagination, LimitOffsetPagination
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly, AllowAny
@@ -53,7 +54,7 @@ from api.serializers import UserSerializer, FideleSerializer, FideleCreateUpdate
 from event.models import ParticipationEvenement, Evenement
 from fidele.models import Fidele, UserProfileCompletion, Eglise, PrayerComment, PrayerRequest, PrayerLike, \
     PrayerCategory, Notification, Device, BibleVersion, BibleVerse, BibleTag, Banner, Donation, DonationCategory, \
-    AccountDeletionRequest
+    AccountDeletionRequest, VerseOfDay
 
 # from .models import Fidele, UserProfileCompletion
 # from .serializers import (
@@ -284,13 +285,22 @@ class VerseDuJourView(generics.RetrieveAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_object(self):
-        # Église du fidèle connecté
-        fidele = getattr(self.request.user, 'fidele', None)
-        if not fidele or not fidele.eglise_id:
-            # Laisse DRF renvoyer 404 proprement
-            raise get_object_or_404(Eglise, pk=-1)  # forcera 404
-        return get_object_or_404(Eglise, pk=fidele.eglise_id)
+        u = self.request.user
+        eglise_id = getattr(getattr(u, 'fidele', None), 'eglise_id', None)
+        if not eglise_id:
+            raise NotFound("Aucune église liée")
 
+        today = timezone.localdate()
+        vod = VerseOfDay.objects.filter(eglise_id=eglise_id, date=today).first()
+        if vod:
+            # Retourner un objet “fake” avec les 3 champs attendus
+            vod.verse_du_jour = vod.text
+            vod.verse_reference = vod.reference
+            vod.verse_date = vod.date
+            return vod  # adapter le serializer si besoin
+
+        # fallback sur Eglise si pas de VOD
+        return get_object_or_404(Eglise, pk=eglise_id)
 
 DEFAULT_HORIZON_DAYS = 60
 

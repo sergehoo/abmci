@@ -1,3 +1,4 @@
+from datetime import date
 from io import BytesIO
 
 from PIL import UnidentifiedImageError
@@ -12,7 +13,8 @@ from django.template.loader import render_to_string
 from django.core.files.base import ContentFile
 from event.models import Evenement, ParticipationEvenement
 from event.services.events import generate_recurrences_for_parent
-from fidele.models import Eglise
+from event.services.scheduling_verse import schedule_vod_for_period, pick_candidate_verses
+from fidele.models import Eglise, BibleVersion
 from fidele.views import process_account_deletion_request
 from fidele.vod_smart import pick_smart_daily_verse_for_eglise
 # from .models import ParticipationEvenement
@@ -178,3 +180,48 @@ def generate_qr_and_resize_chunk(self, ids: list[int]):
                 pass
 
     return {"processed": len(ids), "qr_updated": updated}
+
+
+@shared_task(bind=True, max_retries=3, default_retry_delay=10)
+def schedule_vod_task(self,payload: dict):
+    """
+    payload = {
+      "eglise_ids": [1,2],
+      "start": "2025-09-01",
+      "end": "2025-09-30",
+      "version_id": 1,
+      "language": "fr",
+      "keywords": ["amour","grâce"],
+      "books": ["Psaumes","Proverbes"],
+      "context_key": "DEFAULT",
+      "avoid_recent_days": 90,
+      "overwrite_existing": False,
+      "shuffle": True,
+    }
+    """
+    start = date.fromisoformat(payload["start"])
+    end = date.fromisoformat(payload["end"])
+    eglises = list(Eglise.objects.filter(id__in=payload["eglise_ids"]))
+    version = BibleVersion.objects.get(id=payload["version_id"])
+    keywords = payload.get("keywords") or []
+    books = payload.get("books") or []
+    candidates = pick_candidate_verses(
+        version=version,
+        language=payload.get("language","fr"),
+        keywords=keywords,
+        books=books,
+        limit=None,
+        shuffle=payload.get("shuffle", True),
+    )
+    res = schedule_vod_for_period(
+        eglises=eglises,
+        start=start,
+        end=end,
+        version=version,
+        language=payload.get("language","fr"),
+        candidates=candidates,
+        context_key=payload.get("context_key") or "DEFAULT",
+        avoid_recent_days=int(payload.get("avoid_recent_days") or 0),
+        overwrite_existing=bool(payload.get("overwrite_existing") or False),
+    )
+    return {"created_by_eglise": res, "total_created": sum(res.values())}

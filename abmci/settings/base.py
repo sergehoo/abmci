@@ -6,6 +6,7 @@ import re
 from pathlib import Path
 from datetime import timedelta
 import firebase_admin
+from celery.schedules import crontab
 from firebase_admin import credentials
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
@@ -259,6 +260,13 @@ LOGGING = {
     "root": {"handlers": ["console"], "level": "INFO"},
 }
 
+
+CELERY_BEAT_SCHEDULE = {
+    "push_verse_of_day_daily": {
+        "task": "abmci.push_vod_daily",
+        "schedule": crontab(minute=0, hour=6),  # 06:00 (UTC ou TZ de ton worker)
+    },
+}
 
 
 
