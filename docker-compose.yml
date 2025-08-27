@@ -62,9 +62,13 @@ services:
     command: celery -A abmci worker --loglevel=info
     volumes:
       - .:/app
-      - /var/www/abmci/media:/app/media      # ⬅️ même montage que web
+      - static_volume:/app/staticfiles
+      - static_volume:/smitci-app/static
       - /var/www/abmci/staticfiles:/app/staticfiles
+#      - media_volume:/app/media
+      - /var/www/abmci/media:/app/media
       - /home/ubuntu/abmci/creds/firebase-admin.json:/app/firebase-admin.json:ro
+      - media:/app/media
     env_file:
       - .env
     environment:
@@ -85,9 +89,13 @@ services:
     command: celery -A abmci beat --loglevel=info
     volumes:
       - .:/app
-      - /var/www/abmci/media:/app/media      # ⬅️ même montage
+      - static_volume:/app/staticfiles
+      - static_volume:/smitci-app/static
       - /var/www/abmci/staticfiles:/app/staticfiles
+#      - media_volume:/app/media
+      - /var/www/abmci/media:/app/media
       - /home/ubuntu/abmci/creds/firebase-admin.json:/app/firebase-admin.json:ro
+      - media:/app/media
     env_file:
       - .env
     environment:
@@ -136,6 +144,7 @@ services:
 volumes:
   postgres_data:
   static_volume:
+  media_volume:
   grafana_data:
 
 networks:
