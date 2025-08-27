@@ -1,6 +1,6 @@
 # services/scheduling.py
 from __future__ import annotations
-from typing import Iterable, Sequence, Dict, List, Tuple, Set
+from typing import Iterable, Sequence, Dict, List, Tuple, Set, Optional
 from datetime import timedelta, date
 import random
 
@@ -34,6 +34,7 @@ def pick_candidate_verses(
     language: str,
     keywords: Sequence[str] | None = None,
     books: Sequence[str] | None = None,
+    limit: Optional[int] = None,
     shuffle: bool = True,
 ) -> List[BibleVerse]:
     qs = BibleVerse.objects.select_related("version").filter(version=version)
@@ -47,6 +48,9 @@ def pick_candidate_verses(
             q |= Q(text__icontains=kw) | Q(book__icontains=kw)
         if q:
             qs = qs.filter(q)
+    if limit and limit > 0:
+        qs = qs[:limit]
+
     candidates = list(qs)
     if shuffle:
         random.shuffle(candidates)
