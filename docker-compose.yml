@@ -11,6 +11,7 @@ services:
 #      - media_volume:/app/media
       - /var/www/abmci/media:/app/media
       - /home/ubuntu/abmci/creds/firebase-admin.json:/app/firebase-admin.json:ro
+      - media:/app/media
     ports:
       - "1108:8000"
     env_file:
@@ -61,6 +62,9 @@ services:
     command: celery -A abmci worker --loglevel=info
     volumes:
       - .:/app
+      - /var/www/abmci/media:/app/media      # ⬅️ même montage que web
+      - /var/www/abmci/staticfiles:/app/staticfiles
+      - /home/ubuntu/abmci/creds/firebase-admin.json:/app/firebase-admin.json:ro
     env_file:
       - .env
     environment:
@@ -81,6 +85,9 @@ services:
     command: celery -A abmci beat --loglevel=info
     volumes:
       - .:/app
+      - /var/www/abmci/media:/app/media      # ⬅️ même montage
+      - /var/www/abmci/staticfiles:/app/staticfiles
+      - /home/ubuntu/abmci/creds/firebase-admin.json:/app/firebase-admin.json:ro
     env_file:
       - .env
     environment:
@@ -128,8 +135,6 @@ services:
 
 volumes:
   postgres_data:
-  static_volume:
-  media_volume:
   grafana_data:
 
 networks:
