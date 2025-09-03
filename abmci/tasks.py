@@ -265,11 +265,12 @@ def _build_message(report: ProblemReport) -> str:
     full_name = ""
     if reporter_user:
         full_name = f"{reporter_user.first_name} {reporter_user.last_name}".strip()
+        reporter_contact = f"{reporter_user.fidele.phone}"
     full_name = full_name or "Un fidèle"
     due = _fmt_date(report.due_date)
     return (
-        f"Bonjour, le fidèle {full_name} a signalé « {report.title} » "
-        f"(échéance: {due}). Merci de le contacter."
+        f"Bonjour, le fidèle {full_name} a signalé {report.category.name} « {report.title} » "
+        f"(échéance: {due}). Merci de le contacter pour plus d'informations au {reporter_contact}."
     )
 
 def _pastors_queryset(report: ProblemReport):
