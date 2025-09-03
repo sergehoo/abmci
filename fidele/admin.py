@@ -117,92 +117,12 @@ class CustomOSMWidget(OSMWidget):
 #         }
 #     }
 
-
 @admin.register(Role)
-class RoleAdmin(admin.ModelAdmin):
-    # Configuration de la liste des objets
-    list_display = ('code', 'name', 'description_preview', 'created_at', 'updated_at')
-    list_display_links = ('code', 'name')
-    list_filter = ('created_at', 'updated_at')
-    search_fields = ('code', 'name', 'description')
+class RoleAdminSimple(admin.ModelAdmin):
+    list_display = ('code', 'name', 'description')
+    search_fields = ('code', 'name')
     ordering = ('code',)
-    readonly_fields = ('created_at', 'updated_at')
 
-    # Configuration du formulaire de détail
-    fieldsets = (
-        ('Informations principales', {
-            'fields': ('code', 'name', 'description')
-        }),
-        ('Métadonnées', {
-            'fields': ('created_at', 'updated_at'),
-            'classes': ('collapse',)
-        }),
-    )
-
-    # Configuration de la vue de création
-    add_fieldsets = (
-        (None, {
-            'classes': ('wide',),
-            'fields': ('code', 'name', 'description'),
-        }),
-    )
-
-    # Personnalisation des méthodes
-    def description_preview(self, obj):
-        """Aperçu court de la description"""
-        if obj.description:
-            preview = obj.description[:50] + '...' if len(obj.description) > 50 else obj.description
-            return format_html('<span title="{}">{}</span>', obj.description, preview)
-        return "-"
-
-    description_preview.short_description = 'Description'
-
-    def get_readonly_fields(self, request, obj=None):
-        """Rendre le code non modifiable après création"""
-        if obj:  # Lors de l'édition
-            return self.readonly_fields + ('code',)
-        return self.readonly_fields
-
-    def get_fieldsets(self, request, obj=None):
-        """Changer les fieldsets selon le contexte (ajout vs édition)"""
-        if not obj:
-            return self.add_fieldsets
-        return super().get_fieldsets(request, obj)
-
-    # Configuration des actions
-    actions = ['duplicate_role']
-
-    def duplicate_role(self, request, queryset):
-        """Action pour dupliquer des rôles"""
-        for role in queryset:
-            new_code = f"{role.code}_COPY"
-            counter = 1
-            while Role.objects.filter(code=new_code).exists():
-                new_code = f"{role.code}_COPY_{counter}"
-                counter += 1
-
-            Role.objects.create(
-                code=new_code,
-                name=f"{role.name} (Copie)",
-                description=role.description
-            )
-
-        self.message_user(
-            request,
-            f"{queryset.count()} rôle(s) dupliqué(s) avec succès."
-        )
-
-    duplicate_role.short_description = "Dupliquer les rôles sélectionnés"
-
-    # Personnalisation de la vue liste
-    def get_queryset(self, request):
-        return super().get_queryset(request).prefetch_related('user_roles')
-
-    def user_count(self, obj):
-        """Nombre d'utilisateurs ayant ce rôle"""
-        return obj.user_roles.count()
-
-    user_count.short_description = 'Utilisateurs'
 @admin.register(Fidele)
 class FideleAdmin(SimpleHistoryAdmin):
     list_display = ("id", "user", "phone", "eglise", "type_membre", "date_entree")
