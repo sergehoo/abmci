@@ -246,6 +246,25 @@ class ProblemCategory(models.Model):
         verbose_name_plural = "Catégories de problèmes"
         ordering = ["name"]
 
+    def save(self, *args, **kwargs):
+        if not self.slug or self.name_changed():
+            base_slug = slugify(self.name)
+            slug = base_slug
+            i = 1
+            # garantir l’unicité du slug
+            while ProblemCategory.objects.filter(slug=slug).exclude(pk=self.pk).exists():
+                slug = f"{base_slug}-{i}"
+                i += 1
+            self.slug = slug
+        super().save(*args, **kwargs)
+
+    def name_changed(self) -> bool:
+        """Vérifie si le champ name a changé (utile en édition)."""
+        if not self.pk:
+            return True
+        old = ProblemCategory.objects.filter(pk=self.pk).only("name").first()
+        return old and old.name != self.name
+
     def __str__(self):
         return self.name
 class ProblemReport(models.Model):
@@ -267,24 +286,16 @@ class ProblemReport(models.Model):
         CANCELED = "CANC", "Annulé"
 
     eglise = models.ForeignKey(Eglise, on_delete=models.CASCADE, related_name="problem_reports")
-    assignee = models.ForeignKey(
-        'fidele.Fidele', on_delete=models.SET_NULL, null=True, blank=True, related_name="assigned_problems"
-    )
+    assignee = models.ForeignKey('fidele.Fidele', on_delete=models.SET_NULL, null=True, blank=True, related_name="assigned_problems")
     watchers = models.ManyToManyField('fidele.Fidele', blank=True, related_name="watched_problems")
     reporter = models.ForeignKey('fidele.Fidele', on_delete=models.CASCADE, related_name="problem_reports")
-
     category = models.ForeignKey(ProblemCategory, on_delete=models.SET_NULL, null=True, blank=True)
-
     title = models.CharField(max_length=180)
     description = models.TextField()
-
     # Responsable (membre du staff, diacre, pasteur, cellule sociale…)
-
-
     severity = models.CharField(max_length=5, choices=Severity.choices, default=Severity.MEDIUM)
     status = models.CharField(max_length=5, choices=Status.choices, default=Status.OPEN)
     due_date = models.DateField(null=True, blank=True)
-
     # Métadonnées
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
