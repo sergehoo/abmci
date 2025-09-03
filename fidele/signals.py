@@ -9,11 +9,13 @@ from django.db.models.signals import post_save, pre_save
 from django.contrib.auth.models import User
 from django.dispatch import receiver
 from django.template.loader import get_template
+from phonenumber_field.phonenumber import to_python
 
 from abmci.notifications.fcm import send_to_topic
 from abmci.services.nearest_church import assign_nearest_eglise_if_missing
 from abmci.services.notifications import notify_new_comment
-from fidele.models import Fidele, PrayerRequest, PrayerComment, ProblemReport
+from abmci.utils.orange_sms import send_sms
+from fidele.models import Fidele, PrayerRequest, PrayerComment, ProblemReport, Role
 from django.dispatch import Signal
 
 notify = Signal()
@@ -109,3 +111,54 @@ def problem_report_post_save(sender, instance, created, **kwargs):
 
     # Sécu: on ne publie qu'après commit
     transaction.on_commit(_enqueue)
+
+def _fmt_date(d):
+    if not d:
+        return "—"
+    # JJ/MM/AAAA
+    return d.strftime("%d/%m/%Y")
+
+
+
+@receiver(post_save, sender=ProblemReport)
+def notify_pastors_on_problem_created(sender, instance: ProblemReport, created, **kwargs):
+    if not created:
+        return
+
+    # Récupère les pasteurs de la même église
+    try:
+        role_pasteur = Role.objects.get(code='PASTEUR')
+    except Role.DoesNotExist:
+        return  # aucun rôle pasteur configuré
+
+    qs = Fidele.objects.filter(
+        roles=role_pasteur,
+        eglise=instance.eglise,
+        phone__isnull=False,
+    ).distinct()
+
+    reporter_name = getattr(instance.reporter.user, "first_name", "") + " " + getattr(instance.reporter.user, "last_name", "")
+    reporter_name = reporter_name.strip() or "Un fidèle"
+    due = _fmt_date(instance.due_date)
+
+    # Message
+    msg = (
+        f"Bonjour, le fidèle {reporter_name} a signalé « {instance.title} » "
+        f"(échéance: {due}). Merci de le contacter."
+    )
+
+    # Envoie à chaque pasteur
+    for f in qs:
+        if not f.phone:
+            continue
+        # phone est un PhoneNumber -> convertir en E164 string
+        p = to_python(f.phone)
+        if not p:
+            continue
+        to = p.as_e164  # ex: +2250700000000
+        try:
+            send_sms(to, msg)
+        except Exception:
+            # log silencieux, ne bloque pas la requête
+            import logging
+            logging.getLogger(__name__).exception("Échec envoi SMS à %s", to)

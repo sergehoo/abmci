@@ -410,7 +410,20 @@ def create_problem_report(*, reporter, eglise, title, description, category_slug
             pr.watchers.add(*watchers)
     return pr
 
+class Role(models.Model):
+    """
+    Rôle générique dans l’église (ex: PASTEUR, DIACRE, SECOURISTE, etc.)
+    """
+    code = models.CharField(max_length=50, unique=True)  # ex: "PASTEUR"
+    name = models.CharField(max_length=100)              # ex: "Pasteur"
+    description = models.TextField(blank=True, null=True)
 
+    class Meta:
+        verbose_name = "Rôle"
+        verbose_name_plural = "Rôles"
+
+    def __str__(self):
+        return f"{self.name} ({self.code})"
 class Fidele(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="fidele", )
     firebase_uid = models.CharField(max_length=128, unique=True, null=True, blank=True)
@@ -438,7 +451,6 @@ class Fidele(models.Model):
     mere = models.ForeignKey('self', on_delete=models.CASCADE, related_name='maternelle', blank=True, null=True)
     frere = models.ManyToManyField('self', blank=True, symmetrical=True)
     soeur = models.ManyToManyField('self', blank=True, symmetrical=True)
-
     type_membre = models.ForeignKey('MembreType', on_delete=models.CASCADE, blank=True, null=True)
     membre = models.SmallIntegerField(blank=True, null=True, default=0)
     location = models.ForeignKey(Location, on_delete=models.CASCADE, default=1, blank=True)
@@ -446,12 +458,12 @@ class Fidele(models.Model):
     fonction = models.ForeignKey('Fonction', on_delete=models.CASCADE, blank=True, null=True)
     eglise = models.ForeignKey('Eglise', on_delete=models.CASCADE, null=True, blank=True)
     famille_alliance = models.ForeignKey('Familles', on_delete=models.CASCADE, null=True, blank=True)
-
     photo = models.ImageField(null=True, blank=True, default='abmci/users/7.png', upload_to='abmci/fideles')
     sortie = models.SmallIntegerField(null=True, blank=True, default=0)
     is_deleted = models.SmallIntegerField(null=True, blank=True, default=0)
     slug = models.SlugField(null=True, blank=True, help_text="slug field", verbose_name="slug ", unique=True,
                             editable=False)
+    roles = models.ManyToManyField('Role', blank=True, related_name='fideles')  # 👈 AJOUT
     created_at = models.DateTimeField(auto_now_add=now, )
     history = HistoricalRecords()
 
