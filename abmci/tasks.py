@@ -14,11 +14,11 @@ from django.core.files.base import ContentFile
 from event.models import Evenement, ParticipationEvenement
 from event.services.events import generate_recurrences_for_parent
 from event.services.scheduling_verse import schedule_vod_for_period, pick_candidate_verses
-from fidele.models import Eglise, BibleVersion
+from fidele.models import Eglise, BibleVersion, ProblemReport
 from fidele.views import process_account_deletion_request
 from fidele.vod_smart import pick_smart_daily_verse_for_eglise
 # from .models import ParticipationEvenement
-from .notifications.fcm import send_to_topic
+from .notifications.fcm import send_to_topic, send_to_user
 
 
 @shared_task
@@ -225,3 +225,23 @@ def schedule_vod_task(self,payload: dict):
         overwrite_existing=bool(payload.get("overwrite_existing") or False),
     )
     return {"created_by_eglise": res, "total_created": sum(res.values())}
+
+
+
+@shared_task(bind=True, max_retries=3, default_retry_delay=15)
+def notify_problem_created(self, problem_id: int):
+    try:
+        pr = ProblemReport.objects.select_related("eglise", "reporter__user", "assignee").get(pk=problem_id)
+    except ProblemReport.DoesNotExist:
+        return
+
+    title = f"Nouveau signalement: {pr.title}"
+    body = f"{pr.reporter.user.first_name} {pr.reporter.user.last_name} – {pr.get_severity_display()}"
+
+    # Topic par église (ex: "eglise_12")
+    topic = f"eglise_{pr.eglise_id}_care"
+    send_to_topic(topic, title=title, body=body, data={"problem_id": str(pr.id), "type": "problem_created"})
+
+    # Notifier le responsable direct
+    if pr.assignee:
+        send_to_user(pr.assignee, title=title, body=body, data={"problem_id": str(pr.id)})

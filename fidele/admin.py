@@ -16,7 +16,7 @@ from fidele.form import ScheduleVODForm
 from fidele.models import Department, MembreType, Fidele, Location, TypeLocation, Fonction, OuvrierPermanence, \
     Permanence, Eglise, Familles, SujetPriere, ProblemeParticulier, UserProfileCompletion, PrayerLike, PrayerComment, \
     PrayerRequest, PrayerCategory, BibleVersion, BibleVerse, Banner, DonationCategory, Donation, VerseOfDay, \
-    FidelePosition
+    FidelePosition, ProblemCategory, ProblemReport
 from django.contrib.gis.db import models
 from event.services.scheduling_verse import pick_candidate_verses, schedule_vod_for_period
 from abmci.tasks import schedule_vod_task
@@ -123,6 +123,7 @@ class FideleAdmin(SimpleHistoryAdmin):
     list_display = ("id", "user", "phone", "eglise", "type_membre", "date_entree")
     # IMPORTANT: provide search_fields (used by autocomplete)
     search_fields = ("user__first_name", "user__last_name", "phone", "qlook_id")
+    autocomplete_fields = ("eglise",)
     list_filter = ("eglise", "type_membre")
 
 @admin.register(PrayerCategory)
@@ -517,3 +518,17 @@ class FidelePositionAdmin(admin.ModelAdmin):
         return response
 
     export_positions_csv.short_description = "Exporter les positions sélectionnées en CSV"
+
+@admin.register(ProblemCategory)
+class ProblemCategoryAdmin(admin.ModelAdmin):
+    search_fields = ("name", "slug")
+    list_display = ("name", "slug", "is_active")
+    list_filter = ("is_active",)
+
+@admin.register(ProblemReport)
+class ProblemReportAdmin(admin.ModelAdmin):
+    list_display = ("title", "eglise", "reporter", "assignee", "status", "severity", "created_at", "due_date")
+    list_filter = ("eglise", "status", "severity", "category", "assignee")
+    search_fields = ("title", "description", "reporter__user__first_name", "reporter__user__last_name")
+    autocomplete_fields = ("reporter", "assignee", "watchers", "eglise", "category")
+    date_hierarchy = "created_at"

@@ -234,7 +234,109 @@ class Eglise(models.Model):
     def __str__(self):
         return self.name or "Église sans nom"
 
+class ProblemCategory(models.Model):
+    """Catégories configurables depuis l’admin."""
+    name = models.CharField(max_length=120, unique=True)
+    slug = models.SlugField(unique=True)
+    description = models.TextField(blank=True, null=True)
+    is_active = models.BooleanField(default=True)
 
+    class Meta:
+        verbose_name = "Catégorie de problème"
+        verbose_name_plural = "Catégories de problèmes"
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+class ProblemReport(models.Model):
+    """
+    Signalement d’un fidèle, imputé à un responsable pour traitement.
+    Exemples: décès d'un parent, absence pour maladie/voyage, assistance sociale, etc.
+    """
+    class Severity(models.TextChoices):
+        LOW = "LOW", "Faible"
+        MEDIUM = "MED", "Moyenne"
+        HIGH = "HIGH", "Élevée"
+        CRITICAL = "CRIT", "Critique"
+
+    class Status(models.TextChoices):
+        OPEN = "OPEN", "Ouvert"
+        IN_PROGRESS = "WIP", "En cours"
+        ON_HOLD = "HOLD", "En attente"
+        RESOLVED = "DONE", "Résolu"
+        CANCELED = "CANC", "Annulé"
+
+    eglise = models.ForeignKey(Eglise, on_delete=models.CASCADE, related_name="problem_reports")
+    assignee = models.ForeignKey(
+        'fidele.Fidele', on_delete=models.SET_NULL, null=True, blank=True, related_name="assigned_problems"
+    )
+    watchers = models.ManyToManyField('fidele.Fidele', blank=True, related_name="watched_problems")
+    reporter = models.ForeignKey('fidele.Fidele', on_delete=models.CASCADE, related_name="problem_reports")
+
+    category = models.ForeignKey(ProblemCategory, on_delete=models.SET_NULL, null=True, blank=True)
+
+    title = models.CharField(max_length=180)
+    description = models.TextField()
+
+    # Responsable (membre du staff, diacre, pasteur, cellule sociale…)
+
+
+    severity = models.CharField(max_length=5, choices=Severity.choices, default=Severity.MEDIUM)
+    status = models.CharField(max_length=5, choices=Status.choices, default=Status.OPEN)
+    due_date = models.DateField(null=True, blank=True)
+
+    # Métadonnées
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    resolved_at = models.DateTimeField(null=True, blank=True)
+    resolution_notes = models.TextField(blank=True, null=True)
+
+
+    # Soft flags
+    is_deleted = models.BooleanField(default=False)
+
+    history = HistoricalRecords()
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["eglise", "status"]),
+            models.Index(fields=["assignee", "status"]),
+            models.Index(fields=["severity"]),
+            models.Index(fields=["created_at"]),
+        ]
+        permissions = (
+            ("can_assign_problem", "Peut assigner un problème à un responsable"),
+            ("can_view_all_problems", "Peut voir tous les problèmes de l'église"),
+        )
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"[{self.get_status_display()}] {self.title}"
+
+    def mark_resolved(self, notes: str | None = None, commit=True):
+        self.status = self.Status.RESOLVED
+        self.resolution_notes = notes or self.resolution_notes
+        self.resolved_at = timezone.now()
+        if commit:
+            self.save(update_fields=["status", "resolution_notes", "resolved_at", "updated_at"])
+
+    @property
+    def is_overdue(self) -> bool:
+        return bool(self.due_date and self.status not in {self.Status.RESOLVED, self.Status.CANCELED}
+                    and timezone.localdate() > self.due_date)
+
+
+def default_problem_categories():
+    """À appeler via loaddata ou migration (LOW code setup)."""
+    base = [
+        ("Décès / Assistance funérailles", "deces"),
+        ("Maladie / Visite / Soutien", "maladie"),
+        ("Voyage / Absence prolongée", "voyage"),
+        ("Aide sociale / Urgence", "social"),
+        ("Conseil pastoral", "conseil"),
+    ]
+    for name, slug in base:
+        ProblemCategory.objects.get_or_create(slug=slug, defaults={"name": name})
 class ProblemeParticulier(models.Model):
     class Gravite(models.TextChoices):
         FAIBLE = 'F', 'Faible'
@@ -270,6 +372,32 @@ class Familles(models.Model):
 
     def __str__(self):
         return self.name
+
+
+def create_problem_report(*, reporter, eglise, title, description, category_slug=None,assignee=None, severity="MED", due_date=None, watchers=None) -> ProblemReport:
+    """
+    Crée un signalement et déclenche les notifications post-commit.
+    `reporter`: instance Fidele
+    `eglise`: instance Eglise
+    """
+    category = None
+    if category_slug:
+        category = ProblemCategory.objects.filter(slug=category_slug, is_active=True).first()
+
+    with transaction.atomic():
+        pr = ProblemReport.objects.create(
+            reporter=reporter,
+            eglise=eglise,
+            title=title,
+            description=description,
+            category=category,
+            assignee=assignee,
+            severity=severity,
+            due_date=due_date,
+        )
+        if watchers:
+            pr.watchers.add(*watchers)
+    return pr
 
 
 class Fidele(models.Model):
@@ -315,6 +443,20 @@ class Fidele(models.Model):
                             editable=False)
     created_at = models.DateTimeField(auto_now_add=now, )
     history = HistoricalRecords()
+
+    def signaler_probleme(self, *, title: str, description: str,
+                          category_slug: str | None = None, assignee=None,
+                          severity: str = "MED", due_date=None, watchers=None):
+        """
+        Fonction demandée : le fidèle signale un problème.
+        Retourne l'instance ProblemReport créée.
+        """
+        eglise = self.eglise  # sécurité multi-églises
+        return create_problem_report(
+            reporter=self, eglise=eglise, title=title, description=description,
+            category_slug=category_slug, assignee=assignee, severity=severity,
+            due_date=due_date, watchers=watchers
+        )
 
     def __str__(self):
         return f'{self.user.first_name} {self.user.last_name}'

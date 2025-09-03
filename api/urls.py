@@ -8,7 +8,8 @@ from api.views import VerifyEmailView, UserDetailView, FideleDetailView, FideleL
     UpcomingEventsHomeView, PrayerCategoryViewSet, PrayerRequestViewSet, PrayerCommentViewSet, DeviceViewSet, \
     NotificationViewSet, BibleVersionViewSet, BibleVerseViewSet, BibleTagViewSet, BannerListView, CategoryListView, \
     CreateIntentView, PaystackWebhookView, DonationVerifyAPIView, EgliseListView, EgliseDetailView, \
-    EgliseProcheListView, eglises_avec_verset_du_jour, paystack_return_view, PasswordResetConfirmRedirectView
+    EgliseProcheListView, eglises_avec_verset_du_jour, paystack_return_view, PasswordResetConfirmRedirectView, \
+    ProblemCategoryViewSet, ProblemReportViewSet
 from event.views import FirebaseLoginView
 
 router = DefaultRouter()
@@ -20,6 +21,8 @@ router.register("versions", BibleVersionViewSet, basename="bible-version")
 router.register("verses", BibleVerseViewSet, basename="bible-verse")
 router.register(r'bible/tags', BibleTagViewSet, basename='bible-tag')
 router.register(r"notifications", NotificationViewSet, basename="notifications")
+router.register(r"categories", ProblemCategoryViewSet, basename="care-categories")
+router.register(r"reports", ProblemReportViewSet, basename="care-reports")
 
 
 urlpatterns = [

@@ -50,12 +50,14 @@ from api.serializers import UserSerializer, FideleSerializer, FideleCreateUpdate
     UserProfileCompletionSerializer, ParticipationEvenementSerializer, VerseDuJourSerializer, EvenementListSerializer, \
     PrayerCommentSerializer, PrayerCategorySerializer, PrayerRequestSerializer, NotificationSerializer, \
     DeviceSerializer, BibleVersionSerializer, BibleVerseSerializer, BibleTagCreateSerializer, BannerSerializer, \
-    CreateIntentSerializer, DonationCategorySerializer, EgliseSerializer, EgliseListSerializer
+    CreateIntentSerializer, DonationCategorySerializer, EgliseSerializer, EgliseListSerializer, ProblemReportSerializer, \
+    ProblemCategorySerializer
 from event.models import ParticipationEvenement, Evenement
+from fidele.care.permissions import IsReporterOrStaffSameChurch
 from fidele.models import Fidele, UserProfileCompletion, Eglise, PrayerComment, PrayerRequest, PrayerLike, \
     PrayerCategory, Notification, Device, BibleVersion, BibleVerse, BibleTag, Banner, Donation, DonationCategory, \
-    AccountDeletionRequest, VerseOfDay
-
+    AccountDeletionRequest, VerseOfDay, ProblemReport, ProblemCategory
+from django_filters.rest_framework import DjangoFilterBackend
 # from .models import Fidele, UserProfileCompletion
 # from .serializers import (
 #     UserSerializer,
@@ -1087,3 +1089,35 @@ def eglises_avec_verset_du_jour(request):
 
     serializer = EgliseSerializer(eglises, many=True, context={'request': request})
     return Response(serializer.data)
+
+
+
+class ProblemCategoryViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = ProblemCategory.objects.filter(is_active=True).order_by("name")
+    serializer_class = ProblemCategorySerializer
+    permission_classes = [IsAuthenticated]
+
+class ProblemReportViewSet(viewsets.ModelViewSet):
+    serializer_class = ProblemReportSerializer
+    permission_classes = [IsAuthenticated, IsReporterOrStaffSameChurch]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ["status", "severity", "category", "assignee"]
+    search_fields = ["title", "description", "reporter__user__first_name", "reporter__user__last_name"]
+    ordering_fields = ["created_at", "due_date", "severity"]
+
+    def get_queryset(self):
+        user = self.request.user
+        qs = ProblemReport.objects.select_related("reporter__user", "eglise", "assignee", "category")
+        # Fidèle: seulement ses signalements
+        if hasattr(user, "fidele"):
+            return qs.filter(reporter=user.fidele, is_deleted=False)
+        # Staff avec perm: ceux de sa/leurs églises (adapte selon ton modèle staff)
+        if user.has_perm("care.can_view_all_problems"):
+            try:
+                eglise_id = user.fidele.eglise_id
+            except Exception:
+                eglise_id = None
+            if eglise_id:
+                return qs.filter(eglise_id=eglise_id, is_deleted=False)
+        # Assigné: ce qui lui est imputé
+        return qs.filter(assignee=user, is_deleted=False)

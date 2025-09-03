@@ -16,7 +16,7 @@ from abmci.utils.notifications import send_fcm_multicast
 from event.models import ParticipationEvenement, TypeEvent, Evenement
 from fidele.models import Fidele, UserProfileCompletion, Eglise, SEXE_CHOICES, MARITAL_CHOICES, Location, \
     FidelePosition, PrayerComment, PrayerLike, PrayerCategory, PrayerRequest, Device, Notification, BibleVersion, \
-    BibleVerse, BibleTag, Banner, DonationCategory, VerseOfDay
+    BibleVerse, BibleTag, Banner, DonationCategory, VerseOfDay, ProblemCategory, ProblemReport
 from phonenumber_field.serializerfields import PhoneNumberField as DRFPhoneNumberField
 
 # from .models import Fidele, UserProfileCompletion
@@ -685,3 +685,49 @@ class EgliseSerializer(serializers.ModelSerializer):
                 return float(d)
             except Exception:
                 return None
+
+
+class ProblemCategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProblemCategory
+        fields = ["id", "name", "slug", "description", "is_active"]
+
+class ProblemReportSerializer(serializers.ModelSerializer):
+    reporter_name = serializers.SerializerMethodField()
+    status_display = serializers.CharField(source="get_status_display", read_only=True)
+    severity_display = serializers.CharField(source="get_severity_display", read_only=True)
+
+    class Meta:
+        model = ProblemReport
+        read_only_fields = ["id", "eglise", "reporter", "created_at", "updated_at", "resolved_at"]
+        fields = [
+            "id", "eglise", "reporter", "reporter_name",
+            "category", "title", "description",
+            "assignee", "severity", "status", "due_date",
+            "created_at", "updated_at", "resolved_at",
+            "resolution_notes", "status_display", "severity_display",
+            "watchers",
+        ]
+
+    def get_reporter_name(self, obj):
+        u = obj.reporter.user
+        return f"{u.first_name} {u.last_name}".strip()
+
+    def validate(self, attrs):
+        # Empêche un fidèle de créer pour une autre église
+        request = self.context.get("request")
+        if request and request.user.is_authenticated and request.method == "POST":
+            try:
+                fid = request.user.fidele
+            except Exception:
+                raise serializers.ValidationError("Profil fidèle requis.")
+            if fid.eglise_id is None:
+                raise serializers.ValidationError("Votre profil n’est pas rattaché à une église.")
+        return attrs
+
+    def create(self, validated):
+        request = self.context["request"]
+        fid = request.user.fidele
+        validated["reporter"] = fid
+        validated["eglise"] = fid.eglise
+        return super().create(validated)

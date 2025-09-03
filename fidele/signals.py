@@ -4,6 +4,7 @@ import random
 from allauth.account.signals import user_signed_up
 from django.contrib.auth.hashers import make_password
 from django.core.mail import send_mail, EmailMessage
+from django.db import transaction
 from django.db.models.signals import post_save, pre_save
 from django.contrib.auth.models import User
 from django.dispatch import receiver
@@ -12,7 +13,7 @@ from django.template.loader import get_template
 from abmci.notifications.fcm import send_to_topic
 from abmci.services.nearest_church import assign_nearest_eglise_if_missing
 from abmci.services.notifications import notify_new_comment
-from fidele.models import Fidele, PrayerRequest, PrayerComment
+from fidele.models import Fidele, PrayerRequest, PrayerComment, ProblemReport
 from django.dispatch import Signal
 
 notify = Signal()
@@ -93,3 +94,18 @@ def set_nearest_church_on_create(sender, instance: Fidele, created: bool, **kwar
     except Exception as e:
         # Evite que le signal casse la transaction ; remplace par un logger
         print(f"[signals] assign_nearest_eglise_if_missing error: {e!r}")
+
+
+
+@receiver(post_save, sender=ProblemReport)
+def problem_report_post_save(sender, instance, created, **kwargs):
+    if not created:
+        return
+
+    def _enqueue():
+        # évite import direct -> pas de circular import
+        from abmci.tasks import notify_problem_created
+        notify_problem_created.delay(instance.id)
+
+    # Sécu: on ne publie qu'après commit
+    transaction.on_commit(_enqueue)

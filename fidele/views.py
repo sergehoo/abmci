@@ -16,7 +16,8 @@ from django.utils.dateparse import parse_date
 from django.views import View
 from django.views.generic import TemplateView, ListView, DetailView, UpdateView, FormView, DeleteView, CreateView
 from fidele.models import Fidele, Department, Permanence, Eglise, ProblemeParticulier, Fonction, MembreType, \
-    TransferHistory, Notification, UserProfileCompletion, AccountDeletionRequest, Donation, DonationCategory
+    TransferHistory, Notification, UserProfileCompletion, AccountDeletionRequest, Donation, DonationCategory, \
+    ProblemCategory, ProblemReport
 from fidele.form import PermanenceForm, FideleUpdateForm, FideleTransferForm, ProfileCompletionForm, ConfirmDeleteForm
 from event.models import ParticipationEvenement
 
@@ -795,4 +796,3 @@ class DonationDetailView(LoginRequiredMixin, DetailView):
     model = Donation
     template_name = 'donations/donation_detail.html'
     context_object_name = 'donation'
-
