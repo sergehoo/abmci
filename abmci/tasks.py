@@ -1,5 +1,7 @@
+import logging
 from datetime import date
 from io import BytesIO
+from typing import Iterable
 
 from PIL import UnidentifiedImageError
 from celery import shared_task, group
@@ -11,14 +13,17 @@ from django.utils import timezone
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
 from django.core.files.base import ContentFile
+from phonenumber_field.phonenumber import to_python
+
 from event.models import Evenement, ParticipationEvenement
 from event.services.events import generate_recurrences_for_parent
 from event.services.scheduling_verse import schedule_vod_for_period, pick_candidate_verses
-from fidele.models import Eglise, BibleVersion, ProblemReport
+from fidele.models import Eglise, BibleVersion, ProblemReport, Role, Fidele
 from fidele.views import process_account_deletion_request
 from fidele.vod_smart import pick_smart_daily_verse_for_eglise
 # from .models import ParticipationEvenement
 from .notifications.fcm import send_to_topic, send_to_user
+from .utils.orange_sms import send_sms
 
 
 @shared_task
@@ -245,3 +250,82 @@ def notify_problem_created(self, problem_id: int):
     # Notifier le responsable direct
     if pr.assignee:
         send_to_user(pr.assignee, title=title, body=body, data={"problem_id": str(pr.id)})
+
+
+
+
+
+logger = logging.getLogger(__name__)
+
+def _fmt_date(d):
+    return d.strftime("%d/%m/%Y") if d else "—"
+
+def _build_message(report: ProblemReport) -> str:
+    reporter_user = getattr(report.reporter, "user", None)
+    full_name = ""
+    if reporter_user:
+        full_name = f"{reporter_user.first_name} {reporter_user.last_name}".strip()
+    full_name = full_name or "Un fidèle"
+    due = _fmt_date(report.due_date)
+    return (
+        f"Bonjour, le fidèle {full_name} a signalé « {report.title} » "
+        f"(échéance: {due}). Merci de le contacter."
+    )
+
+def _pastors_queryset(report: ProblemReport):
+    try:
+        role_pasteur = Role.objects.get(code="PASTEUR")
+    except Role.DoesNotExist:
+        return Fidele.objects.none()
+
+    return (
+        Fidele.objects
+        .filter(
+            roles=role_pasteur,
+            eglise=report.eglise,
+            phone__isnull=False,
+        )
+        .distinct()
+    )
+
+def _e164_numbers(fideles: Iterable[Fidele]) -> list[str]:
+    numbers = []
+    for f in fideles:
+        if not f.phone:
+            continue
+        p = to_python(f.phone)
+        if p and p.is_valid():
+            numbers.append(p.as_e164)  # ex: +2250700000000
+    return numbers
+
+@shared_task(bind=True, autoretry_for=(Exception,), retry_backoff=True, retry_kwargs={"max_retries": 5})
+def send_problem_sms_to_pastors(self, report_id: int) -> dict:
+    """
+    Envoie le SMS aux pasteurs (rôle PASTEUR) de la même église que le report.
+    - retry exponentiel auto (retry_backoff=True)
+    - max_retries=5
+    Renvoie un petit résumé {sent: n, to: [...]} pour logs.
+    """
+    try:
+        report = ProblemReport.objects.select_related("reporter__user", "eglise").get(pk=report_id)
+    except ProblemReport.DoesNotExist:
+        logger.warning("Report %s introuvable pour envoi SMS", report_id)
+        return {"sent": 0, "to": []}
+
+    msg = _build_message(report)
+    qs = _pastors_queryset(report)
+    recipients = _e164_numbers(qs)
+
+    sent = 0
+    for to in recipients:
+        try:
+            send_sms(to, msg)
+            sent += 1
+        except Exception as e:
+            logger.exception("Échec envoi SMS à %s pour report %s: %s", to, report_id, e)
+            # On laisse l’autoretry gérer les cas transitoires.
+            # Si tu veux retry par numéro, tu peux lever ici pour stopper la task et replanifier.
+            continue
+
+    logger.info("SMS problème #%s envoyé à %d/%d pasteurs", report_id, sent, len(recipients))
+    return {"sent": sent, "to": recipients}

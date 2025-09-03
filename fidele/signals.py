@@ -17,7 +17,7 @@ from abmci.services.notifications import notify_new_comment
 from abmci.utils.orange_sms import send_sms
 from fidele.models import Fidele, PrayerRequest, PrayerComment, ProblemReport, Role
 from django.dispatch import Signal
-
+from abmci.tasks import send_problem_sms_to_pastors
 notify = Signal()
 
 
@@ -162,3 +162,13 @@ def notify_pastors_on_problem_created(sender, instance: ProblemReport, created, 
             # log silencieux, ne bloque pas la requête
             import logging
             logging.getLogger(__name__).exception("Échec envoi SMS à %s", to)
+
+
+@receiver(post_save, sender=ProblemReport)
+def notify_pastors_on_problem(sender, instance: ProblemReport, created, **kwargs):
+    """
+    Dès qu’un nouveau problème est signalé, planifie l’envoi de SMS aux pasteurs via Celery.
+    """
+    if created:
+        # on décale un peu (5s) pour s'assurer que tout est bien commit
+        send_problem_sms_to_pastors.apply_async(args=[instance.id], countdown=5)
