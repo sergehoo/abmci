@@ -237,7 +237,7 @@ class Eglise(models.Model):
 class ProblemCategory(models.Model):
     """Catégories configurables depuis l’admin."""
     name = models.CharField(max_length=120, unique=True)
-    slug = models.SlugField(unique=True)
+    slug = models.SlugField(unique=True, editable=False)
     description = models.TextField(blank=True, null=True)
     is_active = models.BooleanField(default=True)
 
