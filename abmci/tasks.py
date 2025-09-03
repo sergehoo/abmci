@@ -275,7 +275,7 @@ def _build_message(report: ProblemReport) -> str:
 
 def _pastors_queryset(report: ProblemReport):
     try:
-        role_pasteur = Role.objects.get(code="PASTEUR")
+        role_pasteur = Role.objects.get(code="ASSISTANT_SOCIAL")
     except Role.DoesNotExist:
         return Fidele.objects.none()
 
