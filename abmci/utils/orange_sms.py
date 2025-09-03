@@ -114,6 +114,7 @@ def send_sms(to_e164: str, message: str) -> None:
         "outboundSMSMessageRequest": {
             "address": f"tel:{dest}",
             "senderAddress": sender_address,  # doit matcher le segment du path
+            "senderName": "IPCI",
             "outboundSMSTextMessage": {"message": message[:160]},
         }
     }
