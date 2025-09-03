@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 from datetime import date
 from io import BytesIO
@@ -21,6 +23,7 @@ from event.services.scheduling_verse import schedule_vod_for_period, pick_candid
 from fidele.models import Eglise, BibleVersion, ProblemReport, Role, Fidele
 from fidele.views import process_account_deletion_request
 from fidele.vod_smart import pick_smart_daily_verse_for_eglise
+from .notifications import fcm
 # from .models import ParticipationEvenement
 from .notifications.fcm import send_to_topic, send_to_user
 from .utils.orange_sms import send_sms
@@ -330,3 +333,55 @@ def send_problem_sms_to_pastors(self, report_id: int) -> dict:
 
     logger.info("SMS problème #%s envoyé à %d/%d pasteurs", report_id, sent, len(recipients))
     return {"sent": sent, "to": recipients}
+
+
+@shared_task(bind=True, max_retries=3, default_retry_delay=5)
+def notify_problem_changed(self, report_id: int, changed: dict[str, str] | None = None):
+    """
+    Notifie le reporter (via topic user_{id}) qu'un signalement a changé.
+    changed: dict avec éventuellement les clés 'status' et/ou 'assignee'
+             et des valeurs humaines (ex: 'En cours', 'Pasteur Kouamé')
+    """
+    try:
+        report = ProblemReport.objects.select_related(
+            "reporter__user", "assignee__user", "category", "eglise"
+        ).get(pk=report_id)
+    except ProblemReport.DoesNotExist:
+        return
+
+    title = "Signalement mis à jour"
+    parts: list[str] = []
+
+    # Statut
+    if changed and "status" in changed:
+        parts.append(f"Statut : {changed['status']}")
+
+    # Assignation
+    if changed and "assignee" in changed:
+        parts.append(f"Imputé à : {changed['assignee']}")
+
+    # Message par défaut si rien dans changed (fallback)
+    if not parts:
+        parts = ["Votre signalement a été mis à jour."]
+
+    body = f"« {report.title} » • " + " • ".join(parts)
+
+    data = {
+        "type": "PROBLEM_UPDATED",
+        "problem_id": str(report.id),
+        "status": report.status,
+        "status_display": report.get_status_display(),
+        "assignee_id": str(report.assignee_id or ""),
+        "assignee_name": (report.assignee and report.assignee.user.get_full_name()) or "",
+        "category": report.category.name if report.category else "",
+        "updated_at": timezone.now().isoformat(),
+    }
+
+    # Envoi au reporter via topic user_{id}
+    fcm.send_to_user(
+        report.reporter,
+        title=title,
+        body=body,
+        data=data,
+        dry_run=False,
+    )

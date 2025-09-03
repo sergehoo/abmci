@@ -1,5 +1,6 @@
 from datetime import datetime
 import random
+from typing import Optional
 
 from allauth.account.signals import user_signed_up
 from django.contrib.auth.hashers import make_password
@@ -17,7 +18,8 @@ from abmci.services.notifications import notify_new_comment
 from abmci.utils.orange_sms import send_sms
 from fidele.models import Fidele, PrayerRequest, PrayerComment, ProblemReport, Role
 from django.dispatch import Signal
-from abmci.tasks import send_problem_sms_to_pastors
+from abmci.tasks import send_problem_sms_to_pastors, notify_problem_changed
+
 notify = Signal()
 
 
@@ -172,3 +174,59 @@ def notify_pastors_on_problem(sender, instance: ProblemReport, created, **kwargs
     if created:
         # on décale un peu (5s) pour s'assurer que tout est bien commit
         send_problem_sms_to_pastors.apply_async(args=[instance.id], countdown=5)
+
+def _assignee_label(fid) -> str:
+    """
+    Libellé humain pour l'assigné.
+    """
+    if not fid:
+        return "Non assigné"
+    full = fid.user.get_full_name().strip()
+    return full or fid.user.username or f"Fidèle #{fid.pk}"
+
+
+@receiver(pre_save, sender=ProblemReport)
+def _store_previous_values(sender, instance: ProblemReport, **kwargs):
+    """
+    Avant sauvegarde, on mémorise les anciennes valeurs pour comparaison en post_save.
+    """
+    if not instance.pk:
+        # création: pas de comparaison
+        instance.__old_status = None
+        instance.__old_assignee_id = None
+        return
+
+    try:
+        old = ProblemReport.objects.only("status", "assignee").get(pk=instance.pk)
+        instance.__old_status = old.status
+        instance.__old_assignee_id = old.assignee_id
+    except ProblemReport.DoesNotExist:
+        instance.__old_status = None
+        instance.__old_assignee_id = None
+
+
+@receiver(post_save, sender=ProblemReport)
+def _notify_on_change(sender, instance: ProblemReport, created: bool, **kwargs):
+    """
+    Après sauvegarde, si statut ou assigné a changé, on notifie le reporter via FCM (asynchrone).
+    """
+    # On ne notifie pas ici lors de la création : tu as déjà une task de création.
+    if created:
+        return
+
+    old_status: Optional[str] = getattr(instance, "__old_status", None)
+    old_assignee_id: Optional[int] = getattr(instance, "__old_assignee_id", None)
+
+    changed: dict[str, str] = {}
+
+    # Statut changé ?
+    if old_status is not None and old_status != instance.status:
+        changed["status"] = instance.get_status_display()
+
+    # Assigné changé ?
+    if old_assignee_id != instance.assignee_id:
+        changed["assignee"] = _assignee_label(instance.assignee)
+
+    if changed:
+        # Appel asynchrone Celery
+        notify_problem_changed.delay(instance.pk, changed)
