@@ -120,48 +120,48 @@ def _fmt_date(d):
 
 
 
-@receiver(post_save, sender=ProblemReport)
-def notify_pastors_on_problem_created(sender, instance: ProblemReport, created, **kwargs):
-    if not created:
-        return
-
-    # Récupère les pasteurs de la même église
-    try:
-        role_pasteur = Role.objects.get(code='PASTEUR')
-    except Role.DoesNotExist:
-        return  # aucun rôle pasteur configuré
-
-    qs = Fidele.objects.filter(
-        roles=role_pasteur,
-        eglise=instance.eglise,
-        phone__isnull=False,
-    ).distinct()
-
-    reporter_name = getattr(instance.reporter.user, "first_name", "") + " " + getattr(instance.reporter.user, "last_name", "")
-    reporter_name = reporter_name.strip() or "Un fidèle"
-    due = _fmt_date(instance.due_date)
-
-    # Message
-    msg = (
-        f"Bonjour, le fidèle {reporter_name} a signalé « {instance.title} » "
-        f"(échéance: {due}). Merci de le contacter."
-    )
-
-    # Envoie à chaque pasteur
-    for f in qs:
-        if not f.phone:
-            continue
-        # phone est un PhoneNumber -> convertir en E164 string
-        p = to_python(f.phone)
-        if not p:
-            continue
-        to = p.as_e164  # ex: +2250700000000
-        try:
-            send_sms(to, msg)
-        except Exception:
-            # log silencieux, ne bloque pas la requête
-            import logging
-            logging.getLogger(__name__).exception("Échec envoi SMS à %s", to)
+# @receiver(post_save, sender=ProblemReport)
+# def notify_pastors_on_problem_created(sender, instance: ProblemReport, created, **kwargs):
+#     if not created:
+#         return
+#
+#     # Récupère les pasteurs de la même église
+#     try:
+#         role_pasteur = Role.objects.get(code='PASTEUR')
+#     except Role.DoesNotExist:
+#         return  # aucun rôle pasteur configuré
+#
+#     qs = Fidele.objects.filter(
+#         roles=role_pasteur,
+#         eglise=instance.eglise,
+#         phone__isnull=False,
+#     ).distinct()
+#
+#     reporter_name = getattr(instance.reporter.user, "first_name", "") + " " + getattr(instance.reporter.user, "last_name", "")
+#     reporter_name = reporter_name.strip() or "Un fidèle"
+#     due = _fmt_date(instance.due_date)
+#
+#     # Message
+#     msg = (
+#         f"Bonjour, le fidèle {reporter_name} a signalé « {instance.title} » "
+#         f"(échéance: {due}). Merci de le contacter."
+#     )
+#
+#     # Envoie à chaque pasteur
+#     for f in qs:
+#         if not f.phone:
+#             continue
+#         # phone est un PhoneNumber -> convertir en E164 string
+#         p = to_python(f.phone)
+#         if not p:
+#             continue
+#         to = p.as_e164  # ex: +2250700000000
+#         try:
+#             send_sms(to, msg)
+#         except Exception:
+#             # log silencieux, ne bloque pas la requête
+#             import logging
+#             logging.getLogger(__name__).exception("Échec envoi SMS à %s", to)
 
 
 @receiver(post_save, sender=ProblemReport)
