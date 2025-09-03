@@ -697,12 +697,23 @@ class ProblemReportSerializer(serializers.ModelSerializer):
     status_display = serializers.CharField(source="get_status_display", read_only=True)
     severity_display = serializers.CharField(source="get_severity_display", read_only=True)
 
+    # 👇 Lecture: objet catégorie complet
+    category = ProblemCategorySerializer(read_only=True)
+    # 👇 Écriture: id de catégorie (alimente le champ `category`)
+    category_id = serializers.PrimaryKeyRelatedField(
+        queryset=ProblemCategory.objects.filter(is_active=True),
+        source="category",
+        write_only=True,
+        required=True,
+    )
+
     class Meta:
         model = ProblemReport
         read_only_fields = ["id", "eglise", "reporter", "created_at", "updated_at", "resolved_at"]
         fields = [
             "id", "eglise", "reporter", "reporter_name",
-            "category", "title", "description",
+            "category", "category_id",   # 👈 ajoute category_id
+            "title", "description",
             "assignee", "severity", "status", "due_date",
             "created_at", "updated_at", "resolved_at",
             "resolution_notes", "status_display", "severity_display",
@@ -714,7 +725,6 @@ class ProblemReportSerializer(serializers.ModelSerializer):
         return f"{u.first_name} {u.last_name}".strip()
 
     def validate(self, attrs):
-        # Empêche un fidèle de créer pour une autre église
         request = self.context.get("request")
         if request and request.user.is_authenticated and request.method == "POST":
             try:
