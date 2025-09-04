@@ -3,14 +3,15 @@ from __future__ import annotations
 from typing import Iterable, Set
 from django.db import transaction
 from django.contrib.auth import get_user_model
+import logging
 
 from notifications.models import Notification
-# from abmci.notifications.fcm import send_to_user_topic
+from abmci.notifications.fcm import send_to_user  # ⬅️ utilise la bonne fonction
 
+logger = logging.getLogger(__name__)
 User = get_user_model()
 
 def _title_for_comment(prayer) -> str:
-    # titre court
     return "Nouveau commentaire"
 
 def _body_for_comment(prayer, comment) -> str:
@@ -26,27 +27,18 @@ def _payload_for_comment(prayer, comment) -> dict:
         "type": "COMMENT_NEW",
         "prayer_id": str(prayer.id),
         "comment_id": str(comment.id),
+        # 🔗 ajoute un deeplink pour router côté app
+        "deeplink": f"ac://prayer/{prayer.id}?focus={comment.id}",
     }
 
 def recipients_for_new_comment(prayer, new_comment) -> Set[int]:
-    """
-    - auteur du sujet
-    - tous les commentateurs précédents
-    - exclure l’auteur du nouveau commentaire
-    """
     recips: Set[int] = set()
-
     if getattr(prayer, "user_id", None):
         recips.add(prayer.user_id)
-
-    # Tous les commentateurs distincts du thread
     qs = prayer.comments.values_list("user_id", flat=True).distinct()
     recips.update(uid for uid in qs if uid)
-
-    # Exclure l'auteur du nouveau commentaire
     if getattr(new_comment, "user_id", None):
         recips.discard(new_comment.user_id)
-
     return recips
 
 def notify_new_comment(prayer, comment):
@@ -65,7 +57,12 @@ def notify_new_comment(prayer, comment):
         ok = fail = 0
         for uid in recips:
             try:
-                # Sauvegarde locale (pour l’onglet Notifications)
+                # (Optionnel) déduplication: à activer si tu ajoutes une contrainte unique
+                # notif, created = Notification.objects.get_or_create(
+                #     user_id=uid,
+                #     type="COMMENT_NEW",
+                #     defaults={"title": title, "body": body, "data": data},
+                # )
                 Notification.objects.create(
                     user_id=uid,
                     type="COMMENT_NEW",
@@ -73,14 +70,16 @@ def notify_new_comment(prayer, comment):
                     body=body,
                     data=data,
                 )
-                # Push FCM topic utilisateur
-                send_to_user_topic(uid, title, body, data)
+                # ⚠️ send_to_user accepte un User OU un Fidele
+                # Ici on lui passe l'ID utilisateur → on peut faire un petit wrapper
+                class _Dummy: pass
+                u = _Dummy(); u.id = uid
+                # Data-only recommandé pour éviter doublons foreground
+                send_to_user(u, title=title, body=body, data=data, dry_run=False)
                 ok += 1
             except Exception as e:
                 fail += 1
-                # remplace par ton logger
-                print(f"[NOTIF][user_{uid}] FAILED: {e!r}")
-        print(f"[NOTIF][COMMENT] sent={ok}, failed={fail}")
+                logger.exception("[NOTIF][user_%s] FAILED: %r", uid, e)
+        logger.info("[NOTIF][COMMENT] sent=%s, failed=%s", ok, fail)
 
-    # Important: push après que le commentaire soit réellement committé
     transaction.on_commit(_send)

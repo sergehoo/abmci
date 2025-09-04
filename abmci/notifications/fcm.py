@@ -44,7 +44,7 @@ def _build_credential() -> Optional[credentials.Base]:
                 raise ValueError("FIREBASE_SERVICE_ACCOUNT_JSON ne correspond pas à une clé service_account.")
             return credentials.Certificate(data)
 
-    if os.getenv("GOOGLE_APPLICATION_CREDENTIALS") or getattr(settings, "USE_GOOGLE_APPLICATION_DEFAULT", False):
+    if os.getenv("GOOGLE_APPLICATION_CREDENTIAL") or getattr(settings, "USE_GOOGLE_APPLICATION_DEFAULT", False):
         return credentials.ApplicationDefault()
 
     return None
@@ -128,32 +128,49 @@ def _android_config(
     ttl_seconds: Optional[int] = None,
     priority_high: bool = True,
     channel_id: Optional[str] = None,
+    collapse_key: Optional[str] = None,
+    image_url: Optional[str] = None,
+    use_notification: bool = True,  # piloté au niveau appel
 ):
-    # FCM max TTL is 4 weeks
-    MAX_TTL = 28 * 24 * 3600  # seconds
+    MAX_TTL = 28 * 24 * 3600
     ttl = None
     if ttl_seconds is not None:
         ttl_seconds = max(0, min(int(ttl_seconds), MAX_TTL))
         ttl = timedelta(seconds=ttl_seconds)
 
+    notif = None
+    if use_notification:
+        notif = messaging.AndroidNotification(
+            channel_id=channel_id,
+            image=image_url,
+        )
+
     return messaging.AndroidConfig(
         priority="high" if priority_high else "normal",
         ttl=ttl,
-        notification=messaging.AndroidNotification(channel_id=channel_id) if channel_id else None,
+        collapse_key=collapse_key,
+        notification=notif,
     )
 
 def _apns_config(
     ttl_seconds: Optional[int] = None,
     sound: Optional[str] = "default",
     mutable_content: bool = False,
+    badge: Optional[int] = None,
+    silent: bool = False,
 ):
     headers = {}
     if ttl_seconds:
         headers["apns-expiration"] = str(int(time.time()) + int(ttl_seconds))
-    payload = messaging.APNSPayload(
-        aps=messaging.Aps(sound=sound, mutable_content=mutable_content)
+
+    aps = messaging.Aps(
+        sound=None if silent else sound,
+        mutable_content=mutable_content,
+        badge=badge,
+        content_available=True if silent else None,
     )
-    return messaging.APNSConfig(headers=headers or None, payload=payload)
+    return messaging.APNSConfig(headers=headers or None, payload=messaging.APNSPayload(aps=aps))
+
 
 # -----------------------------
 # Envois unitaires
@@ -167,16 +184,22 @@ def send_to_token(
     *,
     ttl_seconds: Optional[int] = 3600,
     android_channel_id: Optional[str] = None,
+    android_collapse_key: Optional[str] = None,
+    android_image_url: Optional[str] = None,
+    apns_badge: Optional[int] = None,
+    silent: bool = False,
+    use_notification: bool = False,  # défaut data-only
     dry_run: bool = False,
     max_retries: int = 3,
 ):
     _ensure_initialized()
     msg = messaging.Message(
-        notification=messaging.Notification(title=title, body=body),
+        notification=(None if (silent or not use_notification) else messaging.Notification(title=title, body=body)),
         data=_str_dict(data),
         token=token,
-        android=_android_config(ttl_seconds, True, android_channel_id),
-        apns=_apns_config(ttl_seconds),
+        android=_android_config(ttl_seconds, True, android_channel_id, android_collapse_key, android_image_url,
+                                use_notification and not silent),
+        apns=_apns_config(ttl_seconds, badge=apns_badge, silent=silent),
     )
     # retries
     attempt = 0
@@ -290,6 +313,9 @@ def send_multicast_to_tokens(
             if not resp_item.success:
                 err = resp_item.exception
                 err_code = getattr(err, "code", "unknown")
+                if err_code in {"registration-token-not-registered", "invalid-argument"}:
+                    # TODO: marquer ce token comme invalide en DB (ex: TokenDevice.objects.filter(token=chunk[idx]).update(active=False))
+                    pass
             outcomes.append((chunk[idx], err_code if err_code else None))
 
     return total_ok, outcomes
