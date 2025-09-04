@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import date
+from datetime import date, timedelta
 from io import BytesIO
 from typing import Iterable
 
@@ -15,12 +15,13 @@ from django.utils import timezone
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
 from django.core.files.base import ContentFile
+from notifications.models import Notification
 from phonenumber_field.phonenumber import to_python
 
 from event.models import Evenement, ParticipationEvenement
 from event.services.events import generate_recurrences_for_parent
 from event.services.scheduling_verse import schedule_vod_for_period, pick_candidate_verses
-from fidele.models import Eglise, BibleVersion, ProblemReport, Role, Fidele
+from fidele.models import Eglise, BibleVersion, ProblemReport, Role, Fidele, ProblemAction
 from fidele.views import process_account_deletion_request
 from fidele.vod_smart import pick_smart_daily_verse_for_eglise
 from .notifications import fcm
@@ -385,3 +386,44 @@ def notify_problem_changed(self, report_id: int, changed: dict[str, str] | None 
         data=data,
         dry_run=False,
     )
+
+INCOMPLETE = {"OPEN", "WIP", "HOLD"}
+
+def _last_activity(problem_id: int):
+    # dernière action ou updated_at comme fallback
+    agg = ProblemAction.objects.filter(problem_id=problem_id).aggregate(last=Max("created_at"))
+    return agg["last"]
+
+@shared_task(bind=True, max_retries=2, default_retry_delay=30)
+def remind_stale_problems(self, delay_hours: int = 48):
+    now = timezone.now()
+    threshold = now - timedelta(hours=delay_hours)
+    qs = ProblemReport.objects.filter(
+        status__in=INCOMPLETE,
+        is_deleted=False,
+    ).only("id", "title", "assignee_id", "reporter_id")
+
+    count = 0
+    for pr in qs:
+        last = _last_activity(pr.id) or pr.updated_at or pr.created_at
+        if last and last < threshold:
+            # Notifier l’assigné si présent, sinon le reporter
+            targets = []
+            if pr.assignee_id:
+                targets.append(pr.assignee)
+            elif pr.reporter_id:
+                targets.append(pr.reporter)
+            title = "Rappel traitement"
+            body = f"Aucune action récente pour: {pr.title}"
+            data = {"type": "PROBLEM_REMINDER", "problem_id": str(pr.id)}
+            for f in targets:
+                try:
+                    uid = f.user_id if hasattr(f, "user_id") else f.id
+                    Notification.objects.create(user_id=uid, type="PROBLEM_REMINDER", title=title, body=body, data=data)
+                    class _U: pass
+                    u = _U(); u.id = uid
+                    send_to_user(u, title=title, body=body, data=data)
+                except Exception:
+                    pass
+            count += 1
+    return {"reminded": count, "delay_hours": delay_hours}

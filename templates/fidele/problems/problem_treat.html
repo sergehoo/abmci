@@ -1,0 +1,437 @@
+{# templates/problems/problem_treat.html #}
+{% extends "layout/base.html" %}
+{% load widget_tweaks %}
+
+{% block content %}
+<div class="nk-content nk-content-fluid">
+    <div class="container-xl wide-xl">
+        <div class="nk-content-inner">
+            <div class="nk-content-body">
+                <!-- Header -->
+                <div class="nk-block-head nk-block-head-sm">
+                    <div class="nk-block-between">
+                        <div class="nk-block-head-content">
+                            <h3 class="nk-block-title page-title">Traitement du Signalement #{{ problem.id }}</h3>
+                            <div class="nk-block-des">
+                                <p class="lead-text">{{ problem.title }}</p>
+                            </div>
+                        </div>
+                        <div class="nk-block-head-content">
+                            <a href="{% url 'problemreport_list' %}" class="btn btn-outline-light">
+                                <em class="icon ni ni-arrow-left"></em>
+                                <span>Retour à la liste</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="nk-block">
+                    <div class="row g-gs">
+                        <!-- Colonne principale - Formulaires de traitement -->
+                        <div class="col-lg-8">
+                            <!-- Carte de réponse/commentaire -->
+                            <div class="card card-bordered">
+                                <div class="card-inner">
+                                    <h5 class="title">Ajouter une réponse</h5>
+                                    <form method="post" action="{% url 'treat_post' problem.pk %}">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="action" value="comment"/>
+                                        
+                                        <div class="form-group">
+                                            <label class="form-label">Message</label>
+                                            {% render_field comment_form.message class="form-control" rows="4" placeholder="Votre réponse..." %}
+                                            {% if comment_form.message.errors %}
+                                                <div class="invalid-feedback d-block">
+                                                    {{ comment_form.message.errors }}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                        
+                                        <button type="submit" class="btn btn-primary">
+                                            <em class="icon ni ni-send"></em> Envoyer la réponse
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+
+                            <!-- Carte d'assignation -->
+                            <div class="card card-bordered mt-4">
+                                <div class="card-inner">
+                                    <h5 class="title">Assigner à un membre</h5>
+                                    <form method="post" action="{% url 'treat_post' problem.pk %}">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="action" value="assign"/>
+                                        
+                                        <div class="form-group">
+                                            <label class="form-label">Assigner à</label>
+                                            {% render_field assign_form.assignee class="form-select" %}
+                                            {% if assign_form.assignee.errors %}
+                                                <div class="invalid-feedback d-block">
+                                                    {{ assign_form.assignee.errors }}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                        
+                                        <button type="submit" class="btn btn-warning">
+                                            <em class="icon ni ni-user"></em> Assigner
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+
+                            <!-- Carte de changement de statut -->
+                            <div class="card card-bordered mt-4">
+                                <div class="card-inner">
+                                    <h5 class="title">Changer le statut</h5>
+                                    <form method="post" action="{% url 'treat_post' problem.pk %}">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="action" value="status"/>
+                                        
+                                        <div class="form-group">
+                                            <label class="form-label">Nouveau statut</label>
+                                            {% render_field status_form.status class="form-select" %}
+                                            {% if status_form.status.errors %}
+                                                <div class="invalid-feedback d-block">
+                                                    {{ status_form.status.errors }}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                        
+                                        <div class="form-group">
+                                            <label class="form-label">Notes (optionnel)</label>
+{#                                            {% render_field status_form.notes class="form-control" rows="3" placeholder="Notes supplémentaires..." %}#}
+                                        </div>
+                                        
+                                        <button type="submit" class="btn btn-info">
+                                            <em class="icon ni ni-refresh"></em> Mettre à jour le statut
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+
+                            <!-- Carte de rappel -->
+                            <div class="card card-bordered mt-4">
+                                <div class="card-inner">
+                                    <h5 class="title">Définir un rappel</h5>
+                                    <form method="post" action="{% url 'treat_post' problem.pk %}">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="action" value="reminder"/>
+                                        
+                                        <div class="form-group">
+                                            <label class="form-label">Date de rappel</label>
+{#                                            {% render_field reminder_form.reminder_date type="date" class="form-control" %}#}
+                                            {% if reminder_form.reminder_date.errors %}
+                                                <div class="invalid-feedback d-block">
+                                                    {{ reminder_form.reminder_date.errors }}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                        
+                                        <div class="form-group">
+                                            <label class="form-label">Message de rappel</label>
+                                            {% render_field reminder_form.message class="form-control" rows="2" placeholder="Message pour le rappel..." %}
+                                        </div>
+                                        
+                                        <button type="submit" class="btn btn-secondary">
+                                            <em class="icon ni ni-alarm"></em> Programmer le rappel
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+
+                            <!-- Carte de génération de rapport -->
+                            <div class="card card-bordered mt-4">
+                                <div class="card-inner">
+                                    <h5 class="title">Générer un rapport</h5>
+                                    <form method="post" action="{% url 'treat_post' problem.pk %}">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="action" value="report"/>
+                                        
+                                        <div class="form-group">
+                                            <label class="form-label">Format du rapport</label>
+                                            <select name="report_format" class="form-select">
+                                                <option value="pdf">PDF</option>
+                                                <option value="csv">CSV</option>
+                                                <option value="excel">Excel</option>
+                                            </select>
+                                        </div>
+                                        
+                                        <button type="submit" class="btn btn-success">
+                                            <em class="icon ni ni-file-text"></em> Générer le rapport
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Colonne latérale - Informations et historique -->
+                        <div class="col-lg-4">
+                            <!-- Métadonnées du signalement -->
+                            <div class="card card-bordered">
+                                <div class="card-inner">
+                                    <h6 class="title">Informations du Signalement</h6>
+                                    <div class="mb-3">
+                                        <strong>Statut actuel:</strong>
+                                        <span class="badge bg-{% if problem.status == 'OPEN' %}warning{% elif problem.status == 'WIP' %}info{% elif problem.status == 'DONE' %}success{% elif problem.status == 'HOLD' %}secondary{% else %}danger{% endif %} float-end">
+                                            {{ problem.get_status_display }}
+                                        </span>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <strong>Sévérité:</strong>
+                                        <span class="badge bg-{% if problem.severity == 'LOW' %}success{% elif problem.severity == 'MED' %}info{% elif problem.severity == 'HIGH' %}warning{% else %}danger{% endif %} float-end">
+                                            {{ problem.get_severity_display }}
+                                        </span>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <strong>Catégorie:</strong>
+                                        <span class="float-end">{{ problem.category.name|default:"Non spécifiée" }}</span>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <strong>Assigné à:</strong>
+                                        <span class="float-end">
+                                            {% if problem.assignee %}
+                                                {{ problem.assignee.user.get_full_name }}
+                                            {% else %}
+                                                <span class="text-soft">Non assigné</span>
+                                            {% endif %}
+                                        </span>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <strong>Créé par:</strong>
+                                        <span class="float-end">{{ problem.reporter.user.get_full_name }}</span>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <strong>Date création:</strong>
+                                        <span class="float-end">{{ problem.created_at|date:"d/m/Y H:i" }}</span>
+                                    </div>
+                                    
+                                    {% if problem.due_date %}
+                                    <div class="mb-3">
+                                        <strong>Échéance:</strong>
+                                        <span class="float-end {% if problem.is_overdue %}text-danger{% endif %}">
+                                            {{ problem.due_date|date:"d/m/Y" }}
+                                            {% if problem.is_overdue %}(Retard){% endif %}
+                                        </span>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <!-- Historique des actions -->
+                            <div class="card card-bordered mt-4">
+                                <div class="card-inner">
+                                    <h6 class="title">Historique des Actions</h6>
+                                    <div class="timeline">
+                                        {% for action in problem.actions.all %}
+                                        <div class="timeline-item">
+                                            <div class="timeline-time">
+                                                {{ action.created_at|date:"d/m/Y H:i" }}
+                                            </div>
+                                            <div class="timeline-dot bg-{% if action.type == 'comment' %}info{% elif action.type == 'assign' %}warning{% elif action.type == 'status' %}primary{% else %}secondary{% endif %}"></div>
+                                            <div class="timeline-content">
+                                                <div class="timeline-head">
+                                                    <span class="badge bg-outline-{% if action.type == 'comment' %}info{% elif action.type == 'assign' %}warning{% elif action.type == 'status' %}primary{% else %}secondary{% endif %}">
+                                                        {{ action.get_type_display }}
+                                                    </span>
+                                                    <span class="text-soft">par {{ action.user.get_full_name }}</span>
+                                                </div>
+                                                {% if action.message %}
+                                                <p class="timeline-description">{{ action.message }}</p>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                        {% empty %}
+                                        <div class="text-center py-3">
+                                            <em class="icon ni ni-info text-soft" style="font-size: 2rem;"></em>
+                                            <p class="mt-2 text-soft">Aucune action enregistrée</p>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Actions rapides -->
+                            <div class="card card-bordered mt-4">
+                                <div class="card-inner">
+                                    <h6 class="title">Actions Rapides</h6>
+                                    <div class="btn-group-vertical w-100">
+                                        <button onclick="markAsResolved()" class="btn btn-outline-success">
+                                            <em class="icon ni ni-check-circle"></em> Marquer comme résolu
+                                        </button>
+                                        <button onclick="requestMoreInfo()" class="btn btn-outline-info">
+                                            <em class="icon ni ni-question-circle"></em> Demander plus d'info
+                                        </button>
+                                        <button onclick="escalateProblem()" class="btn btn-outline-warning">
+                                            <em class="icon ni ni-alert-circle"></em> Escalader le problème
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .timeline {
+        position: relative;
+        padding-left: 30px;
+        max-height: 400px;
+        overflow-y: auto;
+    }
+
+    .timeline-item {
+        position: relative;
+        padding-bottom: 20px;
+    }
+
+    .timeline-time {
+        font-size: 0.75rem;
+        color: #7987a1;
+        margin-bottom: 5px;
+    }
+
+    .timeline-dot {
+        position: absolute;
+        left: -30px;
+        top: 5px;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        border: 2px solid white;
+    }
+
+    .timeline-content {
+        background: white;
+        padding: 12px;
+        border-radius: 6px;
+        border: 1px solid #e5e9f2;
+        margin-bottom: 10px;
+    }
+
+    .timeline-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    .timeline-description {
+        margin: 0;
+        font-size: 0.9rem;
+        color: #526484;
+    }
+
+    .btn-group-vertical .btn {
+        text-align: left;
+        justify-content: start;
+        margin-bottom: 8px;
+        padding: 12px;
+    }
+
+    .card {
+        margin-bottom: 1rem;
+    }
+
+    .form-group {
+        margin-bottom: 1rem;
+    }
+</style>
+
+<script>
+    function markAsResolved() {
+        Swal.fire({
+            title: 'Marquer comme résolu',
+            text: 'Êtes-vous sûr de vouloir marquer ce signalement comme résolu ?',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#6576ff',
+            cancelButtonColor: '#f5365c',
+            confirmButtonText: 'Oui, marquer comme résolu',
+            cancelButtonText: 'Annuler'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // Soumettre le formulaire de changement de statut
+                document.querySelector('input[name="action"][value="status"]').value = 'status';
+                document.querySelector('select[name="status"]').value = 'DONE';
+                document.querySelector('form[action*="status"]').submit();
+            }
+        });
+    }
+
+    function requestMoreInfo() {
+        Swal.fire({
+            title: 'Demander plus d\'informations',
+            input: 'textarea',
+            inputLabel: 'Quelles informations supplémentaires avez-vous besoin ?',
+            inputPlaceholder: 'Décrivez les informations manquantes...',
+            showCancelButton: true,
+            confirmButtonColor: '#6576ff',
+            cancelButtonColor: '#f5365c',
+            confirmButtonText: 'Envoyer la demande',
+            cancelButtonText: 'Annuler'
+        }).then((result) => {
+            if (result.isConfirmed && result.value) {
+                // Soumettre le formulaire de commentaire
+                document.querySelector('input[name="action"][value="comment"]').value = 'comment';
+                document.querySelector('textarea[name="message"]').value = "Demande d'information: " + result.value;
+                document.querySelector('form[action*="comment"]').submit();
+            }
+        });
+    }
+
+    function escalateProblem() {
+        Swal.fire({
+            title: 'Escalader le problème',
+            text: 'Cette action va notifier les responsables supérieurs. Continuer ?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#6576ff',
+            cancelButtonColor: '#f5365c',
+            confirmButtonText: 'Oui, escalader',
+            cancelButtonText: 'Annuler'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // Logique d'escalade
+                fetch("#", {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': '{{ csrf_token }}',
+                        'Content-Type': 'application/json'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        Swal.fire('Succès', 'Problème escaladé avec succès', 'success');
+                    } else {
+                        Swal.fire('Erreur', data.error, 'error');
+                    }
+                });
+            }
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialisation des datepickers
+        const dateInputs = document.querySelectorAll('input[type="date"]');
+        dateInputs.forEach(input => {
+            if (!input.value) {
+                const tomorrow = new Date();
+                tomorrow.setDate(tomorrow.getDate() + 1);
+                input.value = tomorrow.toISOString().split('T')[0];
+            }
+        });
+    });
+</script>
+{% endblock %}

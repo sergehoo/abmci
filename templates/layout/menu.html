@@ -12,7 +12,10 @@
         </a>
         <ul class="nk-menu-sub">
             <li class="nk-menu-item">
-                <a class="nk-menu-link" href="{% url 'membres' %}"><span class="nk-menu-text">Membres</span></a>
+                <a class="nk-menu-link" href="{% url 'membres' %}"><span class="nk-menu-text">Fidèles</span></a>
+            </li>
+                    <li class="nk-menu-item">
+                <a class="nk-menu-link" href="{% url 'problemreport_list' %}"><span class="nk-menu-text">informations Fidèles</span></a>
             </li>
             <li class="nk-menu-item">
                 <a class="nk-menu-link" href="#"><span class="nk-menu-text">Pastorale</span></a>
@@ -46,7 +49,9 @@
 
         </ul>
             </li>
-
+ <li class="nk-menu-item">
+                <a class="nk-menu-link" href="{% url 'donation-list' %}"><span class="nk-menu-text">Donations - Offrandes </span></a>
+            </li>
         </ul><!-- .nk-menu-sub -->
     </li><!-- .nk-menu-item -->
 
@@ -198,18 +203,5 @@
             </li>
         </ul><!-- .nk-menu-sub -->
     </li><!-- .nk-menu-item -->
-<li class="nk-menu-item has-sub">
-        <a class="nk-menu-link nk-menu-toggle" href="#">
-            <span class="nk-menu-text">Fin</span>
-        </a>
-        <ul class="nk-menu-sub">
-            <li class="nk-menu-item">
-                <a class="nk-menu-link" href="{% url 'donation-list' %}"><span class="nk-menu-text">Dons & Offrandes </span></a>
-            </li>
-            <li class="nk-menu-item">
-                <a class="nk-menu-link" href="html/pages/terms-policy.html"><span
-                        class="nk-menu-text">Fils</span></a>
-            </li>
-        </ul><!-- .nk-menu-sub -->
-    </li>
+
 </ul><!-- .nk-menu -->

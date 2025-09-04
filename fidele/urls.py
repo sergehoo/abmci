@@ -5,7 +5,8 @@ from django.urls import path
 from . import views
 from .views import FideleListView, permanencecreate, FideleDetailView, VieDeLEgliseListView, EngagementListView, \
     StatutSocialListView, MessagerieListView, DirectionDetailView, FideleUpdateView, SuivieFideleListView, \
-    FideleDeleteView, FideleTransferView, FideleCreateView, complete_profile, profile_complete, Politique, SaftyChildren
+    FideleDeleteView, FideleTransferView, FideleCreateView, complete_profile, profile_complete, Politique, \
+    SaftyChildren, ProblemTreatView, ProblemTreatPostView
 
 urlpatterns = [
                   path('membres/', FideleListView.as_view(), name='membres'),
@@ -32,6 +33,21 @@ urlpatterns = [
 
                   path('donations/', views.DonationListView.as_view(), name='donation-list'),
                   path('donations/<int:pk>/', views.DonationDetailView.as_view(), name='donation-detail'),
+
+                  path("<int:pk>/traiter/", ProblemTreatView.as_view(), name="treat"),
+                  path("<int:pk>/traiter/post/", ProblemTreatPostView.as_view(), name="treat_post"),
+
+                  # ProblemReport URLs
+                  path('problemes/repportes', views.ProblemReportListView.as_view(), name='problemreport_list'),
+                  path('add/', views.ProblemReportCreateView.as_view(), name='problemreport_create'),
+                  path('<int:pk>/', views.ProblemReportDetailView.as_view(), name='problemreport_detail'),
+                  path('<int:pk>/edit/', views.ProblemReportUpdateView.as_view(), name='problemreport_update'),
+                  path('<int:pk>/delete/', views.ProblemReportDeleteView.as_view(), name='problemreport_delete'),
+                  path('<int:pk>/assign/', views.ProblemReportAssignView.as_view(), name='problemreport_assign'),
+                  path('<int:pk>/change-status/', views.ProblemReportChangeStatusView.as_view(),
+                       name='problemreport_change_status'),
+                  path('stats/', views.ProblemReportStatsView.as_view(), name='problemreport_stats'),
+
               ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

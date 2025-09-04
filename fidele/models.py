@@ -201,38 +201,10 @@ class Eglise(models.Model):
         super().save(*args, **kwargs)
 
         # Notifier si le verset a changé et que l'on souhaite notifier
-        if self.notify_on_save and not skip_notify and self.pk:
-            try:
-                changed = self._verset_changed(old_text, old_ref)
-            except Exception:
-                changed = False
-
-            if changed and self.verse_du_jour and self.verse_reference:
-                ref = self.verse_reference
-                txt = self.verse_du_jour
-                date_str = str(self.verse_date or today)
-
-                # Envoi APRÈS commit pour éviter les états incohérents
-                def _send():
-                    try:
-                        send_verse_to_eglise_topic(
-                            self.id,
-                            reference=ref,
-                            text=txt,
-                            date_str=date_str,
-                            # si tu stockes une version/lang par église, adapte ici :
-                            version="LSG",
-                            lang="fr",
-                            dry_run=False,
-                        )
-                    except Exception as e:
-                        # remplace par ton logger si besoin
-                        print(f"[FCM][eglise_{self.id}] Échec envoi (save): {e!r}")
-
-                transaction.on_commit(_send)
 
     def __str__(self):
         return self.name or "Église sans nom"
+
 
 class ProblemCategory(models.Model):
     """Catégories configurables depuis l’admin."""
@@ -267,11 +239,14 @@ class ProblemCategory(models.Model):
 
     def __str__(self):
         return self.name
+
+
 class ProblemReport(models.Model):
     """
     Signalement d’un fidèle, imputé à un responsable pour traitement.
     Exemples: décès d'un parent, absence pour maladie/voyage, assistance sociale, etc.
     """
+
     class Severity(models.TextChoices):
         LOW = "LOW", "Faible"
         MEDIUM = "MED", "Moyenne"
@@ -286,7 +261,8 @@ class ProblemReport(models.Model):
         CANCELED = "CANC", "Annulé"
 
     eglise = models.ForeignKey(Eglise, on_delete=models.CASCADE, related_name="problem_reports")
-    assignee = models.ForeignKey('fidele.Fidele', on_delete=models.SET_NULL, null=True, blank=True, related_name="assigned_problems")
+    assignee = models.ForeignKey('fidele.Fidele', on_delete=models.SET_NULL, null=True, blank=True,
+                                 related_name="assigned_problems")
     watchers = models.ManyToManyField('fidele.Fidele', blank=True, related_name="watched_problems")
     reporter = models.ForeignKey('fidele.Fidele', on_delete=models.CASCADE, related_name="problem_reports")
     category = models.ForeignKey(ProblemCategory, on_delete=models.SET_NULL, null=True, blank=True)
@@ -301,7 +277,6 @@ class ProblemReport(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     resolved_at = models.DateTimeField(null=True, blank=True)
     resolution_notes = models.TextField(blank=True, null=True)
-
 
     # Soft flags
     is_deleted = models.BooleanField(default=False)
@@ -337,6 +312,23 @@ class ProblemReport(models.Model):
                     and timezone.localdate() > self.due_date)
 
 
+class ProblemAction(models.Model):
+    class Type(models.TextChoices):
+        COMMENT = "COMMENT", "Commentaire"
+        ASSIGN = "ASSIGN", "Assignation"
+        STATUS = "STATUS", "Changement de statut"
+
+    problem = models.ForeignKey('ProblemReport', on_delete=models.CASCADE, related_name='actions')
+    author = models.ForeignKey('fidele.Fidele', on_delete=models.SET_NULL, null=True, blank=True)
+    type = models.CharField(max_length=16, choices=Type.choices)
+    message = models.TextField(blank=True)  # commentaire / note
+    meta = models.JSONField(default=dict, blank=True)  # ex: {"old": "OPEN", "new": "WIP", "assignee_id": 123}
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+
 def default_problem_categories():
     """À appeler via loaddata ou migration (LOW code setup)."""
     base = [
@@ -348,6 +340,8 @@ def default_problem_categories():
     ]
     for name, slug in base:
         ProblemCategory.objects.get_or_create(slug=slug, defaults={"name": name})
+
+
 class ProblemeParticulier(models.Model):
     class Gravite(models.TextChoices):
         FAIBLE = 'F', 'Faible'
@@ -385,7 +379,8 @@ class Familles(models.Model):
         return self.name
 
 
-def create_problem_report(*, reporter, eglise, title, description, category_slug=None,assignee=None, severity="MED", due_date=None, watchers=None) -> ProblemReport:
+def create_problem_report(*, reporter, eglise, title, description, category_slug=None, assignee=None, severity="MED",
+                          due_date=None, watchers=None) -> ProblemReport:
     """
     Crée un signalement et déclenche les notifications post-commit.
     `reporter`: instance Fidele
@@ -410,12 +405,13 @@ def create_problem_report(*, reporter, eglise, title, description, category_slug
             pr.watchers.add(*watchers)
     return pr
 
+
 class Role(models.Model):
     """
     Rôle générique dans l’église (ex: PASTEUR, DIACRE, SECOURISTE, etc.)
     """
     code = models.CharField(max_length=50, unique=True)  # ex: "PASTEUR"
-    name = models.CharField(max_length=100)              # ex: "Pasteur"
+    name = models.CharField(max_length=100)  # ex: "Pasteur"
     description = models.TextField(blank=True, null=True)
 
     class Meta:
@@ -424,6 +420,8 @@ class Role(models.Model):
 
     def __str__(self):
         return f"{self.name} ({self.code})"
+
+
 class Fidele(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="fidele", )
     firebase_uid = models.CharField(max_length=128, unique=True, null=True, blank=True)

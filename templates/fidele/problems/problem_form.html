@@ -1,0 +1,301 @@
+{% extends 'layout/base.html' %}
+
+{% block content %}
+<div class="nk-content nk-content-fluid">
+    <div class="container-xl wide-xl">
+        <div class="nk-content-inner">
+            <div class="nk-content-body">
+                <!-- Header -->
+                <div class="nk-block-head nk-block-head-sm">
+                    <div class="nk-block-between">
+                        <div class="nk-block-head-content">
+                            <h3 class="nk-block-title page-title">
+                                {% if form.instance.pk %}
+                                    Modifier le signalement
+                                {% else %}
+                                    Nouveau signalement
+                                {% endif %}
+                            </h3>
+                            <div class="nk-block-des">
+                                <p class="lead-text">
+                                    {% if form.instance.pk %}
+                                        Modifiez les informations du signalement existant
+                                    {% else %}
+                                        Créez un nouveau signalement pour un fidèle
+                                    {% endif %}
+                                </p>
+                            </div>
+                        </div>
+                        <div class="nk-block-head-content">
+                            <a href="{% url 'problemreport_list' %}" class="btn btn-outline-light">
+                                <em class="icon ni ni-arrow-left"></em>
+                                <span>Retour à la liste</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Formulaire -->
+                <div class="nk-block">
+                    <div class="card card-bordered">
+                        <div class="card-inner">
+                            <form method="post" novalidate>
+                                {% csrf_token %}
+                                
+                                {% if form.non_field_errors %}
+                                <div class="alert alert-danger">
+                                    <em class="icon ni ni-cross-circle"></em>
+                                    <strong>Erreurs :</strong>
+                                    {{ form.non_field_errors }}
+                                </div>
+                                {% endif %}
+
+                                <div class="row g-4">
+                                    <!-- Titre -->
+                                    <div class="col-md-12">
+                                        <div class="form-group">
+                                            <label class="form-label" for="{{ form.title.id_for_label }}">
+                                                Titre du signalement *
+                                            </label>
+                                            <div class="form-control-wrap">
+                                                {{ form.title }}
+                                                {% if form.title.errors %}
+                                                <span class="invalid">{{ form.title.errors }}</span>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Catégorie -->
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label class="form-label" for="{{ form.category.id_for_label }}">
+                                                Catégorie *
+                                            </label>
+                                            <div class="form-control-wrap">
+                                                {{ form.category }}
+                                                {% if form.category.errors %}
+                                                <span class="invalid">{{ form.category.errors }}</span>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Sévérité -->
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label class="form-label" for="{{ form.severity.id_for_label }}">
+                                                Niveau de sévérité *
+                                            </label>
+                                            <div class="form-control-wrap">
+                                                {{ form.severity }}
+                                                {% if form.severity.errors %}
+                                                <span class="invalid">{{ form.severity.errors }}</span>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Statut (seulement pour modification) -->
+                                    {% if form.instance.pk and perms.problems.can_assign_problem %}
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label class="form-label" for="{{ form.status.id_for_label }}">
+                                                Statut
+                                            </label>
+                                            <div class="form-control-wrap">
+                                                {{ form.status }}
+                                                {% if form.status.errors %}
+                                                <span class="invalid">{{ form.status.errors }}</span>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% endif %}
+
+                                    <!-- Date d'échéance -->
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label class="form-label" for="{{ form.due_date.id_for_label }}">
+                                                Date d'échéance
+                                            </label>
+                                            <div class="form-control-wrap">
+                                                <div class="input-group">
+                                                    {{ form.due_date }}
+                                                    <span class="input-group-text">
+                                                        <em class="icon ni ni-calendar"></em>
+                                                    </span>
+                                                </div>
+                                                {% if form.due_date.errors %}
+                                                <span class="invalid">{{ form.due_date.errors }}</span>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Description -->
+                                    <div class="col-12">
+                                        <div class="form-group">
+                                            <label class="form-label" for="{{ form.description.id_for_label }}">
+                                                Description détaillée *
+                                            </label>
+                                            <div class="form-control-wrap">
+                                                {{ form.description }}
+                                                {% if form.description.errors %}
+                                                <span class="invalid">{{ form.description.errors }}</span>
+                                                {% endif %}
+                                                <div class="form-note">
+                                                    Décrivez le problème de manière détaillée
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Notes de résolution (seulement pour modification) -->
+                                    {% if form.instance.pk and perms.problems.can_assign_problem %}
+                                    <div class="col-12">
+                                        <div class="form-group">
+                                            <label class="form-label" for="{{ form.resolution_notes.id_for_label }}">
+                                                Notes de résolution
+                                            </label>
+                                            <div class="form-control-wrap">
+                                                {{ form.resolution_notes }}
+                                                {% if form.resolution_notes.errors %}
+                                                <span class="invalid">{{ form.resolution_notes.errors }}</span>
+                                                {% endif %}
+                                                <div class="form-note">
+                                                    Ajoutez des notes sur la résolution du problème
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% endif %}
+                                </div>
+
+                                <!-- Actions -->
+                                <div class="row g-4 mt-4">
+                                    <div class="col-12">
+                                        <div class="form-group">
+                                            <button type="submit" class="btn btn-primary">
+                                                <em class="icon ni ni-save"></em>
+                                                {% if form.instance.pk %}
+                                                    Mettre à jour
+                                                {% else %}
+                                                    Créer le signalement
+                                                {% endif %}
+                                            </button>
+                                            <a href="{% url 'problemreport_list' %}" class="btn btn-outline-light">
+                                                <em class="icon ni ni-cross"></em>
+                                                Annuler
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .form-control {
+        border-radius: 6px;
+        padding: 12px 16px;
+        border: 1px solid #dbdfea;
+        transition: all 0.3s ease;
+    }
+
+    .form-control:focus {
+        border-color: #6576ff;
+        box-shadow: 0 0 0 3px rgba(101, 118, 255, 0.1);
+    }
+
+    .form-label {
+        font-weight: 500;
+        margin-bottom: 8px;
+        color: #526484;
+    }
+
+    .invalid {
+        color: #f5365c;
+        font-size: 0.875rem;
+        margin-top: 4px;
+        display: block;
+    }
+
+    .form-note {
+        font-size: 0.875rem;
+        color: #7987a1;
+        margin-top: 4px;
+    }
+
+    textarea.form-control {
+        min-height: 120px;
+        resize: vertical;
+    }
+
+    .input-group-text {
+        background-color: #f5f6fa;
+        border: 1px solid #dbdfea;
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialisation des sélecteurs
+        const selects = document.querySelectorAll('select');
+        selects.forEach(select => {
+            select.classList.add('form-select');
+        });
+
+        // Initialisation des textareas
+        const textareas = document.querySelectorAll('textarea');
+        textareas.forEach(textarea => {
+            textarea.classList.add('form-control');
+            textarea.setAttribute('rows', '4');
+        });
+
+        // Initialisation des inputs
+        const inputs = document.querySelectorAll('input[type="text"], input[type="date"]');
+        inputs.forEach(input => {
+            input.classList.add('form-control');
+        });
+
+        // Ajout d'un datepicker pour la date d'échéance
+        const dueDateInput = document.getElementById('{{ form.due_date.id_for_label }}');
+        if (dueDateInput) {
+            dueDateInput.type = 'date';
+            dueDateInput.min = new Date().toISOString().split('T')[0];
+        }
+
+        // Validation du formulaire
+        const form = document.querySelector('form');
+        form.addEventListener('submit', function(e) {
+            let isValid = true;
+            const requiredFields = form.querySelectorAll('[required]');
+            
+            requiredFields.forEach(field => {
+                if (!field.value.trim()) {
+                    isValid = false;
+                    field.classList.add('is-invalid');
+                } else {
+                    field.classList.remove('is-invalid');
+                }
+            });
+
+            if (!isValid) {
+                e.preventDefault();
+                Swal.fire({
+                    title: 'Champs manquants',
+                    text: 'Veuillez remplir tous les champs obligatoires',
+                    icon: 'warning',
+                    confirmButtonColor: '#6576ff'
+                });
+            }
+        });
+    });
+</script>
+{% endblock %}

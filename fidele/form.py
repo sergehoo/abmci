@@ -10,7 +10,7 @@ from django_countries import countries
 
 from eden.models import Fiancailles, Mariage
 from fidele.models import Fidele, Fonction, OuvrierPermanence, Permanence, BAPTEME_CHOICES, SEXE_CHOICES, \
-    MARITAL_CHOICES, MembreType, Location, Department, Eglise, BibleVersion
+    MARITAL_CHOICES, MembreType, Location, Department, Eglise, BibleVersion, ProblemReport
 
 from event.models import Evenement
 
@@ -468,6 +468,7 @@ class MariageForm(forms.ModelForm):
 
         return cleaned
 
+
 class ConfirmDeleteForm(forms.Form):
     confirm = forms.CharField(
         label="Tapez SUPPRIMER pour confirmer",
@@ -479,6 +480,7 @@ class ConfirmDeleteForm(forms.Form):
         if value != "SUPPRIMER":
             raise forms.ValidationError("Vous devez taper exactement SUPPRIMER.")
         return value
+
 
 class ScheduleVODForm(forms.Form):
     eglises = forms.ModelMultipleChoiceField(
@@ -536,3 +538,19 @@ class ScheduleVODForm(forms.Form):
         initial=False, required=False,
         help_text="Si coché: remplace le VOD déjà programmé pour un jour donné."
     )
+
+
+class ProblemCommentForm(forms.Form):
+    message = forms.CharField(label="Réponse / Note", widget=forms.Textarea(attrs={"rows": 3}), max_length=2000)
+
+
+class ProblemAssignForm(forms.Form):
+    assignee_id = forms.IntegerField(label="Assigner à (Fidele ID)")
+
+
+class ProblemStatusForm(forms.Form):
+    status = forms.ChoiceField(choices=ProblemReport.Status.choices)
+
+
+class ProblemReminderForm(forms.Form):
+    delay_hours = forms.IntegerField(min_value=1, max_value=720, initial=48, label="Délai d’inactivité (heures)")

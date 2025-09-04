@@ -1,5 +1,8 @@
+from __future__ import annotations
+
 from collections import defaultdict
 from datetime import timedelta
+from io import BytesIO
 
 from allauth.account.forms import LoginForm
 from django.conf import settings
@@ -9,19 +12,24 @@ from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMix
 from django.core.mail import send_mail
 from django.db import transaction
 from django.db.models import Count, Q, Case, When, IntegerField, Sum
+from django.http import HttpRequest, HttpResponse, FileResponse, HttpResponseRedirect
 from django.shortcuts import render, get_object_or_404, redirect
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from django.utils.dateparse import parse_date
 from django.views import View
 from django.views.generic import TemplateView, ListView, DetailView, UpdateView, FormView, DeleteView, CreateView
+from reportlab.pdfgen import canvas
+
+from abmci.notifications.fcm import send_to_user
 from fidele.models import Fidele, Department, Permanence, Eglise, ProblemeParticulier, Fonction, MembreType, \
     TransferHistory, Notification, UserProfileCompletion, AccountDeletionRequest, Donation, DonationCategory, \
-    ProblemCategory, ProblemReport
-from fidele.form import PermanenceForm, FideleUpdateForm, FideleTransferForm, ProfileCompletionForm, ConfirmDeleteForm
+    ProblemCategory, ProblemReport, ProblemAction
+from fidele.form import PermanenceForm, FideleUpdateForm, FideleTransferForm, ProfileCompletionForm, ConfirmDeleteForm, \
+    ProblemReminderForm, ProblemStatusForm, ProblemAssignForm, ProblemCommentForm
 from event.models import ParticipationEvenement
-
-
+from django.utils.translation import gettext_lazy as _
+from django.db.models import Q, Count, Case, When, BooleanField, Value, DateField, F
 @login_required
 def all_notifications(request):
     notifications = Notification.objects.filter(recipient=request.user)
@@ -46,9 +54,11 @@ class Politique(TemplateView):
     # context_object_name = 'politique'
     template_name = 'landing/politique.html'
 
+
 class SaftyChildren(TemplateView):
     # context_object_name = 'politique'
     template_name = 'landing/safety-policy.html'
+
 
 class HomePageView(LoginRequiredMixin, TemplateView):
     login_url = 'login/'
@@ -792,7 +802,536 @@ class DonationListView(LoginRequiredMixin, ListView):
         ctx['showing_all'] = self.request.user.is_staff and self.request.GET.get('all') == '1'
         return ctx
 
+
 class DonationDetailView(LoginRequiredMixin, DetailView):
     model = Donation
     template_name = 'donations/donation_detail.html'
     context_object_name = 'donation'
+
+
+def add_comment(problem: ProblemReport, author: Fidele | None, message: str):
+    with transaction.atomic():
+        ProblemAction.objects.create(
+            problem=problem, author=author, type=ProblemAction.Type.COMMENT, message=message
+        )
+        problem.updated_at = timezone.now()
+        problem.save(update_fields=["updated_at"])
+
+
+def assign_to(problem: ProblemReport, author: Fidele | None, assignee: Fidele):
+    old_id = problem.assignee_id
+    if old_id == assignee.id:
+        return
+    with transaction.atomic():
+        problem.assignee = assignee
+        problem.save(update_fields=["assignee", "updated_at"])
+        ProblemAction.objects.create(
+            problem=problem, author=author, type=ProblemAction.Type.ASSIGN,
+            meta={"old_assignee_id": old_id, "new_assignee_id": assignee.id}
+        )
+
+
+def update_status(problem: ProblemReport, author: Fidele | None, new_status: str):
+    old = problem.status
+    if old == new_status:
+        return
+    with transaction.atomic():
+        problem.status = new_status
+        if new_status == ProblemReport.Status.RESOLVED:
+            problem.resolved_at = timezone.now()
+        problem.save(update_fields=["status", "resolved_at", "updated_at"])
+        ProblemAction.objects.create(
+            problem=problem, author=author, type=ProblemAction.Type.STATUS,
+            meta={"old": old, "new": new_status}
+        )
+
+
+def notify_parties(problem: ProblemReport, title: str, body: str, data: dict):
+    """Notifie reporter + assignee + watchers (sans doublons, sauf auteur de l’action)."""
+    user_ids = set()
+    if problem.reporter_id:
+        user_ids.add(problem.reporter.user_id if hasattr(problem.reporter, "user_id") else problem.reporter.id)
+    if problem.assignee_id:
+        user_ids.add(problem.assignee.user_id if hasattr(problem.assignee, "user_id") else problem.assignee.id)
+    for f in problem.watchers.all().only("id"):
+        user_ids.add(f.user_id if hasattr(f, "user_id") else f.id)
+
+    for uid in user_ids:
+        try:
+            Notification.objects.create(user_id=uid, type=data.get("type", "PROBLEM"), title=title, body=body,
+                                        data=data)
+
+            class _U:
+                pass
+
+            u = _U();
+            u.id = uid
+            send_to_user(u, title=title, body=body, data=data)  # data-only recommandé côté app
+        except Exception:
+            pass
+
+
+def build_pdf_report(problem: ProblemReport) -> bytes:
+    """Exemple minimal ReportLab (rapide). Remplace par WeasyPrint si tu veux du HTML/CSS."""
+    buf = BytesIO()
+    c = canvas.Canvas(buf)
+    c.setTitle(f"Rapport - {problem.title}")
+    y = 800
+    c.drawString(40, y, f"Rapport de traitement - {problem.title}")
+    y -= 30
+    c.drawString(40, y,
+                 f"Eglise: {problem.eglise_id} | Catégorie: {problem.category} | Sévérité: {problem.get_severity_display()}")
+    y -= 20
+    c.drawString(40, y,
+                 f"Statut: {problem.get_status_display()} | Créé: {problem.created_at.strftime('%Y-%m-%d %H:%M')}")
+    y -= 40
+    c.drawString(40, y, "Historique :")
+    y -= 20
+    for act in problem.actions.select_related("author").order_by("created_at"):
+        msg = act.message[:90].replace("\n", " ") if act.message else ""
+        who = f"{getattr(act.author, 'id', '—')}"
+        c.drawString(50, y, f"- {act.created_at:%Y-%m-%d %H:%M} [{act.type}] par {who} | {msg}")
+        y -= 18
+        if y < 80:
+            c.showPage();
+            y = 800
+    c.showPage()
+    c.save()
+    return buf.getvalue()
+
+
+def pdf_response(problem: ProblemReport) -> FileResponse:
+    content = build_pdf_report(problem)
+    return FileResponse(BytesIO(content), as_attachment=True, filename=f"rapport-probleme-{problem.pk}.pdf")
+
+
+class ProblemTreatView(LoginRequiredMixin, PermissionRequiredMixin, DetailView):
+    """Affiche le signalement + formulaires d’action"""
+    permission_required = "problems.can_view_all_problems"  # ou logique personnalisée
+    model = ProblemReport
+    template_name = "fidele/problems/problem_treat.html"
+    context_object_name = "problem"
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx["comment_form"] = kwargs.get("comment_form") or ProblemCommentForm()
+        ctx["assign_form"] = kwargs.get("assign_form") or ProblemAssignForm()
+        ctx["status_form"] = kwargs.get("status_form") or ProblemStatusForm(initial={"status": self.object.status})
+        ctx["reminder_form"] = kwargs.get("reminder_form") or ProblemReminderForm()
+        return ctx
+
+
+class ProblemTreatPostView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    """Traite les POST (comment, assign, status, rapport)"""
+    permission_required = "problems.can_view_all_problems"
+
+    def post(self, request: HttpRequest, pk: int) -> HttpResponse:
+        problem = get_object_or_404(ProblemReport, pk=pk, is_deleted=False)
+
+        action = request.POST.get("action")
+
+        # Réponse / commentaire
+        if action == "comment":
+            form = ProblemCommentForm(request.POST)
+            if form.is_valid():
+                author = getattr(request.user, "fidele", None)  # adapte selon ta relation
+                add_comment(problem, author, form.cleaned_data["message"])
+                notify_parties(
+                    problem,
+                    title=_("Nouvelle réponse"),
+                    body=form.cleaned_data["message"][:120],
+                    data={"type": "PROBLEM_COMMENT", "problem_id": str(problem.id)},
+                )
+                messages.success(request, _("Réponse ajoutée."))
+                return redirect(
+                    problem.get_absolute_url() if hasattr(problem, "get_absolute_url") else reverse("treat",
+                                                                                                    args=[problem.pk]))
+            return ProblemTreatView.as_view()(request, pk=pk, comment_form=form)
+
+        # Assignation
+        if action == "assign":
+            form = ProblemAssignForm(request.POST)
+            if form.is_valid():
+                assignee = get_object_or_404(Fidele, pk=form.cleaned_data["assignee_id"])
+                author = getattr(request.user, "fidele", None)
+                assign_to(problem, author, assignee)
+                notify_parties(
+                    problem,
+                    title=_("Assignation"),
+                    body=_("Le problème a été assigné."),
+                    data={"type": "PROBLEM_ASSIGN", "problem_id": str(problem.id), "assignee_id": str(assignee.id)},
+                )
+                messages.success(request, _("Assigné avec succès."))
+                return redirect(reverse("treat", args=[problem.pk]))
+            return ProblemTreatView.as_view()(request, pk=pk, assign_form=form)
+
+        # Changement de statut
+        if action == "status":
+            form = ProblemStatusForm(request.POST)
+            if form.is_valid():
+                author = getattr(request.user, "fidele", None)
+                update_status(problem, author, form.cleaned_data["status"])
+                notify_parties(
+                    problem,
+                    title=_("Statut mis à jour"),
+                    body=_("Le statut du problème a été mis à jour."),
+                    data={"type": "PROBLEM_STATUS", "problem_id": str(problem.id),
+                          "status": form.cleaned_data["status"]},
+                )
+                messages.success(request, _("Statut mis à jour."))
+                return redirect(reverse("treat", args=[problem.pk]))
+            return ProblemTreatView.as_view()(request, pk=pk, status_form=form)
+
+        # Générer un rapport PDF
+        if action == "report":
+            return pdf_response(problem)
+
+        # Déclencher/paramétrer un rappel (stockage coté session ou profil)
+        if action == "reminder":
+            form = ProblemReminderForm(request.POST)
+            if form.is_valid():
+                request.session["problem_reminder_hours"] = form.cleaned_data["delay_hours"]
+                messages.success(request, _("Délai de rappel défini."))
+                return redirect(reverse("treat", args=[problem.pk]))
+            return ProblemTreatView.as_view()(request, pk=pk, reminder_form=form)
+
+        messages.error(request, _("Action inconnue."))
+        return redirect(reverse("treat", args=[problem.pk]))
+
+
+class ProblemReportListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
+    model = ProblemReport
+    permission_required = 'problems.view_problemreport'
+    template_name = 'fidele/problems/problem_list.html'
+    context_object_name = 'problems'
+    paginate_by = 25
+
+    def _base_queryset(self):
+        qs = ProblemReport.objects.filter(is_deleted=False)
+
+        # Limitation par église si l'utilisateur n'a pas le droit "voir tout"
+        if not self.request.user.has_perm('problems.can_view_all_problems'):
+            # éviter AttributeError si pas de fidèle lié
+            fid = getattr(self.request.user, 'fidele', None)
+            if fid and fid.eglise_id:
+                qs = qs.filter(eglise=fid.eglise_id)
+            else:
+                qs = qs.none()
+
+        # 👉 Annotation "is_overdue" (en base) pour filtrage/tri/agrégations
+        today = timezone.localdate()
+        qs = qs.annotate(
+            is_overdue_db=Case(
+                When(
+                    Q(due_date__isnull=False) &
+                    ~Q(status__in=[ProblemReport.Status.RESOLVED, ProblemReport.Status.CANCELED]) &
+                    Q(due_date__lt=Value(today, output_field=DateField())),
+                    then=Value(True)
+                ),
+                default=Value(False),
+                output_field=BooleanField()
+            )
+        )
+
+        return qs
+
+    def get_queryset(self):
+        qs = self._base_queryset()
+
+        # Filtres
+        status = self.request.GET.get('status')
+        if status in dict(ProblemReport.Status.choices):
+            qs = qs.filter(status=status)
+
+        severity = self.request.GET.get('severity')
+        if severity in dict(ProblemReport.Severity.choices):
+            qs = qs.filter(severity=severity)
+
+        category = self.request.GET.get('category')
+        if category and str(category).isdigit():
+            qs = qs.filter(category_id=int(category))
+
+        assignee = self.request.GET.get('assignee')
+        if assignee and str(assignee).isdigit():
+            qs = qs.filter(assignee_id=int(assignee))
+
+        overdue = self.request.GET.get('overdue')
+        if overdue == 'true':
+            qs = qs.filter(is_overdue_db=True)
+        elif overdue == 'false':
+            qs = qs.filter(is_overdue_db=False)
+
+        # Recherche plein texte simple
+        search = self.request.GET.get('search')
+        if search:
+            qs = qs.filter(
+                Q(title__icontains=search) |
+                Q(description__icontains=search) |
+                Q(resolution_notes__icontains=search) |
+                Q(reporter__user__first_name__icontains=search) |
+                Q(reporter__user__last_name__icontains=search)
+            )
+
+        return qs.select_related(
+            'eglise', 'reporter', 'assignee', 'category'
+        ).prefetch_related('watchers').order_by('-created_at')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        # Filtres disponibles
+        context['status_choices'] = ProblemReport.Status.choices
+        context['severity_choices'] = ProblemReport.Severity.choices
+        context['categories'] = ProblemCategory.objects.filter(is_active=True)
+
+        # Valeurs des filtres actuels
+        context['current_filters'] = {
+            'status': self.request.GET.get('status') or '',
+            'severity': self.request.GET.get('severity') or '',
+            'category': self.request.GET.get('category') or '',
+            'assignee': self.request.GET.get('assignee') or '',
+            'overdue': self.request.GET.get('overdue') or '',
+            'search': self.request.GET.get('search') or '',
+        }
+
+        # Stats sur le même queryset filtré et annoté
+        qs = self.get_queryset().only('id', 'status', 'severity')  # légère optimisation
+        context['stats'] = {
+            'total': qs.count(),
+            'open': qs.filter(status=ProblemReport.Status.OPEN).count(),
+            'in_progress': qs.filter(status=ProblemReport.Status.IN_PROGRESS).count(),
+            'overdue': qs.filter(is_overdue_db=True).count(),
+            'by_status': list(qs.values('status').annotate(count=Count('id')).order_by()),
+            'by_severity': list(qs.values('severity').annotate(count=Count('id')).order_by()),
+        }
+
+        return context
+
+class ProblemReportCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
+    model = ProblemReport
+    permission_required = 'problems.add_problemreport'
+    template_name = 'fidele/problems/problem_form.html'
+    fields = ['title', 'description', 'category', 'severity', 'due_date']
+
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class)
+        # Limiter les catégories aux actives
+        form.fields['category'].queryset = ProblemCategory.objects.filter(is_active=True)
+        return form
+
+    def form_valid(self, form):
+        form.instance.reporter = self.request.user.fidele
+        form.instance.eglise = self.request.user.fidele.eglise
+        messages.success(self.request, 'Signalement créé avec succès.')
+        return super().form_valid(form)
+
+    def get_success_url(self):
+        return reverse_lazy('problemreport_detail', kwargs={'pk': self.object.pk})
+
+
+class ProblemReportDetailView(LoginRequiredMixin, PermissionRequiredMixin, DetailView):
+    model = ProblemReport
+    permission_required = 'problems.view_problemreport'
+    template_name = 'fidele/problems/problem_detail.html'
+    context_object_name = 'problem'
+
+    def get_queryset(self):
+        queryset = ProblemReport.objects.filter(is_deleted=False)
+        if not self.request.user.has_perm('problems.can_view_all_problems'):
+            queryset = queryset.filter(eglise=self.request.user.fidele.eglise)
+        return queryset.select_related('eglise', 'reporter', 'assignee', 'category')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        problem = self.object
+
+        # Historique des modifications (si simple-history est installé)
+        if hasattr(problem, 'history'):
+            context['history'] = problem.history.all()[:10]
+
+        # Fidèles disponibles pour l'assignation
+        # context['available_assignees'] = problem.eglise.fideles.filter(
+        #     user__is_active=True
+        # ).select_related('user')
+
+        # Watchers actuels
+        context['watchers'] = problem.watchers.select_related('user').all()
+
+        return context
+
+
+class ProblemReportUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
+    model = ProblemReport
+    permission_required = 'problems.change_problemreport'
+    template_name = 'problems/problem_form.html'
+    fields = ['title', 'description', 'category', 'severity', 'status', 'due_date', 'resolution_notes']
+
+    def get_queryset(self):
+        queryset = ProblemReport.objects.filter(is_deleted=False)
+        if not self.request.user.has_perm('problems.can_view_all_problems'):
+            queryset = queryset.filter(eglise=self.request.user.fidele.eglise)
+        return queryset
+
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class)
+        # Limiter les catégories aux actives
+        form.fields['category'].queryset = ProblemCategory.objects.filter(is_active=True)
+
+        # Pour les non-administrateurs, limiter les champs modifiables
+        if not self.request.user.has_perm('problems.can_assign_problem'):
+            del form.fields['status']
+            del form.fields['resolution_notes']
+
+        return form
+
+    def form_valid(self, form):
+        # Si le statut passe à résolu, mettre à jour la date de résolution
+        if form.instance.status == ProblemReport.Status.RESOLVED and not form.instance.resolved_at:
+            form.instance.resolved_at = timezone.now()
+
+        messages.success(self.request, 'Signalement modifié avec succès.')
+        return super().form_valid(form)
+
+    def get_success_url(self):
+        return reverse_lazy('problemreport_detail', kwargs={'pk': self.object.pk})
+
+
+class ProblemReportDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
+    model = ProblemReport
+    permission_required = 'problems.delete_problemreport'
+    template_name = 'problems/problem_confirm_delete.html'
+
+    def get_queryset(self):
+        queryset = ProblemReport.objects.filter(is_deleted=False)
+        if not self.request.user.has_perm('problems.can_view_all_problems'):
+            queryset = queryset.filter(eglise=self.request.user.fidele.eglise)
+        return queryset
+
+    def delete(self, request, *args, **kwargs):
+        # Soft delete au lieu de suppression physique
+        self.object = self.get_object()
+        self.object.is_deleted = True
+        self.object.save()
+        messages.success(request, 'Signalement supprimé avec succès.')
+        return HttpResponseRedirect(self.get_success_url())
+
+    def get_success_url(self):
+        return reverse_lazy('problemreport_list')
+
+
+# Vues spéciales pour l'assignation et le changement de statut
+class ProblemReportAssignView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
+    model = ProblemReport
+    permission_required = 'problems.can_assign_problem'
+    template_name = 'problems/problem_assign.html'
+    fields = ['assignee']
+
+    def get_queryset(self):
+        return ProblemReport.objects.filter(is_deleted=False)
+
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class)
+        # Limiter les assignés aux fidèles de la même église
+        problem = self.get_object()
+        form.fields['assignee'].queryset = problem.eglise.fideles.filter(
+            user__is_active=True
+        )
+        return form
+
+    def form_valid(self, form):
+        messages.success(self.request, 'Signalement assigné avec succès.')
+        return super().form_valid(form)
+
+    def get_success_url(self):
+        return reverse_lazy('problemreport_detail', kwargs={'pk': self.object.pk})
+
+
+# Vue pour les rapports et statistiques
+class ProblemReportStatsView(LoginRequiredMixin, PermissionRequiredMixin, TemplateView):
+    permission_required = 'problems.view_problemreport'
+    template_name = 'fidele/problems/problem_stats.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        # Base queryset
+        queryset = ProblemReport.objects.filter(is_deleted=False)
+        if not self.request.user.has_perm('problems.can_view_all_problems'):
+            queryset = queryset.filter(eglise=self.request.user.fidele.eglise)
+
+        # Statistiques générales
+        context['stats'] = {
+            'total': queryset.count(),
+            'resolved': queryset.filter(status='DONE').count(),
+            'overdue': queryset.filter(is_overdue=True).count(),
+            'avg_resolution_time': self._calculate_avg_resolution_time(queryset),
+        }
+
+        # Par statut
+        context['by_status'] = queryset.values('status').annotate(
+            count=Count('id')
+        ).order_by('status')
+
+        # Par sévérité
+        context['by_severity'] = queryset.values('severity').annotate(
+            count=Count('id')
+        ).order_by('severity')
+
+        # Par catégorie
+        context['by_category'] = queryset.values(
+            'category__name'
+        ).annotate(
+            count=Count('id')
+        ).order_by('category__name')
+
+        # Évolution mensuelle
+        context['monthly_trend'] = self._get_monthly_trend(queryset)
+
+        return context
+
+    def _calculate_avg_resolution_time(self, queryset):
+        resolved = queryset.filter(
+            status='DONE',
+            resolved_at__isnull=False,
+            created_at__isnull=False
+        )
+
+        if not resolved.exists():
+            return None
+
+        total_duration = sum(
+            (problem.resolved_at - problem.created_at).total_seconds()
+            for problem in resolved
+        )
+
+        return total_duration / resolved.count()
+
+    def _get_monthly_trend(self, queryset):
+        # Implémentation simplifiée pour les tendances mensuelles
+        from django.db.models.functions import TruncMonth
+        return queryset.annotate(
+            month=TruncMonth('created_at')
+        ).values('month').annotate(
+            count=Count('id')
+        ).order_by('month')[:12]
+
+
+class ProblemReportChangeStatusView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
+    model = ProblemReport
+    permission_required = 'problems.can_assign_problem'
+    template_name = 'problems/problem_change_status.html'
+    fields = ['status', 'resolution_notes']
+
+    def get_queryset(self):
+        return ProblemReport.objects.filter(is_deleted=False)
+
+    def form_valid(self, form):
+        # Si le statut passe à résolu, mettre à jour la date de résolution
+        if form.instance.status == ProblemReport.Status.RESOLVED and not form.instance.resolved_at:
+            form.instance.resolved_at = timezone.now()
+
+        messages.success(self.request, 'Statut modifié avec succès.')
+        return super().form_valid(form)
+
+    def get_success_url(self):
+        return reverse_lazy('problemreport_detail', kwargs={'pk': self.object.pk})

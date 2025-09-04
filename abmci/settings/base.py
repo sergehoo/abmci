@@ -19,9 +19,11 @@ def env_int(key: str, default: int) -> int:
     except (TypeError, ValueError):
         return default
 
+
 def _split_csv_env(name: str) -> list[str]:
     raw = os.getenv(name, "")
     return [x.strip() for x in raw.split(",") if x.strip()]
+
 
 def _with_scheme(origin: str) -> str:
     # si déjà un schéma → OK
@@ -77,7 +79,8 @@ INSTALLED_APPS = [
     "drf_yasg",
     'celery',
     'mathfilters',
-    "django_celery_beat",  # optionnel mais recommandé
+    "django_celery_beat",
+    'widget_tweaks',
 
 ]
 
@@ -119,12 +122,12 @@ ASGI_APPLICATION = "abmci.asgi.application"
 # DB: par défaut sqlite (override en prod)
 DATABASES = {
     "default": {
-        "ENGINE": os.environ.get("DB_ENGINE", default="django.db.backends.sqlite3"),
-        "NAME": os.environ.get("DB_NAME", default=str(BASE_DIR / "db.sqlite3")),
-        "USER": os.environ.get("DB_USER", default=""),
-        "PASSWORD": os.environ.get("DB_PASSWORD", default=""),
-        "HOST": os.environ.get("DB_HOST", default=""),
-        "PORT": os.environ.get("DB_PORT", default=""),
+        "ENGINE": "django.contrib.gis.db.backends.postgis",
+        "NAME": os.getenv("DB_NAME"),
+        "USER": os.getenv("DB_USER"),
+        "PASSWORD": os.getenv("DB_PASSWORD"),
+        "HOST": os.getenv("DB_HOST", "localhost"),
+        "PORT": os.getenv("DB_PORT", "5432"),
     }
 }
 
@@ -170,7 +173,6 @@ SIMPLE_JWT = {
 
 CORS_ALLOW_CREDENTIALS = True
 
-
 # ALLOWED_HOSTS: pas de schéma ici !
 # ALLOWED_HOSTS = _split_csv_env("ALLOWED_HOSTS")
 # ex .env : ALLOWED_HOSTS=administration.abmci.com,abmci.com,127.0.0.1,localhost
@@ -187,7 +189,6 @@ MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
 SITE_ORIGIN = "https://administration.abmci.com"
-
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
@@ -220,7 +221,6 @@ ACCOUNT_FORMS = {
 
 LOGIN_REDIRECT_URL = "/"
 LOGOUT_REDIRECT_URL = "account_login"
-
 
 ACCOUNT_AUTHENTICATION_METHOD = "email"
 ACCOUNT_EMAIL_REQUIRED = True
@@ -260,16 +260,17 @@ LOGGING = {
     "root": {"handlers": ["console"], "level": "INFO"},
 }
 
-
 CELERY_BEAT_SCHEDULE = {
     "push_verse_of_day_daily": {
         "task": "abmci.push_vod_daily",
         "schedule": crontab(minute=0, hour=6),  # 06:00 (UTC ou TZ de ton worker)
     },
+    "remind-stale-problems-every-hour": {
+        "task": "problems.tasks.remind_stale_problems",
+        "schedule": crontab(minute=0),  # chaque heure
+        "args": (lambda: int(os.getenv("PROBLEM_REMINDER_DELAY_H", 48)),),  # ou fixe 48
+    }
 }
-
-
-
 
 PAYSTACK_SECRET_KEY = os.getenv('PAYSTACK_SECRET_KEY')
 # settings.py
