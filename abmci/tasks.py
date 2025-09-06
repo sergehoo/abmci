@@ -476,79 +476,79 @@ def send_daily_vod(self, when_date: str | None = None, dry_run: bool = False):
     return {"date": str(today), "sent": sent, "dry_run": dry_run}
 
 #
-# @shared_task(bind=True, autoretry_for=(Exception,), retry_backoff=True, retry_kwargs={"max_retries": 5})
-# def notify_comment_created_task(self, prayer_id: int, comment_id: int, author_name: Optional[str] = None, *, dry_run: bool=False):
-#     title = "Nouveau commentaire"
-#     default_name = author_name or "Quelqu'un"
-#     body = f"{default_name} a commenté une prière."
-#     data = {
-#         "type": "PRAYER_COMMENT_NEW",
-#         "prayer_id": str(prayer_id),
-#         "comment_id": str(comment_id),
-#     }
-#     topic = f"prayer_{prayer_id}"
-#     return send_to_topic(
-#         topic,
-#         title=title,
-#         body=body,
-#         data=data,
-#         android_channel_id="default_channel",
-#         dry_run=dry_run,
-#     )
-
-def _clean_one_line(s: str | None) -> str:
-    s = (s or "").strip()
-    return " ".join(s.split())
-
-def _excerpt(s: str | None, max_chars: int = 90) -> str:
-    s = _clean_one_line(s)
-    return Truncator(s).chars(max_chars)
-
-@shared_task(bind=True, autoretry_for=(Exception,), retry_backoff=True, retry_kwargs={"max_retries": 3})
-def notify_comment_created_task(self, prayer_id: int, comment_id: int, *, dry_run: bool = False):
-    """Envoie une notif FCM vers /topics/prayer_{prayer_id} après création d’un commentaire."""
-    try:
-        comment = (
-            PrayerComment.objects
-            .select_related("user", "prayer")
-            .get(pk=comment_id, prayer_id=prayer_id)
-        )
-    except PrayerComment.DoesNotExist:
-        # Le commentaire n’existe plus → on ignore
-        return "comment_missing"
-
-    prayer: PrayerRequest = comment.prayer
-    author: User = comment.user
-
-    author_name = _clean_one_line(author.get_full_name() or author.username or "Quelqu’un")
-    subject = _excerpt(getattr(prayer, "title", "") or "Sujet", max_chars=60)
-    content_excerpt = _excerpt(getattr(comment, "content", ""), max_chars=90)
-
+@shared_task(bind=True, autoretry_for=(Exception,), retry_backoff=True, retry_kwargs={"max_retries": 5})
+def notify_comment_created_task(self, prayer_id: int, comment_id: int, author_name: Optional[str] = None, *, dry_run: bool=False):
     title = "Nouveau commentaire"
-    body = f"{author_name} « {content_excerpt} » sur le sujet « {subject} »"
-
+    default_name = author_name or "Quelqu'un"
+    body = f"{default_name} a commenté une prière."
     data = {
         "type": "PRAYER_COMMENT_NEW",
         "prayer_id": str(prayer_id),
         "comment_id": str(comment_id),
-        "prayer_title": subject,
-        "author_name": author_name,
-        "excerpt": content_excerpt,
     }
-
     topic = f"prayer_{prayer_id}"
-    try:
-        return send_to_topic(
-            topic,
-            title=title,
-            body=body,
-            data=data,
-            android_channel_id="default_channel",
-            dry_run=dry_run,
-        )
-    except Exception as e:
-        # On LOG, mais on ne fait pas casser la chaîne d’écriture côté API
-        # (la tâche échouera/retry côté Celery si nécessaire).
-        from django.utils.log import getLogger
-        getLogger(__name__).warning("FCM send failed for %s: %s", topic, e)
-        raise
+    return send_to_topic(
+        topic,
+        title=title,
+        body=body,
+        data=data,
+        android_channel_id="default_channel",
+        dry_run=dry_run,
+    )
+#
+# def _clean_one_line(s: str | None) -> str:
+#     s = (s or "").strip()
+#     return " ".join(s.split())
+#
+# def _excerpt(s: str | None, max_chars: int = 90) -> str:
+#     s = _clean_one_line(s)
+#     return Truncator(s).chars(max_chars)
+#
+# @shared_task(bind=True, autoretry_for=(Exception,), retry_backoff=True, retry_kwargs={"max_retries": 3})
+# def notify_comment_created_task(self, prayer_id: int, comment_id: int, *, dry_run: bool = False):
+#     """Envoie une notif FCM vers /topics/prayer_{prayer_id} après création d’un commentaire."""
+#     try:
+#         comment = (
+#             PrayerComment.objects
+#             .select_related("user", "prayer")
+#             .get(pk=comment_id, prayer_id=prayer_id)
+#         )
+#     except PrayerComment.DoesNotExist:
+#         # Le commentaire n’existe plus → on ignore
+#         return "comment_missing"
+#
+#     prayer: PrayerRequest = comment.prayer
+#     author: User = comment.user
+#
+#     author_name = _clean_one_line(author.get_full_name() or author.username or "Quelqu’un")
+#     subject = _excerpt(getattr(prayer, "title", "") or "Sujet", max_chars=60)
+#     content_excerpt = _excerpt(getattr(comment, "content", ""), max_chars=90)
+#
+#     title = "Nouveau commentaire"
+#     body = f"{author_name} « {content_excerpt} » sur le sujet « {subject} »"
+#
+#     data = {
+#         "type": "PRAYER_COMMENT_NEW",
+#         "prayer_id": str(prayer_id),
+#         "comment_id": str(comment_id),
+#         "prayer_title": subject,
+#         "author_name": author_name,
+#         "excerpt": content_excerpt,
+#     }
+#
+#     topic = f"prayer_{prayer_id}"
+#     try:
+#         return send_to_topic(
+#             topic,
+#             title=title,
+#             body=body,
+#             data=data,
+#             android_channel_id="default_channel",
+#             dry_run=dry_run,
+#         )
+#     except Exception as e:
+#         # On LOG, mais on ne fait pas casser la chaîne d’écriture côté API
+#         # (la tâche échouera/retry côté Celery si nécessaire).
+#         from django.utils.log import getLogger
+#         getLogger(__name__).warning("FCM send failed for %s: %s", topic, e)
+#         raise
