@@ -100,7 +100,6 @@ def set_nearest_church_on_create(sender, instance: Fidele, created: bool, **kwar
         print(f"[signals] assign_nearest_eglise_if_missing error: {e!r}")
 
 
-
 @receiver(post_save, sender=ProblemReport)
 def problem_report_post_save(sender, instance, created, **kwargs):
     if not created:
@@ -114,12 +113,12 @@ def problem_report_post_save(sender, instance, created, **kwargs):
     # Sécu: on ne publie qu'après commit
     transaction.on_commit(_enqueue)
 
+
 def _fmt_date(d):
     if not d:
         return "—"
     # JJ/MM/AAAA
     return d.strftime("%d/%m/%Y")
-
 
 
 # @receiver(post_save, sender=ProblemReport)
@@ -174,6 +173,7 @@ def notify_pastors_on_problem(sender, instance: ProblemReport, created, **kwargs
     if created:
         # on décale un peu (5s) pour s'assurer que tout est bien commit
         send_problem_sms_to_pastors.apply_async(args=[instance.id], countdown=5)
+
 
 def _assignee_label(fid) -> str:
     """
@@ -231,14 +231,20 @@ def _notify_on_change(sender, instance: ProblemReport, created: bool, **kwargs):
         # Appel asynchrone Celery
         notify_problem_changed.delay(instance.pk, changed)
 
+
 @receiver(post_save, sender=PrayerComment)
-def on_comment_created(sender, instance: PrayerComment, created: bool, **kwargs):
+def on_prayer_comment_created(sender, instance: PrayerComment, created: bool, **kwargs):
     if not created:
         return
-    prayer_id = instance.prayer_id
-    comment_id = instance.pk
-    author_name = (getattr(instance.user, "get_full_name", None) or (lambda: ""))() \
-                  or getattr(instance.user, "first_name", "") or None
 
-    # lance la task asynchrone
-    notify_comment_created_task.delay(prayer_id, comment_id, author_name)
+    def _enqueue():
+        author = instance.user.get_full_name() or instance.user.username or None
+        notify_comment_created_task.delay(
+            prayer_id=instance.prayer_id,
+            comment_id=instance.id,
+            author_name=author,
+            dry_run=False,
+        )
+
+    # ⚠️ Après COMMIT pour éviter les courses DB
+    transaction.on_commit(_enqueue)
