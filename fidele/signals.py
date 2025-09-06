@@ -18,7 +18,7 @@ from abmci.services.notifications import notify_new_comment
 from abmci.utils.orange_sms import send_sms
 from fidele.models import Fidele, PrayerRequest, PrayerComment, ProblemReport, Role
 from django.dispatch import Signal
-from abmci.tasks import send_problem_sms_to_pastors, notify_problem_changed
+from abmci.tasks import send_problem_sms_to_pastors, notify_problem_changed, notify_comment_created_task
 
 notify = Signal()
 
@@ -230,3 +230,15 @@ def _notify_on_change(sender, instance: ProblemReport, created: bool, **kwargs):
     if changed:
         # Appel asynchrone Celery
         notify_problem_changed.delay(instance.pk, changed)
+
+@receiver(post_save, sender=PrayerComment)
+def on_comment_created(sender, instance: PrayerComment, created: bool, **kwargs):
+    if not created:
+        return
+    prayer_id = instance.prayer_id
+    comment_id = instance.pk
+    author_name = (getattr(instance.user, "get_full_name", None) or (lambda: ""))() \
+                  or getattr(instance.user, "first_name", "") or None
+
+    # lance la task asynchrone
+    notify_comment_created_task.delay(prayer_id, comment_id, author_name)

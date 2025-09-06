@@ -1,9 +1,8 @@
 from __future__ import annotations
-
 import logging
 from datetime import date, timedelta
 from io import BytesIO
-from typing import Iterable
+from typing import Iterable, Optional
 
 from PIL import UnidentifiedImageError
 from celery import shared_task, group
@@ -12,6 +11,7 @@ from django.core.management import call_command
 from django.db import transaction
 from PIL import Image, UnidentifiedImageError
 from django.db.models import Max
+from django.dispatch import receiver
 from django.utils import timezone
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
@@ -25,6 +25,7 @@ from event.services.scheduling_verse import schedule_vod_for_period, pick_candid
 from fidele.models import Eglise, BibleVersion, ProblemReport, Role, Fidele, ProblemAction, VerseOfDay
 from fidele.views import process_account_deletion_request
 from fidele.vod_smart import pick_smart_daily_verse_for_eglise
+from . import settings
 from .notifications import fcm
 # from .models import ParticipationEvenement
 from .notifications.fcm import send_to_topic, send_to_user, send_verse_to_eglise_topic
@@ -470,3 +471,42 @@ def send_daily_vod(self, when_date: str | None = None, dry_run: bool = False):
             if self.request.retries < self.max_retries:
                 raise self.retry(exc=e)
     return {"date": str(today), "sent": sent, "dry_run": dry_run}
+
+@shared_task(
+    bind=True,
+    autoretry_for=(Exception,),
+    retry_backoff=True,          # backoff exponentiel: 1s,2s,4s…
+    retry_backoff_max=60,        # cap à 60s
+    retry_jitter=True,           # un peu d’aléatoire pour éviter le thundering herd
+    max_retries=5,
+    acks_late=True,              # la tâche sera ré-exécutée si worker crash avant ack
+    queue=getattr(settings, "CELERY_QUEUE_NOTIFS", "notifications"),
+    rate_limit=getattr(settings, "CELERY_RATE_LIMIT_FCM", "30/m"),  # optionnel
+)
+def notify_comment_created_task(
+    self,
+    prayer_id: int,
+    comment_id: int,
+    author_name: Optional[str] = None,
+    dry_run: bool = False,
+):
+    """
+    Envoie la notif FCM “nouveau commentaire”.
+    Utiliser .delay(prayer_id, comment_id, author_name) après création.
+    """
+    title = "Nouveau commentaire"
+    body = f"{author_name or 'Quelqu\'un'} a commenté une prière."
+    data = {
+        "type": "PRAYER_COMMENT_NEW",
+        "prayer_id": str(prayer_id),
+        "comment_id": str(comment_id),
+    }
+    topic = f"prayer_{prayer_id}"
+    return send_to_topic(
+        topic,
+        title=title,
+        body=body,
+        data=data,
+        android_channel_id="default_channel",
+        dry_run=dry_run,
+    )
