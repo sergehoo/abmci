@@ -904,12 +904,15 @@ class VerseOfDay(models.Model):
     text = models.TextField()
     reference = models.CharField(max_length=128)
     created_at = models.DateTimeField(auto_now_add=True)
+    notified_at = models.DateTimeField(null=True, blank=True, db_index=True)
+
 
     class Meta:
         unique_together = (('date', 'eglise'),)
         indexes = [
             models.Index(fields=['eglise', 'date']),
             models.Index(fields=['version', 'language']),
+            models.Index(fields=['date', 'notified_at']),
         ]
 
     def __str__(self):

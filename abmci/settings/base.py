@@ -269,7 +269,13 @@ CELERY_BEAT_SCHEDULE = {
         "task": "problems.tasks.remind_stale_problems",
         "schedule": crontab(minute=0),  # chaque heure
         "args": (lambda: int(os.getenv("PROBLEM_REMINDER_DELAY_H", 48)),),  # ou fixe 48
-    }
+    },
+    "send-daily-vod-0730": {
+        "task": "vod.tasks.send_daily_vod",
+        "schedule": crontab(minute=30, hour=6),  # 06:30 tous les jours
+        "args": (),  # rien (prend localdate)
+        # "options": {"queue": "notifications"},  # si tu as des queues
+    },
 }
 
 PAYSTACK_SECRET_KEY = os.getenv('PAYSTACK_SECRET_KEY')

@@ -21,12 +21,12 @@ from phonenumber_field.phonenumber import to_python
 from event.models import Evenement, ParticipationEvenement
 from event.services.events import generate_recurrences_for_parent
 from event.services.scheduling_verse import schedule_vod_for_period, pick_candidate_verses
-from fidele.models import Eglise, BibleVersion, ProblemReport, Role, Fidele, ProblemAction
+from fidele.models import Eglise, BibleVersion, ProblemReport, Role, Fidele, ProblemAction, VerseOfDay
 from fidele.views import process_account_deletion_request
 from fidele.vod_smart import pick_smart_daily_verse_for_eglise
 from .notifications import fcm
 # from .models import ParticipationEvenement
-from .notifications.fcm import send_to_topic, send_to_user
+from .notifications.fcm import send_to_topic, send_to_user, send_verse_to_eglise_topic
 from .utils.orange_sms import send_sms
 
 
@@ -427,3 +427,45 @@ def remind_stale_problems(self, delay_hours: int = 48):
                     pass
             count += 1
     return {"reminded": count, "delay_hours": delay_hours}
+
+
+@shared_task(bind=True, max_retries=2, default_retry_delay=30)
+def send_daily_vod(self, when_date: str | None = None, dry_run: bool = False):
+    """
+    Envoie le Verset du Jour (VDJ) d'aujourd'hui (ou date passée via when_date='YYYY-MM-DD')
+    à chaque église ayant un enregistrement et non encore notifié.
+    """
+    today = timezone.localdate() if not when_date else timezone.datetime.fromisoformat(when_date).date()
+    qs = VerseOfDay.objects.select_related('eglise').filter(date=today, notified_at__isnull=True)
+
+    sent = 0
+    for vod in qs:
+        # sécurité : texte/référence vides → skip
+        if not (vod.text and vod.reference):
+            continue
+        try:
+            # Envoi via ton helper (topic = eglise_{id})
+            send_verse_to_eglise_topic(
+                vod.eglise_id,
+                reference=vod.reference,
+                text=vod.text,
+                date_str=str(vod.date),
+                version=vod.version,
+                lang=vod.language,
+                dry_run=dry_run,
+            )
+            # Marque comme notifié (idempotence)
+            with transaction.atomic():
+                updated = (
+                    VerseOfDay.objects
+                    .filter(pk=vod.pk, notified_at__isnull=True)
+                    .update(notified_at=timezone.now())
+                )
+                if updated:
+                    sent += 1
+        except Exception as e:
+            # logge si tu as un logger configuré
+            # logger.exception("VDJ send failed for eglise=%s: %r", vod.eglise_id, e)
+            if self.request.retries < self.max_retries:
+                raise self.retry(exc=e)
+    return {"date": str(today), "sent": sent, "dry_run": dry_run}
