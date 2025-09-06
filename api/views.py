@@ -486,6 +486,7 @@ class NotificationPagination(PageNumberPagination):
     page_size = 20
     page_size_query_param = "page_size"
     max_page_size = 100
+# views.py
 class NotificationViewSet(viewsets.ModelViewSet):
     serializer_class = NotificationSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -494,7 +495,7 @@ class NotificationViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         qs = Notification.objects.filter(user=self.request.user)
-        # filtres optionnels
+
         unread = str(self.request.query_params.get("unread", "")).lower()
         if unread in ("1", "true", "yes"):
             qs = qs.filter(is_read=False)
@@ -516,6 +517,11 @@ class NotificationViewSet(viewsets.ModelViewSet):
 
         return qs.order_by("-created_at")
 
+    @action(detail=False, methods=["get"], url_path="unread-count")
+    def unread_count(self, request):
+        count = self.get_queryset().filter(is_read=False).count()
+        return Response({"count": count}, status=status.HTTP_200_OK)
+
     @action(detail=False, methods=["post"], url_path="mark-all-read")
     def mark_all_read(self, request):
         count = self.get_queryset().filter(is_read=False).update(is_read=True)
@@ -530,7 +536,6 @@ class NotificationViewSet(viewsets.ModelViewSet):
             notif.is_read = True
             notif.save(update_fields=["is_read"])
         return Response({"ok": True}, status=status.HTTP_200_OK)
-
 
 class BibleVersionViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
     queryset = BibleVersion.objects.all()

@@ -39,6 +39,14 @@ class FideleSignupForm(SignupForm):
         self.fields['password1'].widget.attrs['class'] = 'form-control form-control-lg'
         self.fields['password2'].widget.attrs['class'] = 'form-control form-control-lg'
 
+    def clean_first_name(self):
+        """Forcer la majuscule pour first_name"""
+        return (self.cleaned_data['first_name'] or "").strip().upper()
+
+    def clean_last_name(self):
+        """Forcer la majuscule pour last_name"""
+        return (self.cleaned_data['last_name'] or "").strip().upper()
+
     def save(self, request):
         user = super().save(request)
         user.first_name = self.cleaned_data['first_name']

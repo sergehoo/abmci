@@ -692,10 +692,6 @@ class Notification(models.Model):
     def __str__(self):
         return f"{self.user_id} • {self.type} • {self.title[:32]}"
 
-    def __str__(self):
-        return f"{self.actor} {self.verb}"
-
-
 class Competence(models.Model):
     nom = models.CharField(max_length=100)
     categorie = models.CharField(max_length=50)

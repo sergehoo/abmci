@@ -582,6 +582,22 @@ def notify_comment_created_task(
         # "click_action": "FLUTTER_NOTIFICATION_CLICK",
         # "screen": "prayer_comments",
     }
+    # 2) PERSISTENCE: crée au moins une notif pour le créateur de la prière
+    recipients = User.objects.filter(pk=getattr(prayer, "user_id", None)).exclude(pk=author_name.pk)
+    bulk = [
+        Notification(
+            user=u,
+            type="COMMENT_NEW",
+            title=title,
+            body=body,
+            data=data,
+            is_read=False,
+            created_at=timezone.now(),
+        )
+        for u in recipients
+    ]
+    if bulk:
+        Notification.objects.bulk_create(bulk)
 
     # 4) Envoi FCM (Android: canal explicite)
     return send_to_topic(
