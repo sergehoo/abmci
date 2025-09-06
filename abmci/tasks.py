@@ -472,28 +472,9 @@ def send_daily_vod(self, when_date: str | None = None, dry_run: bool = False):
                 raise self.retry(exc=e)
     return {"date": str(today), "sent": sent, "dry_run": dry_run}
 
-@shared_task(
-    bind=True,
-    autoretry_for=(Exception,),
-    retry_backoff=True,          # backoff exponentiel: 1s,2s,4s…
-    retry_backoff_max=60,        # cap à 60s
-    retry_jitter=True,           # un peu d’aléatoire pour éviter le thundering herd
-    max_retries=5,
-    acks_late=True,              # la tâche sera ré-exécutée si worker crash avant ack
-    queue=getattr(settings, "CELERY_QUEUE_NOTIFS", "notifications"),
-    rate_limit=getattr(settings, "CELERY_RATE_LIMIT_FCM", "30/m"),  # optionnel
-)
-def notify_comment_created_task(
-    self,
-    prayer_id: int,
-    comment_id: int,
-    author_name: Optional[str] = None,
-    dry_run: bool = False,
-):
-    """
-    Envoie la notif FCM “nouveau commentaire”.
-    Utiliser .delay(prayer_id, comment_id, author_name) après création.
-    """
+
+@shared_task(bind=True, autoretry_for=(Exception,), retry_backoff=True, retry_kwargs={"max_retries": 5})
+def notify_comment_created_task(self, prayer_id: int, comment_id: int, author_name: Optional[str] = None, *, dry_run: bool=False):
     title = "Nouveau commentaire"
     default_name = author_name or "Quelqu'un"
     body = f"{default_name} a commenté une prière."
