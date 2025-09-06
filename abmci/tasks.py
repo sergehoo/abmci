@@ -495,7 +495,8 @@ def notify_comment_created_task(
     Utiliser .delay(prayer_id, comment_id, author_name) après création.
     """
     title = "Nouveau commentaire"
-    body = f"{author_name or 'Quelqu\'un'} a commenté une prière."
+    default_name = author_name or "Quelqu'un"
+    body = f"{default_name} a commenté une prière."
     data = {
         "type": "PRAYER_COMMENT_NEW",
         "prayer_id": str(prayer_id),
