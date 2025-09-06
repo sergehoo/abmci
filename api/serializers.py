@@ -201,28 +201,10 @@ class CustomRegisterSerializer(RegisterSerializer):
 
 
 class CustomUserDetailsSerializer(serializers.ModelSerializer):
-    eglise_id = serializers.SerializerMethodField()
-    eglise_name = serializers.SerializerMethodField()
     class Meta:
         model = User
-        fields = ['id', 'email', 'first_name', 'last_name','eglise_id', 'eglise_name']
+        fields = ['id', 'email', 'first_name', 'last_name']
         read_only_fields = ('email',)
-
-    def get_eglise_id(self, obj):
-        # adapte selon tes relations
-        try:
-            fid = getattr(obj, 'fidele', None)
-            return getattr(fid, 'eglise_id', None)
-        except Exception:
-            return None
-
-    def get_eglise_name(self, obj):
-        try:
-            fid = getattr(obj, 'fidele', None)
-            eg = getattr(fid, 'eglise', None)
-            return getattr(eg, 'name', None)
-        except Exception:
-            return None
 
 
 class FideleSerializer(serializers.ModelSerializer):
