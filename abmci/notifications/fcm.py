@@ -13,6 +13,7 @@ import firebase_admin
 from firebase_admin import credentials, messaging
 from django.conf import settings
 
+
 # -----------------------------
 # Credentials & initialization
 # -----------------------------
@@ -48,6 +49,8 @@ def _build_credential() -> Optional[credentials.Base]:
         return credentials.ApplicationDefault()
 
     return None
+
+
 def _ensure_initialized() -> firebase_admin.App:
     """
     Initialise **l’app par défaut** (sans name=) exactement une fois.
@@ -69,6 +72,8 @@ def _ensure_initialized() -> firebase_admin.App:
         )
     # ⚠️ NE PAS passer de 'name=' ici -> crée l'app **par défaut**
     return firebase_admin.initialize_app(cred)
+
+
 #     if firebase_admin._apps:
 #         return
 #     cred = _build_credential()
@@ -98,6 +103,7 @@ def is_configured() -> bool:
 
 _TOPIC_RE = re.compile(r"[^A-Za-z0-9_-]")
 
+
 def _normalize_topic(topic: str) -> str:
     """
     Nettoie le topic pour respecter la contrainte FCM.
@@ -107,8 +113,10 @@ def _normalize_topic(topic: str) -> str:
     topic = _TOPIC_RE.sub("_", topic)
     return topic or "default"
 
+
 def _str_dict(d: Optional[Dict]) -> Dict[str, str]:
     return {str(k): str(v) for k, v in (d or {}).items()}
+
 
 def _retryable_error(code: Optional[str]) -> bool:
     """
@@ -116,21 +124,23 @@ def _retryable_error(code: Optional[str]) -> bool:
     """
     return code in {"internal", "unavailable", "deadline-exceeded", "unknown"}
 
+
 def _sleep_backoff(attempt: int, base: float = 0.3, cap: float = 3.0):
     delay = min(cap, base * (2 ** (attempt - 1)))  # 0.3, 0.6, 1.2, 2.4, 3.0…
     time.sleep(delay)
+
 
 # -----------------------------
 # Options plateforme
 # -----------------------------
 
 def _android_config(
-    ttl_seconds: Optional[int] = None,
-    priority_high: bool = True,
-    channel_id: Optional[str] = None,
-    collapse_key: Optional[str] = None,
-    image_url: Optional[str] = None,
-    use_notification: bool = True,  # piloté au niveau appel
+        ttl_seconds: Optional[int] = None,
+        priority_high: bool = True,
+        channel_id: Optional[str] = None,
+        collapse_key: Optional[str] = None,
+        image_url: Optional[str] = None,
+        use_notification: bool = True,  # piloté au niveau appel
 ):
     MAX_TTL = 28 * 24 * 3600
     ttl = None
@@ -152,12 +162,13 @@ def _android_config(
         notification=notif,
     )
 
+
 def _apns_config(
-    ttl_seconds: Optional[int] = None,
-    sound: Optional[str] = "default",
-    mutable_content: bool = False,
-    badge: Optional[int] = None,
-    silent: bool = False,
+        ttl_seconds: Optional[int] = None,
+        sound: Optional[str] = "default",
+        mutable_content: bool = False,
+        badge: Optional[int] = None,
+        silent: bool = False,
 ):
     headers = {}
     if ttl_seconds:
@@ -177,20 +188,20 @@ def _apns_config(
 # -----------------------------
 
 def send_to_token(
-    token: str,
-    title: str,
-    body: str,
-    data: dict | None = None,
-    *,
-    ttl_seconds: Optional[int] = 3600,
-    android_channel_id: Optional[str] = None,
-    android_collapse_key: Optional[str] = None,
-    android_image_url: Optional[str] = None,
-    apns_badge: Optional[int] = None,
-    silent: bool = False,
-    use_notification: bool = False,  # défaut data-only
-    dry_run: bool = False,
-    max_retries: int = 3,
+        token: str,
+        title: str,
+        body: str,
+        data: dict | None = None,
+        *,
+        ttl_seconds: Optional[int] = 3600,
+        android_channel_id: Optional[str] = None,
+        android_collapse_key: Optional[str] = None,
+        android_image_url: Optional[str] = None,
+        apns_badge: Optional[int] = None,
+        silent: bool = False,
+        use_notification: bool = False,  # défaut data-only
+        dry_run: bool = False,
+        max_retries: int = 3,
 ):
     _ensure_initialized()
     msg = messaging.Message(
@@ -214,16 +225,17 @@ def send_to_token(
                 continue
             raise
 
+
 def send_to_topic(
-    topic: str,
-    title: str,
-    body: str,
-    data: dict | None = None,
-    *,
-    ttl_seconds: Optional[int] = 3600,
-    android_channel_id: Optional[str] = None,
-    dry_run: bool = False,
-    max_retries: int = 3,
+        topic: str,
+        title: str,
+        body: str,
+        data: dict | None = None,
+        *,
+        ttl_seconds: Optional[int] = 3600,
+        android_channel_id: Optional[str] = None,
+        dry_run: bool = False,
+        max_retries: int = 3,
 ):
     _ensure_initialized()
     norm = _normalize_topic(topic)
@@ -246,14 +258,15 @@ def send_to_topic(
                 continue
             raise
 
+
 def send_condition(
-    condition: str,
-    title: str,
-    body: str,
-    data: dict | None = None,
-    *,
-    ttl_seconds: Optional[int] = 3600,
-    dry_run: bool = False,
+        condition: str,
+        title: str,
+        body: str,
+        data: dict | None = None,
+        *,
+        ttl_seconds: Optional[int] = 3600,
+        dry_run: bool = False,
 ):
     """
     Envoi via condition FCM (ex: "'eglise_1' in topics || 'eglise_2' in topics").
@@ -269,19 +282,20 @@ def send_condition(
     )
     return messaging.send(msg, dry_run=dry_run)
 
+
 # -----------------------------
 # Envois en batch / multicast
 # -----------------------------
 
 def send_multicast_to_tokens(
-    tokens: Iterable[str],
-    title: str,
-    body: str,
-    data: dict | None = None,
-    *,
-    ttl_seconds: Optional[int] = 3600,
-    android_channel_id: Optional[str] = None,
-    dry_run: bool = False,
+        tokens: Iterable[str],
+        title: str,
+        body: str,
+        data: dict | None = None,
+        *,
+        ttl_seconds: Optional[int] = 3600,
+        android_channel_id: Optional[str] = None,
+        dry_run: bool = False,
 ) -> Tuple[int, List[Tuple[str, Optional[str]]]]:
     """
     Envoi à plusieurs tokens (jusqu’à 500 par batch).
@@ -297,7 +311,7 @@ def send_multicast_to_tokens(
     outcomes: List[Tuple[str, Optional[str]]] = []
 
     for i in range(0, len(tokens), BATCH):
-        chunk = tokens[i : i + BATCH]
+        chunk = tokens[i: i + BATCH]
         msg = messaging.MulticastMessage(
             notification=messaging.Notification(title=title, body=body),
             data=_str_dict(data),
@@ -320,10 +334,11 @@ def send_multicast_to_tokens(
 
     return total_ok, outcomes
 
+
 def send_batch_messages(
-    messages: List[messaging.Message],
-    *,
-    dry_run: bool = False,
+        messages: List[messaging.Message],
+        *,
+        dry_run: bool = False,
 ) -> Tuple[int, int]:
     """
     Envoi d’une liste de messages (max 500 par appel).
@@ -336,11 +351,12 @@ def send_batch_messages(
     BATCH = 500
     ok = fail = 0
     for i in range(0, len(messages), BATCH):
-        chunk = messages[i : i + BATCH]
+        chunk = messages[i: i + BATCH]
         resp = messaging.send_all(chunk, dry_run=dry_run)
         ok += resp.success_count
         fail += resp.failure_count
     return ok, fail
+
 
 # -----------------------------
 # Helpers "Verset du Jour"
@@ -349,23 +365,25 @@ def send_batch_messages(
 def verse_title() -> str:
     return "Verset du jour"
 
+
 def verse_body(reference: str, text: str, *, max_text_len: int = 140) -> str:
     text = " ".join((text or "").split())
     if len(text) > max_text_len:
         text = text[: max_text_len - 1].rstrip() + "…"
     return f"{reference} — {text}"
 
+
 def verse_data_payload(
-    reference: str,
-    text: str,
-    *,
-    date_str: str,
-    version: str,
-    lang: str,
+        reference: str,
+        text: str,
+        *,
+        date_str: str,
+        version: str,
+        lang: str,
 ) -> Dict[str, str]:
     return _str_dict(
         {
-            "type": "VERSE_DU_JOUR",
+            "type": "verse",
             "reference": reference,
             "text": text,
             "date": date_str,
@@ -374,15 +392,17 @@ def verse_data_payload(
         }
     )
 
+
 def send_verse_to_eglise_topic(
-    eglise_id: int,
-    *,
-    reference: str,
-    text: str,
-    date_str: str,
-    version: str,
-    lang: str,
-    dry_run: bool = False,
+        eglise_id: int,
+        *,
+        reference: str,
+        text: str,
+        date_str: str,
+        version: str,
+        lang: str,
+        dry_run: bool = False,
+        android_channel_id="default_channel",
 ):
     """
     Raccourci: envoie la notif du VDJ vers /topics/eglise_{id}
@@ -394,7 +414,8 @@ def send_verse_to_eglise_topic(
     return send_to_topic(topic, title, body, data, dry_run=dry_run)
 
 
-def send_to_user(user_or_fidele, *, title: str, body: str, data: Mapping[str, Any] | None = None, dry_run: bool = False):
+def send_to_user(user_or_fidele, *, title: str, body: str, data: Mapping[str, Any] | None = None,
+                 dry_run: bool = False):
     """
     Envoi “direct” en s’appuyant sur un topic par utilisateur.
     Accepte un User OU un Fidele.

@@ -11,6 +11,7 @@ from django.core.files.storage import default_storage
 from django.core.management import call_command
 from django.db import transaction
 from PIL import Image, UnidentifiedImageError
+from django.db.models import Max
 from django.utils import timezone
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
