@@ -205,7 +205,7 @@ class CustomUserDetailsSerializer(serializers.ModelSerializer):
     eglise_name = serializers.SerializerMethodField()
     class Meta:
         model = User
-        fields = ['id', 'email', 'first_name', 'last_name']
+        fields = ['id', 'email', 'first_name', 'last_name','eglise_id', 'eglise_name']
         read_only_fields = ('email',)
 
     def get_eglise_id(self, obj):
