@@ -313,3 +313,6 @@ FIREBASE_SERVICE_ACCOUNT_PATH = os.getenv("FIREBASE_SERVICE_ACCOUNT_PATH")  # op
 FIREBASE_SERVICE_ACCOUNT_JSON = os.getenv("FIREBASE_SERVICE_ACCOUNT_JSON")  # base64 OU JSON brut
 FIREBASE_SERVICE_ACCOUNT_DICT = None
 
+MIGRATION_MODULES = {
+    "notifications": "app_vendor_migrations.notifications.migrations",
+}
