@@ -47,7 +47,7 @@ urlpatterns = [
                   path('<int:pk>/change-status/', views.ProblemReportChangeStatusView.as_view(),
                        name='problemreport_change_status'),
                   path('stats/', views.ProblemReportStatsView.as_view(), name='problemreport_stats'),
-                  path("ckeditor/", include("ckeditor_uploader.urls")),
+                  path("tinymce/", include("tinymce.urls")),
 
               ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
 if settings.DEBUG:

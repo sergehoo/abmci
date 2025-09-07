@@ -15,7 +15,7 @@ from simple_history.models import HistoricalRecords
 from django_countries.fields import CountryField
 from phonenumber_field.modelfields import PhoneNumberField
 from django.contrib.gis.db import models as gis_models
-from ckeditor.fields import RichTextField
+from tinymce.models import HTMLField  # 👈
 from abmci.notifications.fcm import send_verse_to_eglise_topic
 
 # Create your models here.
@@ -948,7 +948,7 @@ class VerseUsage(models.Model):
 class Banner(models.Model):
     title = models.CharField(max_length=200, blank=True, default="")
     subtitle = models.CharField(max_length=300, blank=True, default="")
-    details = RichTextField(blank=True)
+    details = HTMLField(blank=True)
     image = models.ImageField(upload_to=banner_upload_to)
     link_url = models.URLField(blank=True, default="")  # URL de redirection éventuelle
     active = models.BooleanField(default=True)

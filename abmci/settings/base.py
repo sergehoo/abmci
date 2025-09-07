@@ -81,8 +81,8 @@ INSTALLED_APPS = [
     'mathfilters',
     "django_celery_beat",
     'widget_tweaks',
-    "ckeditor",
-    "ckeditor_uploader",
+    'tinymce'
+
 
 ]
 
@@ -289,7 +289,17 @@ SITE_URL = os.environ.get("SITE_URL", "https://administration.abmci.com/api")  #
 PAYSTACK_IPS_WHITELIST = {
     # Optionnel: adresses IP Paystack (si tu sécurises par IP à l’ELB/Nginx)
 }
-CKEDITOR_UPLOAD_PATH = "uploads/"
+TINYMCE_DEFAULT_CONFIG = {
+    "height": 400,
+    "menubar": False,
+    "plugins": "link lists table code image",
+    "toolbar": "undo redo | styles | bold italic underline | "
+               "alignleft aligncenter alignright | bullist numlist | "
+               "link image table | code",
+    "block_formats": "Paragraph=p; Heading 2=h2; Heading 3=h3",
+    "cleanup_on_startup": True,
+    "convert_urls": False,  # garde tes URLs inchangées (utile en Docker/proxy)
+}
 # Option A — chemin vers le fichier de service account (recommandé en local/Docker)
 # FIREBASE_SERVICE_ACCOUNT_PATH = os.environ.get("FIREBASE_SERVICE_ACCOUNT_PATH")  # ex: /run/secrets/firebase.json
 
