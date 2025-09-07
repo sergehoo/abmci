@@ -81,6 +81,8 @@ INSTALLED_APPS = [
     'mathfilters',
     "django_celery_beat",
     'widget_tweaks',
+    "ckeditor",
+    "ckeditor_uploader",
 
 ]
 
@@ -287,7 +289,7 @@ SITE_URL = os.environ.get("SITE_URL", "https://administration.abmci.com/api")  #
 PAYSTACK_IPS_WHITELIST = {
     # Optionnel: adresses IP Paystack (si tu sécurises par IP à l’ELB/Nginx)
 }
-
+CKEDITOR_UPLOAD_PATH = "uploads/"
 # Option A — chemin vers le fichier de service account (recommandé en local/Docker)
 # FIREBASE_SERVICE_ACCOUNT_PATH = os.environ.get("FIREBASE_SERVICE_ACCOUNT_PATH")  # ex: /run/secrets/firebase.json
 

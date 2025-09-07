@@ -348,7 +348,7 @@ class UpcomingEventsHomeView(UpcomingEventsView):
     """Version allégée pour l’accueil — renvoie les N prochains (3 par défaut)."""
 
     def list(self, request, *args, **kwargs):
-        limit = int(request.query_params.get("limit", 3))
+        limit = int(request.query_params.get("limit", 6))
         self.pagination_class = None  # pas de pagination, on limite directement
         queryset = self.filter_queryset(self.get_queryset())[:limit]
         serializer = self.get_serializer(queryset, many=True)

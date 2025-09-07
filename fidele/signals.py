@@ -16,9 +16,11 @@ from abmci.notifications.fcm import send_to_topic
 from abmci.services.nearest_church import assign_nearest_eglise_if_missing
 from abmci.services.notifications import notify_new_comment
 from abmci.utils.orange_sms import send_sms
+from event.models import Evenement
 from fidele.models import Fidele, PrayerRequest, PrayerComment, ProblemReport, Role
 from django.dispatch import Signal
-from abmci.tasks import send_problem_sms_to_pastors, notify_problem_changed, notify_comment_created_task
+from abmci.tasks import send_problem_sms_to_pastors, notify_problem_changed, notify_comment_created_task, \
+    generate_recurrences_task
 
 notify = Signal()
 
@@ -100,7 +102,6 @@ def set_nearest_church_on_create(sender, instance: Fidele, created: bool, **kwar
         print(f"[signals] assign_nearest_eglise_if_missing error: {e!r}")
 
 
-
 @receiver(post_save, sender=ProblemReport)
 def problem_report_post_save(sender, instance, created, **kwargs):
     if not created:
@@ -114,12 +115,34 @@ def problem_report_post_save(sender, instance, created, **kwargs):
     # Sécu: on ne publie qu'après commit
     transaction.on_commit(_enqueue)
 
+
 def _fmt_date(d):
     if not d:
         return "—"
     # JJ/MM/AAAA
     return d.strftime("%d/%m/%Y")
 
+
+@receiver(post_save, sender=Evenement)
+def schedule_recurrences_on_create(sender, instance: "Evenement", created, **kwargs):
+    """
+    Planifie la génération des récurrences lorsque:
+    - un Evenement est CRÉÉ et marqué is_recurrent=True
+    - OU quand on bascule un existant en récurrent (optionnel: à activer si besoin)
+    """
+    # Ne génère que pour les PARENTS (tes enfants ont is_recurrent=False)
+    if not instance.is_recurrent:
+        return
+
+    # Déclenche seulement à la création
+    if created:
+        transaction.on_commit(lambda: generate_recurrences_task.delay(instance.id))
+        return
+
+    # (Optionnel) Si tu veux aussi déclencher quand on édite un event et qu'il devient récurrent:
+    # Astuce simple : si aucune occurrence enfant n'existe encore, on peut générer.
+    if not instance.children.exists():
+        transaction.on_commit(lambda: generate_recurrences_task.delay(instance.id))
 
 
 # @receiver(post_save, sender=ProblemReport)
@@ -174,6 +197,7 @@ def notify_pastors_on_problem(sender, instance: ProblemReport, created, **kwargs
     if created:
         # on décale un peu (5s) pour s'assurer que tout est bien commit
         send_problem_sms_to_pastors.apply_async(args=[instance.id], countdown=5)
+
 
 def _assignee_label(fid) -> str:
     """
@@ -236,6 +260,7 @@ def _notify_on_change(sender, instance: ProblemReport, created: bool, **kwargs):
 def on_prayer_comment_created(sender, instance: PrayerComment, created: bool, **kwargs):
     if not created:
         return
+
     def _enqueue():
         author = instance.user.get_full_name() or instance.user.username or None
         notify_comment_created_task.delay(
@@ -244,5 +269,6 @@ def on_prayer_comment_created(sender, instance: PrayerComment, created: bool, **
             author_name=author,
             dry_run=False,
         )
+
     # ⚠️ Après COMMIT pour éviter les courses DB
     transaction.on_commit(_enqueue)

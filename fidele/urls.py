@@ -1,6 +1,6 @@
 from django.conf import settings
 from django.conf.urls.static import static
-from django.urls import path
+from django.urls import path, include
 
 from . import views
 from .views import FideleListView, permanencecreate, FideleDetailView, VieDeLEgliseListView, EngagementListView, \
@@ -47,6 +47,7 @@ urlpatterns = [
                   path('<int:pk>/change-status/', views.ProblemReportChangeStatusView.as_view(),
                        name='problemreport_change_status'),
                   path('stats/', views.ProblemReportStatsView.as_view(), name='problemreport_stats'),
+                  path("ckeditor/", include("ckeditor_uploader.urls")),
 
               ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
 if settings.DEBUG:

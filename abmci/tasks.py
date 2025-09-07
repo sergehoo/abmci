@@ -158,7 +158,6 @@ def generate_recurrences_task(self, parent_id: int):
 
     return {"created": len(created_ids), "children": created_ids}
 
-
 @shared_task(
     bind=True,
     max_retries=2,
