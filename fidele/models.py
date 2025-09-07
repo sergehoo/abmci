@@ -672,7 +672,8 @@ class Notification(models.Model):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name="notifications",
+        related_name="fidele_notifications",  # <- unique
+        related_query_name="fidele_notification",  # <- unique
     )
     type = models.CharField(max_length=40, default="GENERIC", db_index=True)
     title = models.CharField(max_length=200)
