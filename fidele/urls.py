@@ -1,3 +1,4 @@
+import notifications
 from django.conf import settings
 from django.conf.urls.static import static
 from django.urls import path, include
@@ -46,6 +47,8 @@ urlpatterns = [
                   path('<int:pk>/assign/', views.ProblemReportAssignView.as_view(), name='problemreport_assign'),
                   path('<int:pk>/change-status/', views.ProblemReportChangeStatusView.as_view(),
                        name='problemreport_change_status'),
+                  url('^inbox/notifications/', include(notifications.urls, namespace='notifications')),
+
                   path('stats/', views.ProblemReportStatsView.as_view(), name='problemreport_stats'),
                   path("tinymce/", include("tinymce.urls")),
 
