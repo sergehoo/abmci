@@ -2,7 +2,7 @@ import notifications
 from django.conf import settings
 from django.conf.urls.static import static
 from django.urls import path, include
-import notifications.urls
+
 
 from . import views
 from .views import FideleListView, permanencecreate, FideleDetailView, VieDeLEgliseListView, EngagementListView, \
@@ -48,7 +48,6 @@ urlpatterns = [
                   path('<int:pk>/assign/', views.ProblemReportAssignView.as_view(), name='problemreport_assign'),
                   path('<int:pk>/change-status/', views.ProblemReportChangeStatusView.as_view(),
                        name='problemreport_change_status'),
-                  path('^inbox/notifications/', include(notifications.urls, namespace='notifications')),
 
                   path('stats/', views.ProblemReportStatsView.as_view(), name='problemreport_stats'),
                   path("tinymce/", include("tinymce.urls")),
