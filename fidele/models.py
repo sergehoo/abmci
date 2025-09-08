@@ -673,6 +673,7 @@ class Notification(models.Model):
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name="fidelenotifications",  # <- unique
+        related_query_name="fidelenotification",
     )
     type = models.CharField(max_length=40, default="GENERIC", db_index=True)
     title = models.CharField(max_length=200)
@@ -682,6 +683,7 @@ class Notification(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
+        db_table = "fidelenotification"
         ordering = ["-created_at"]
         indexes = [
             models.Index(fields=["user", "is_read"]),
