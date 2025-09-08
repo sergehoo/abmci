@@ -46,8 +46,7 @@ urlpatterns = [
                   path('<int:pk>/edit/', views.ProblemReportUpdateView.as_view(), name='problemreport_update'),
                   path('<int:pk>/delete/', views.ProblemReportDeleteView.as_view(), name='problemreport_delete'),
                   path('<int:pk>/assign/', views.ProblemReportAssignView.as_view(), name='problemreport_assign'),
-                  path('<int:pk>/change-status/', views.ProblemReportChangeStatusView.as_view(),
-                       name='problemreport_change_status'),
+                  path('<int:pk>/change-status/', views.ProblemReportChangeStatusView.as_view(), name='problemreport_change_status'),
 
                   path('stats/', views.ProblemReportStatsView.as_view(), name='problemreport_stats'),
                   path("tinymce/", include("tinymce.urls")),
