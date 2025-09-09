@@ -1,30 +1,72 @@
+version: "3.9"
+
+networks:
+  proxy:
+    external: true           # <-- réseau Traefik existant
+  abmci-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  grafana_data:
+
 services:
   abmciweb:
     build: .
     container_name: abmciweb
-    command: gunicorn abmci.wsgi:application --bind 0.0.0.0:8000
+    # Gunicorn plus sobre (2 workers / 2 threads)
+    command: >
+      gunicorn abmci.wsgi:application
+      --bind 0.0.0.0:8000
+      --workers 2 --threads 2
+      --timeout 60
+      --log-level warning
+    env_file: [ .env ]
+    environment:
+      RUN_MIGRATIONS: "1"
+      GDAL_LIBRARY_PATH: /usr/lib/x86_64-linux-gnu/libgdal.so
+      GEOS_LIBRARY_PATH: /usr/lib/x86_64-linux-gnu/libgeos_c.so
     volumes:
       - .:/app
       - /var/www/abmci/staticfiles:/app/staticfiles
       - /var/www/abmci/media:/app/media
       - /home/ubuntu/abmci/creds/firebase-admin.json:/app/firebase-admin.json:ro
-    ports:
-      - "1108:8000"
-    env_file:
-      - .env
-    environment:
-      # Facultatif mais utile pour GeoDjango (amd64)
-      RUN_MIGRATIONS: "1"
-      GDAL_LIBRARY_PATH: /usr/lib/x86_64-linux-gnu/libgdal.so
-      GEOS_LIBRARY_PATH: /usr/lib/x86_64-linux-gnu/libgeos_c.so
     depends_on:
       abmcidb:
         condition: service_healthy
       redis:
         condition: service_started
+    # Plus de "ports:" (Traefik prend la main)
     networks:
       - abmci-network
+      - proxy
     restart: unless-stopped
+    # Limites CPU/RAM (compatibles docker compose classique)
+    cpus: "0.80"
+    mem_limit: "1024m"
+    healthcheck:
+      test: [ "CMD-SHELL", "wget -q -O- http://127.0.0.1:8000/healthz || exit 1" ]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    # === Intégration Traefik ===
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=proxy
+      # Router principal HTTPS
+      - traefik.http.routers.abmci.rule=Host(`administration.abmci.com`)
+      - traefik.http.routers.abmci.entrypoints=websecure
+      - traefik.http.routers.abmci.tls.certresolver=lets
+      # Service (port interne)
+      - traefik.http.services.abmci.loadbalancer.server.port=8000
+      # Middlewares (si définis côté Traefik)
+      - traefik.http.routers.abmci.middlewares=sec-headers@docker,compress@docker,ratelimit@docker
 
   abmcidb:
     image: postgis/postgis:16-3.4
@@ -35,105 +77,137 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks: [ abmci-network ]
+    restart: unless-stopped
+    cpus: "1.0"
+    mem_limit: "1536m"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB || exit 1"]
+      test: [ "CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB || exit 1" ]
       interval: 10s
       timeout: 5s
-      retries: 8
-    networks:
-      - abmci-network
-    restart: unless-stopped
+      retries: 10
+    logging:
+      driver: "json-file"
+      options: { max-size: "10m", max-file: "3" }
 
   redis:
     image: redis:7
     container_name: abmciredis
-    command: ["redis-server", "--appendonly", "yes"]
-    networks:
-      - abmci-network
+    command: [ "redis-server", "--appendonly", "yes" ]
+    networks: [ abmci-network ]
     restart: unless-stopped
+    cpus: "0.20"
+    mem_limit: "256m"
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    logging:
+      driver: "json-file"
+      options: { max-size: "5m", max-file: "2" }
 
   celery:
     build: .
     container_name: abmcicelery
-    command: celery -A abmci worker --loglevel=info
-    volumes:
-      - .:/app
-      - /var/www/abmci/staticfiles:/app/staticfiles
-      - /var/www/abmci/media:/app/media
-      - /home/ubuntu/abmci/creds/firebase-admin.json:/app/firebase-admin.json:ro
-    env_file:
-      - .env
+    # Worker frugal
+    command: >
+      celery -A abmci worker
+      --loglevel=warning
+      --concurrency=1 --prefetch-multiplier=1
+      --autoscale=2,1
+      --max-tasks-per-child=100
+      --without-gossip --without-mingle
+    env_file: [ .env ]
     environment:
       GDAL_LIBRARY_PATH: /usr/lib/x86_64-linux-gnu/libgdal.so
       GEOS_LIBRARY_PATH: /usr/lib/x86_64-linux-gnu/libgeos_c.so
+      CELERY_SEND_EVENTS: "False"
+      CELERY_RESULT_BACKEND: ""
+    volumes:
+      - .:/app
     depends_on:
       abmcidb:
         condition: service_healthy
       redis:
         condition: service_started
-    networks:
-      - abmci-network
+    networks: [ abmci-network ]
     restart: unless-stopped
+    cpus: "0.50"
+    mem_limit: "512m"
+    logging:
+      driver: "json-file"
+      options: { max-size: "10m", max-file: "3" }
 
+  # DÉSACTIVÉ PAR DÉFAUT (profile) — active-le seulement si nécessaire
   celery-beat:
+    profiles: [ "scheduler" ]
     build: .
     container_name: abmcicelerybeat
-    command: celery -A abmci beat --loglevel=info
-    volumes:
-      - .:/app
-      - /var/www/abmci/staticfiles:/app/staticfiles
-      - /var/www/abmci/media:/app/media
-      - /home/ubuntu/abmci/creds/firebase-admin.json:/app/firebase-admin.json:ro
-    env_file:
-      - .env
+    command: >
+      celery -A abmci beat
+      --loglevel=warning
+      --scheduler django_celery_beat.schedulers:DatabaseScheduler
+    env_file: [ .env ]
     environment:
       GDAL_LIBRARY_PATH: /usr/lib/x86_64-linux-gnu/libgdal.so
       GEOS_LIBRARY_PATH: /usr/lib/x86_64-linux-gnu/libgeos_c.so
+    volumes:
+      - .:/app
     depends_on:
       abmcidb:
         condition: service_healthy
       redis:
         condition: service_started
-    networks:
-      - abmci-network
+    networks: [ abmci-network ]
     restart: unless-stopped
+    cpus: "0.20"
+    mem_limit: "256m"
+    logging:
+      driver: "json-file"
+      options: { max-size: "5m", max-file: "2" }
 
+  # MONITORING lourd -> désactivé par défaut (profiles)
   prometheus:
+    profiles: [ "monitoring" ]
     image: prom/prometheus:latest
     container_name: abmciprometheus
     volumes:
-      - ./monitoring:/etc/prometheus:ro   # <-- assure-toi que ./monitoring/prometheus.yml existe
-    ports:
-      - "9098:9090"
-    networks:
-      - abmci-network
+      - ./monitoring:/etc/prometheus:ro
+    # pas d'exposition publique par défaut ; si besoin, passe via Traefik derrière auth
+    networks: [ abmci-network ]
     restart: unless-stopped
+    cpus: "0.30"
+    mem_limit: "512m"
 
   grafana:
+    profiles: [ "monitoring" ]
     image: grafana/grafana
     container_name: abmcigrafana
-    ports:
-      - "3008:3000"
     volumes:
       - grafana_data:/var/lib/grafana
-    networks:
-      - abmci-network
+    networks: [ abmci-network ]
     restart: unless-stopped
+    cpus: "0.30"
+    mem_limit: "512m"
 
+  # Adminer on-demand uniquement
   adminer:
+    profiles: [ "admin" ]
     image: adminer
     container_name: abmci-adminer
-    ports:
-      - "1208:8080"
     networks:
       - abmci-network
+      - proxy
     restart: unless-stopped
-
-volumes:
-  postgres_data:
-  static_volume:
-  media_volume:
-  grafana_data:
-
-networks:
-  abmci-network:
+    cpus: "0.10"
+    mem_limit: "128m"
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=proxy
+      - traefik.http.routers.adminer.rule=Host(`administration.abmci.com`)
+      - traefik.http.routers.adminer.entrypoints=websecure
+      - traefik.http.routers.adminer.tls.certresolver=lets
+      - traefik.http.services.adminer.loadbalancer.server.port=8080
+      # Optionnel: protège Adminer par basic auth (middleware à définir côté Traefik)
+      - traefik.http.routers.adminer.middlewares=traefik-auth@docker
