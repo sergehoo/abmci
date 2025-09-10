@@ -1,4 +1,4 @@
-
+#/Users/ogahserge/Documents/abmci/docker-compose.yml
 networks:
   proxy:
     external: true     # Réseau Traefik existant
@@ -19,14 +19,6 @@ services:
       GDAL_LIBRARY_PATH: /usr/lib/x86_64-linux-gnu/libgdal.so
       GEOS_LIBRARY_PATH: /usr/lib/x86_64-linux-gnu/libgeos_c.so
       RUN_MIGRATIONS: "1"
-    command: >
-      gunicorn abmci.asgi:application
-      -k uvicorn.workers.UvicornWorker
-      --bind 0.0.0.0:8000
-      --workers 2 --threads 2
-      --timeout 60 --graceful-timeout 30
-      --max-requests 600 --max-requests-jitter 60
-      --log-level warning
     volumes:
       - .:/app
       - /var/www/abmci/staticfiles:/app/staticfiles
@@ -78,8 +70,6 @@ services:
       - postgres_data:/var/lib/postgresql/data
     networks: [ abmci-network ]
     restart: unless-stopped
-    cpus: "0.80"
-    mem_limit: "1024m"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB || exit 1" ]
       interval: 10s

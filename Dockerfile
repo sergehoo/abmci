@@ -1,32 +1,89 @@
-# 💡 utilitaires pour healthcheck (curl) et GDAL/GEOS déjà gérés plus haut
-RUN apt-get update && apt-get install -y --no-install-recommends curl \
+# =========================
+# Base de build
+# =========================
+FROM python:3.11-slim-bookworm AS builder
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    DEBIAN_FRONTEND=noninteractive \
+    VIRTUAL_ENV=/opt/venv
+
+# Outils de build pour wheels natifs
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential gcc \
+    gdal-bin libgdal-dev \
+    libgeos-dev \
+    proj-bin proj-data \
+    libpq-dev \
+    curl ca-certificates \
  && rm -rf /var/lib/apt/lists/*
+
+# Crée le venv et installe les deps Python
+RUN python -m venv $VIRTUAL_ENV
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+
+WORKDIR /app
+
+# Si tu utilises GDAL depuis pip, ces variables aident certaines builds
+ENV CPLUS_INCLUDE_PATH=/usr/include/gdal \
+    C_INCLUDE_PATH=/usr/include/gdal
+
+COPY requirements.txt /app/requirements.txt
+RUN pip install --upgrade pip && pip install -r requirements.txt
+
+# =========================
+# Runtime (léger)
+# =========================
+FROM python:3.11-slim-bookworm AS runtime
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    DEBIAN_FRONTEND=noninteractive \
+    VIRTUAL_ENV=/opt/venv
+
+# Libs runtime uniquement (sans toolchain)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gdal-bin libgdal32 \
+    libgeos-c1v5 \
+    proj-bin proj-data \
+    libpq5 \
+    curl ca-certificates \
+ && rm -rf /var/lib/apt/lists/*
+
+# Variables Geo
+ENV GDAL_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu/libgdal.so \
+    GEOS_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu/libgeos_c.so \
+    GDAL_DATA=/usr/share/gdal \
+    PROJ_LIB=/usr/share/proj
+
+# Copie le venv déjà rempli
+COPY --from=builder /opt/venv /opt/venv
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+
+WORKDIR /app
+
+# Copie le code
+COPY . /app
+
+# Dossiers statiques
+RUN mkdir -p /app/staticfiles /app/media
 
 # Entrypoint
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
-# Dossiers statiques
-RUN mkdir -p /app/staticfiles /app/media
-
-# Libs GDAL/GEOS (amd64). Pour ARM64, commente ces 2 var et décommente les 2 suivantes.
-ENV GDAL_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu/libgdal.so \
-    GEOS_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu/libgeos_c.so
-# ENV GDAL_LIBRARY_PATH=/usr/lib/aarch64-linux-gnu/libgdal.so \
-#     GEOS_LIBRARY_PATH=/usr/lib/aarch64-linux-gnu/libgeos_c.so
+# (Optionnel) utilisateur non-root
+RUN useradd -ms /bin/bash appuser && chown -R appuser:appuser /app
+USER appuser
 
 EXPOSE 8000
-ENTRYPOINT ["/entrypoint.sh"]
 
-# ✅ Recommandé pour ASGI/Channels (websockets) : Gunicorn + UvicornWorker
-# (plus simple à intégrer avec Traefik qu’un daphne dédié)
-CMD ["gunicorn", "abmci.asgi:application", \
-     "-k", "uvicorn.workers.UvicornWorker", \
-     "--bind", "0.0.0.0:8000", \
-     "--workers", "2", "--threads", "2", \
-     "--timeout", "60", "--graceful-timeout", "30", \
-     "--max-requests", "600", "--max-requests-jitter", "60", \
-     "--log-level", "warning"]
+# Gunicorn args par défaut (overridables)
+ENV GUNICORN_CMD_ARGS="--workers 2 --threads 2 --timeout 60 --graceful-timeout 30 --max-requests 600 --max-requests-jitter 60 --log-level warning --bind 0.0.0.0:8000"
+
+CMD ["gunicorn", "abmci.asgi:application", "-k", "uvicorn.workers.UvicornWorker"]
+ENTRYPOINT ["/entrypoint.sh"]
 ## ====== Stage 1: build deps ======
 #FROM python:3.11-slim AS builder
 #
