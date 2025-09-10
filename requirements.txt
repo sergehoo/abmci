@@ -112,3 +112,4 @@ wheel~=0.37.0
 platformdirs~=4.2.2
 zipp~=3.23.0
 django-tinymce>=4.0.0
+uvicorn
