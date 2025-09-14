@@ -4,3 +4,7 @@ google-services.json
 
 static/abmci-62f4d-firebase.json
 static/google-services.json
+!/staticfiles/google-services.json
+!/staticfiles/abmci-62f4d-firebase.json
+!/static/abmci-62f4d-firebase.json
+!/static/google-services.json
