@@ -9,3 +9,9 @@ static/google-services.json
 !/staticfiles/abmci-62f4d-firebase.json
 !/static/abmci-62f4d-firebase.json
 !/static/google-services.json
+
+# GCP/Firebase creds
+*.firebase.json
+*firebase*.json
+staticfiles/*.json
+
