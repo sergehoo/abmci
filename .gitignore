@@ -15,3 +15,10 @@ static/google-services.json
 *firebase*.json
 staticfiles/*.json
 
+
+# 🔒 Never commit secrets
+*.firebase.json
+*firebase*.json
+static/*.json
+staticfiles/*.json
+secrets/
