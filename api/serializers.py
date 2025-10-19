@@ -1,6 +1,7 @@
 from dj_rest_auth.registration.serializers import RegisterSerializer
 from django.contrib.gis.geos import Point
-from django.contrib.gis.measure import Distance, D
+# from django.contrib.gis.measure import Distance, D
+from django.contrib.gis.measure import D
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
@@ -144,7 +145,8 @@ class CustomRegisterSerializer(RegisterSerializer):
             Eglise.objects
             .exclude(location__isnull=True)
             .filter(location__distance_lte=(point, D(km=self.NEARBY_RADIUS_KM)))
-            .annotate(distance=Distance('location', point))
+            # .annotate(distance=Distance('location', point))
+            .annotate(distance=DistanceFunc('location', point))
             .order_by('distance')
             .first()
         )
