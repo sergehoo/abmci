@@ -559,12 +559,15 @@ class UserNotificationViewSet(viewsets.ReadOnlyModelViewSet):
             qs = qs.filter(is_read=False)
         return qs.select_related("notification")
 
-    @decorators.action(detail=False, methods=["post"], url_path="mark-all-read")
-    def mark_all_read(self, request):
-        NotificationUser.objects.filter(
-            user=request.user, is_read=False
-        ).update(is_read=True)
-        return response.Response(status=status.HTTP_200_OK)
+    @action(detail=True, methods=["post"], url_path="mark-read")
+    def mark_read(self, request, pk=None):
+        notif = self.get_queryset().filter(pk=pk).first()
+        if not notif:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+        if not notif.is_read:
+            notif.is_read = True
+            notif.save(update_fields=["is_read"])
+        return Response({"ok": True}, status=status.HTTP_200_OK)
 
     @decorators.action(detail=True, methods=["post"], url_path="mark-read")
     def mark_read(self, request, pk=None):
