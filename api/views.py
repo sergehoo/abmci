@@ -552,12 +552,46 @@ class UserNotificationViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = UserNotificationSerializer
     permission_classes = [permissions.IsAuthenticated]
 
+    # def get_queryset(self):
+    #     qs = NotificationUser.objects.filter(user=self.request.user)
+    #     unread = self.request.query_params.get("unread")
+    #     if unread == "true":
+    #         qs = qs.filter(is_read=False)
+    #     return qs.select_related("notification")
+
     def get_queryset(self):
         qs = NotificationUser.objects.filter(user=self.request.user)
-        unread = self.request.query_params.get("unread")
-        if unread == "true":
+
+        unread = str(self.request.query_params.get("unread", "")).lower()
+        if unread in ("1", "true", "yes"):
             qs = qs.filter(is_read=False)
-        return qs.select_related("notification")
+
+        ntype = self.request.query_params.get("type")
+        if ntype:
+            qs = qs.filter(type=ntype)
+
+        after = self.request.query_params.get("after")
+        before = self.request.query_params.get("before")
+        if after:
+            dt = parse_datetime(after)
+            if dt:
+                qs = qs.filter(created_at__gte=dt)
+        if before:
+            dt = parse_datetime(before)
+            if dt:
+                qs = qs.filter(created_at__lte=dt)
+
+        return qs.order_by("-created_at")
+
+    @action(detail=False, methods=["get"], url_path="unread-count")
+    def unread_count(self, request):
+        count = self.get_queryset().filter(is_read=False).count()
+        return Response({"count": count}, status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=["post"], url_path="mark-all-read")
+    def mark_all_read(self, request):
+        count = self.get_queryset().filter(is_read=False).update(is_read=True)
+        return Response({"updated": count}, status=status.HTTP_200_OK)
 
     @action(detail=True, methods=["post"], url_path="mark-read")
     def mark_read(self, request, pk=None):
