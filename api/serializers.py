@@ -17,7 +17,7 @@ from abmci.utils.notifications import send_fcm_multicast
 from event.models import ParticipationEvenement, TypeEvent, Evenement
 from fidele.models import Fidele, UserProfileCompletion, Eglise, SEXE_CHOICES, MARITAL_CHOICES, Location, \
     FidelePosition, PrayerComment, PrayerLike, PrayerCategory, PrayerRequest, Device, Notification, BibleVersion, \
-    BibleVerse, BibleTag, Banner, DonationCategory, VerseOfDay, ProblemCategory, ProblemReport
+    BibleVerse, BibleTag, Banner, DonationCategory, VerseOfDay, ProblemCategory, ProblemReport, NotificationUser
 from phonenumber_field.serializerfields import PhoneNumberField as DRFPhoneNumberField
 
 # from .models import Fidele, UserProfileCompletion
@@ -207,9 +207,10 @@ class CustomRegisterSerializer(RegisterSerializer):
 class CustomUserDetailsSerializer(serializers.ModelSerializer):
     eglise_id = serializers.SerializerMethodField()
     eglise_name = serializers.SerializerMethodField()
+
     class Meta:
         model = User
-        fields = ['id', 'email', 'first_name', 'last_name','eglise_id', 'eglise_name']
+        fields = ['id', 'email', 'first_name', 'last_name', 'eglise_id', 'eglise_name']
         read_only_fields = ('email',)
 
     def get_eglise_id(self, obj):
@@ -466,8 +467,28 @@ class DeviceSerializer(serializers.ModelSerializer):
 class NotificationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Notification
-        fields = ['id','type', 'title', 'body', 'data', 'is_read', 'created_at']
+        fields = ['id', 'type', 'title', 'body', 'data', 'created_at']
         read_only_fields = ['id', 'created_at']
+
+
+class UserNotificationSerializer(serializers.ModelSerializer):
+    type = serializers.CharField(source="notification.type")
+    title = serializers.CharField(source="notification.title")
+    body = serializers.CharField(source="notification.body")
+    data = serializers.JSONField(source="notification.data")
+    created_at = serializers.DateTimeField(source="notification.created_at")
+
+    class Meta:
+        model = NotificationUser
+        fields = [
+            "id",  # id de NotificationUser
+            "type",
+            "title",
+            "body",
+            "data",
+            "is_read",
+            "created_at",
+        ]
 
 
 class BibleVersionSerializer(serializers.ModelSerializer):
@@ -536,7 +557,7 @@ class BannerSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Banner
-        fields = ["id", "title", "subtitle",'details', "image_url", "link_url", "order", "updated_at"]
+        fields = ["id", "title", "subtitle", 'details', "image_url", "link_url", "order", "updated_at"]
 
     def get_image_url(self, obj):
         request = self.context.get("request")
@@ -714,6 +735,7 @@ class ProblemCategorySerializer(serializers.ModelSerializer):
         model = ProblemCategory
         fields = ["id", "name", "slug", "description", "is_active"]
 
+
 class ProblemReportSerializer(serializers.ModelSerializer):
     reporter_name = serializers.SerializerMethodField()
     status_display = serializers.CharField(source="get_status_display", read_only=True)
@@ -734,7 +756,7 @@ class ProblemReportSerializer(serializers.ModelSerializer):
         read_only_fields = ["id", "eglise", "reporter", "created_at", "updated_at", "resolved_at"]
         fields = [
             "id", "eglise", "reporter", "reporter_name",
-            "category", "category_id",   # 👈 ajoute category_id
+            "category", "category_id",  # 👈 ajoute category_id
             "title", "description",
             "assignee", "severity", "status", "due_date",
             "created_at", "updated_at", "resolved_at",

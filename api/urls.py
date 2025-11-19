@@ -6,10 +6,10 @@ from rest_framework.routers import DefaultRouter
 from api.views import VerifyEmailView, UserDetailView, FideleDetailView, FideleListView, ProfileCompletionView, \
     FideleCreateView, ParticipationListCreateView, ScanQRCodeAPIView, VerseDuJourView, UpcomingEventsView, \
     UpcomingEventsHomeView, PrayerCategoryViewSet, PrayerRequestViewSet, PrayerCommentViewSet, DeviceViewSet, \
-    NotificationViewSet, BibleVersionViewSet, BibleVerseViewSet, BibleTagViewSet, BannerListView, CategoryListView, \
+    BibleVersionViewSet, BibleVerseViewSet, BibleTagViewSet, BannerListView, CategoryListView, \
     CreateIntentView, PaystackWebhookView, DonationVerifyAPIView, EgliseListView, EgliseDetailView, \
     EgliseProcheListView, eglises_avec_verset_du_jour, paystack_return_view, PasswordResetConfirmRedirectView, \
-    ProblemCategoryViewSet, ProblemReportViewSet
+    ProblemCategoryViewSet, ProblemReportViewSet, UserNotificationViewSet
 from event.views import FirebaseLoginView
 
 router = DefaultRouter()
@@ -20,7 +20,7 @@ router.register(r'devices', DeviceViewSet, basename='devices')
 router.register("versions", BibleVersionViewSet, basename="bible-version")
 router.register("verses", BibleVerseViewSet, basename="bible-verse")
 router.register(r'bible/tags', BibleTagViewSet, basename='bible-tag')
-router.register(r"notifications", NotificationViewSet, basename="notifications")
+router.register(r"notifications", UserNotificationViewSet, basename="notifications")
 router.register(r"problems/categories", ProblemCategoryViewSet, basename="problem-category")
 router.register(r"problems/reports", ProblemReportViewSet, basename="problem-report")
 

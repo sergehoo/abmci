@@ -18,7 +18,7 @@ from django.core.exceptions import ValidationError
 from django.core.mail import send_mail
 from django.db import IntegrityError, transaction, models
 from django.db.models import Q, Prefetch
-from django.http import JsonResponse, HttpRequest, HttpResponseRedirect, HttpResponse
+from django.http import JsonResponse, HttpRequest, HttpResponseRedirect, HttpResponse, response
 from django.shortcuts import get_object_or_404, render
 from django.template.defaulttags import comment
 from django.utils import timezone
@@ -30,7 +30,7 @@ from django.utils.timezone import now
 from django.views import View
 from django.views.decorators.cache import cache_page
 from django.views.decorators.csrf import csrf_exempt
-from rest_framework import generics, permissions, status, viewsets, mixins, pagination, filters
+from rest_framework import generics, permissions, status, viewsets, mixins, pagination, filters, decorators
 from rest_framework.decorators import action, api_view
 from rest_framework.exceptions import NotFound
 from rest_framework.pagination import PageNumberPagination, LimitOffsetPagination
@@ -51,13 +51,14 @@ from api.serializers import UserSerializer, FideleSerializer, FideleCreateUpdate
     PrayerCommentSerializer, PrayerCategorySerializer, PrayerRequestSerializer, NotificationSerializer, \
     DeviceSerializer, BibleVersionSerializer, BibleVerseSerializer, BibleTagCreateSerializer, BannerSerializer, \
     CreateIntentSerializer, DonationCategorySerializer, EgliseSerializer, EgliseListSerializer, ProblemReportSerializer, \
-    ProblemCategorySerializer
+    ProblemCategorySerializer, UserNotificationSerializer
 from event.models import ParticipationEvenement, Evenement
 from fidele.care.permissions import IsReporterOrStaffSameChurch
 from fidele.models import Fidele, UserProfileCompletion, Eglise, PrayerComment, PrayerRequest, PrayerLike, \
     PrayerCategory, Notification, Device, BibleVersion, BibleVerse, BibleTag, Banner, Donation, DonationCategory, \
-    AccountDeletionRequest, VerseOfDay, ProblemReport, ProblemCategory
+    AccountDeletionRequest, VerseOfDay, ProblemReport, ProblemCategory, NotificationUser
 from django_filters.rest_framework import DjangoFilterBackend
+
 # from .models import Fidele, UserProfileCompletion
 # from .serializers import (
 #     UserSerializer,
@@ -132,12 +133,14 @@ class VerifyEmailView(generics.GenericAPIView):
             return Response({'detail': 'Email vérifié avec succès.'}, status=status.HTTP_200_OK)
         return Response({'detail': 'Lien de vérification invalide.'}, status=status.HTTP_400_BAD_REQUEST)
 
+
 class PasswordResetConfirmRedirectView(View):
     """
     Vue ultra-légère :
     - satisfait reverse('password_reset_confirm') pour dj-rest-auth
     - redirige vers le deeplink mobile (app links) sinon fallback web
     """
+
     def get(self, request, uidb64, token):
         # Deep link mobile (schéma custom ou app links)
         mobile_deeplink = f"allianceconnect://reset-password?uid={uidb64}&token={token}"
@@ -163,6 +166,8 @@ class PasswordResetConfirmRedirectView(View):
 </html>
 """
         return HttpResponse(html)
+
+
 def _verify_signed_qr(payload_b64: str) -> str | None:
     """
     FACULTATIF : si vous décidez d’encoder dans le QR un payload signé plutôt que le simple code.
@@ -182,6 +187,7 @@ def _verify_signed_qr(payload_b64: str) -> str | None:
         return data['code']
     except Exception:
         return None
+
 
 class ScanQRCodeAPIView(APIView):
     """
@@ -303,6 +309,7 @@ class VerseDuJourView(generics.RetrieveAPIView):
 
         # fallback sur Eglise si pas de VOD
         return get_object_or_404(Eglise, pk=eglise_id)
+
 
 DEFAULT_HORIZON_DAYS = 60
 
@@ -482,60 +489,95 @@ class DeviceViewSet(viewsets.ModelViewSet):
         resp = super().create(request, *args, **kwargs)
         return resp
 
+
 class NotificationPagination(PageNumberPagination):
     page_size = 20
     page_size_query_param = "page_size"
     max_page_size = 100
+
+
 # views.py
-class NotificationViewSet(viewsets.ModelViewSet):
-    serializer_class = NotificationSerializer
+# class NotificationViewSet(viewsets.ModelViewSet):
+#     serializer_class = NotificationSerializer
+#     permission_classes = [permissions.IsAuthenticated]
+#     pagination_class = NotificationPagination
+#     http_method_names = ["get", "post", "delete", "head", "options"]
+#
+#     def get_queryset(self):
+#         qs = Notification.objects.filter(user=self.request.user)
+#
+#         unread = str(self.request.query_params.get("unread", "")).lower()
+#         if unread in ("1", "true", "yes"):
+#             qs = qs.filter(is_read=False)
+#
+#         ntype = self.request.query_params.get("type")
+#         if ntype:
+#             qs = qs.filter(type=ntype)
+#
+#         after = self.request.query_params.get("after")
+#         before = self.request.query_params.get("before")
+#         if after:
+#             dt = parse_datetime(after)
+#             if dt:
+#                 qs = qs.filter(created_at__gte=dt)
+#         if before:
+#             dt = parse_datetime(before)
+#             if dt:
+#                 qs = qs.filter(created_at__lte=dt)
+#
+#         return qs.order_by("-created_at")
+#
+#     @action(detail=False, methods=["get"], url_path="unread-count")
+#     def unread_count(self, request):
+#         count = self.get_queryset().filter(is_read=False).count()
+#         return Response({"count": count}, status=status.HTTP_200_OK)
+#
+#     @action(detail=False, methods=["post"], url_path="mark-all-read")
+#     def mark_all_read(self, request):
+#         count = self.get_queryset().filter(is_read=False).update(is_read=True)
+#         return Response({"updated": count}, status=status.HTTP_200_OK)
+#
+#     @action(detail=True, methods=["post"], url_path="mark-read")
+#     def mark_read(self, request, pk=None):
+#         notif = self.get_queryset().filter(pk=pk).first()
+#         if not notif:
+#             return Response(status=status.HTTP_404_NOT_FOUND)
+#         if not notif.is_read:
+#             notif.is_read = True
+#             notif.save(update_fields=["is_read"])
+#         return Response({"ok": True}, status=status.HTTP_200_OK)
+
+
+class UserNotificationViewSet(viewsets.ReadOnlyModelViewSet):
+    serializer_class = UserNotificationSerializer
     permission_classes = [permissions.IsAuthenticated]
-    pagination_class = NotificationPagination
-    http_method_names = ["get", "post", "delete", "head", "options"]
 
     def get_queryset(self):
-        qs = Notification.objects.filter(user=self.request.user)
-
-        unread = str(self.request.query_params.get("unread", "")).lower()
-        if unread in ("1", "true", "yes"):
+        qs = NotificationUser.objects.filter(user=self.request.user)
+        unread = self.request.query_params.get("unread")
+        if unread == "true":
             qs = qs.filter(is_read=False)
+        return qs.select_related("notification")
 
-        ntype = self.request.query_params.get("type")
-        if ntype:
-            qs = qs.filter(type=ntype)
-
-        after = self.request.query_params.get("after")
-        before = self.request.query_params.get("before")
-        if after:
-            dt = parse_datetime(after)
-            if dt:
-                qs = qs.filter(created_at__gte=dt)
-        if before:
-            dt = parse_datetime(before)
-            if dt:
-                qs = qs.filter(created_at__lte=dt)
-
-        return qs.order_by("-created_at")
-
-    @action(detail=False, methods=["get"], url_path="unread-count")
-    def unread_count(self, request):
-        count = self.get_queryset().filter(is_read=False).count()
-        return Response({"count": count}, status=status.HTTP_200_OK)
-
-    @action(detail=False, methods=["post"], url_path="mark-all-read")
+    @decorators.action(detail=False, methods=["post"], url_path="mark-all-read")
     def mark_all_read(self, request):
-        count = self.get_queryset().filter(is_read=False).update(is_read=True)
-        return Response({"updated": count}, status=status.HTTP_200_OK)
+        NotificationUser.objects.filter(
+            user=request.user, is_read=False
+        ).update(is_read=True)
+        return response.Response(status=status.HTTP_200_OK)
 
-    @action(detail=True, methods=["post"], url_path="mark-read")
+    @decorators.action(detail=True, methods=["post"], url_path="mark-read")
     def mark_read(self, request, pk=None):
-        notif = self.get_queryset().filter(pk=pk).first()
-        if not notif:
-            return Response(status=status.HTTP_404_NOT_FOUND)
-        if not notif.is_read:
-            notif.is_read = True
-            notif.save(update_fields=["is_read"])
-        return Response({"ok": True}, status=status.HTTP_200_OK)
+        try:
+            obj = self.get_queryset().get(pk=pk)
+        except NotificationUser.DoesNotExist:
+            return response.Response(status=status.HTTP_404_NOT_FOUND)
+        if not obj.is_read:
+            obj.is_read = True
+            obj.read_at = timezone.now()
+            obj.save(update_fields=["is_read", "read_at"])
+        return response.Response(status=status.HTTP_200_OK)
+
 
 class BibleVersionViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
     queryset = BibleVersion.objects.all()
@@ -729,6 +771,7 @@ class CreateIntentView(generics.GenericAPIView):
             'authorization_url': auth_url,
         }, status=status.HTTP_201_CREATED)
 
+
 class PaystackWebhookView(generics.GenericAPIView):
     authentication_classes = []  # tu peux vérifier la signature Paystack (x-paystack-signature)
     permission_classes = [permissions.AllowAny]
@@ -793,6 +836,7 @@ class DonationVerifyAPIView(APIView):
             donation.save(update_fields=['status'])
             return Response({'status': 'failed', 'paystack': data}, status=400)
 
+
 def paystack_return_view(request: HttpRequest):
     """
     Page de retour Paystack (callback utilisateur, PAS webhook).
@@ -805,7 +849,7 @@ def paystack_return_view(request: HttpRequest):
     # 1) Deep link custom (Android Intent Filter + iOS URL Types)
     deeplink_scheme = getattr(settings, "DEEPLINK_SCHEME", "allianceconnect")
     deeplink_host = "donations"
-    deeplink_path = "/thanks"   # => allianceconnect://donations/thanks?...
+    deeplink_path = "/thanks"  # => allianceconnect://donations/thanks?...
     deeplink_qs = urlencode({"reference": ref, "status": status})
     deeplink_url = f"{deeplink_scheme}://{deeplink_host}{deeplink_path}?{deeplink_qs}"
 
@@ -836,6 +880,8 @@ def paystack_return_view(request: HttpRequest):
         "status_ok": status.lower() == "success",
     }
     return render(request, "landing/payments/return.html", ctx)
+
+
 class UserDetailView(generics.RetrieveUpdateAPIView):
     serializer_class = UserSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -914,6 +960,7 @@ class AccountDeletePerformWebhook(View):
         # déconnexion côté web ; pour mobile, renvoie 200 et laisse le client purger son token
         return JsonResponse({"status": "requested"})
 
+
 class DonationVerifyAPIView(APIView):
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
 
@@ -942,6 +989,7 @@ class DonationVerifyAPIView(APIView):
 
         return Response({'status': donation.status, 'paystack': payload}, status=400)
 
+
 class UserDetailView(generics.RetrieveUpdateAPIView):
     serializer_class = UserSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -960,6 +1008,8 @@ def _get_float(request, name):
         return float(v)
     except (TypeError, ValueError):
         return None
+
+
 @method_decorator(cache_page(60 * 5), name="dispatch")
 class EgliseListView(generics.ListAPIView):
     """
@@ -1033,7 +1083,6 @@ class EgliseProcheListView(generics.ListAPIView):
     authentication_classes = []
     serializer_class = EgliseListSerializer
 
-
     def get_queryset(self):
         qs = Eglise.objects.filter(location__isnull=False)
         lat = self.request.query_params.get('lat')
@@ -1082,6 +1131,7 @@ class EgliseProcheListView(generics.ListAPIView):
         ctx['radius_m'] = getattr(self.request, '_radius_m', None)
         return ctx
 
+
 @api_view(['GET'])
 def eglises_avec_verset_du_jour(request):
     """API personnalisée pour les églises avec leur verset du jour"""
@@ -1096,11 +1146,11 @@ def eglises_avec_verset_du_jour(request):
     return Response(serializer.data)
 
 
-
 class ProblemCategoryViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = ProblemCategory.objects.filter(is_active=True).order_by("name")
     serializer_class = ProblemCategorySerializer
     permission_classes = [IsAuthenticated]
+
 
 class ProblemReportViewSet(viewsets.ModelViewSet):
     serializer_class = ProblemReportSerializer

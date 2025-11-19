@@ -51,7 +51,7 @@ from fidele.models import (
     PrayerAttachment,
     BibleTag,
     VerseUsage,
-    AccountDeletionRequest,
+    AccountDeletionRequest, NotificationUser,
 )
 
 # Configuration globale de l’admin
@@ -672,11 +672,37 @@ class TransferHistoryAdmin(admin.ModelAdmin):
 
 @admin.register(Notification)
 class NotificationAdmin(admin.ModelAdmin):
-    list_display = ["user", "type", "title", "is_read", "created_at"]
-    list_filter = ["type", "is_read", "created_at"]
-    search_fields = ["user__username", "title"]
+    list_display = [ "type", "title", "created_at"]
+    list_filter = ["type",  "created_at"]
+    search_fields = ["title"]
 
 
+@admin.register(NotificationUser)
+class NotificationUserAdmin(admin.ModelAdmin):
+    list_display = ['user', 'notification', 'is_read', 'created_at', 'read_at']
+    list_filter = ['is_read', 'created_at']
+    search_fields = ['user__username', 'notification__title']
+    raw_id_fields = ['user', 'notification']
+    readonly_fields = ['created_at']
+
+    def mark_as_read(self, request, queryset):
+        updated = queryset.filter(is_read=False).update(
+            is_read=True,
+            read_at=timezone.now()
+        )
+        self.message_user(request, f"{updated} notifications marquées comme lues.")
+
+    def mark_as_unread(self, request, queryset):
+        updated = queryset.filter(is_read=True).update(
+            is_read=False,
+            read_at=None
+        )
+        self.message_user(request, f"{updated} notifications marquées comme non lues.")
+
+    mark_as_read.short_description = "Marquer comme lu"
+    mark_as_unread.short_description = "Marquer comme non lu"
+
+    actions = [mark_as_read, mark_as_unread]
 @admin.register(Device)
 class DeviceAdmin(admin.ModelAdmin):
     list_display = ["user", "platform", "last_seen", "created_at"]

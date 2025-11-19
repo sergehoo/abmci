@@ -669,30 +669,64 @@ User = get_user_model()
 
 
 class Notification(models.Model):
-    user = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
-        related_name="fidelenotifications",  # <- unique
-        related_query_name="fidelenotification",
-    )
+    # user = models.ForeignKey(
+    #     settings.AUTH_USER_MODEL,
+    #     on_delete=models.CASCADE,
+    #     related_name="fidelenotifications",  # <- unique
+    #     related_query_name="fidelenotification",
+    # )
     type = models.CharField(max_length=40, default="GENERIC", db_index=True)
     title = models.CharField(max_length=200)
     body = models.TextField()
     data = models.JSONField(default=dict, blank=True)
-    is_read = models.BooleanField(default=False)
+
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         # db_table = "fidelenotification"
         ordering = ["-created_at"]
         indexes = [
-            models.Index(fields=["user", "is_read"]),
+
             models.Index(fields=["type"]),
             models.Index(fields=["-created_at"]),
         ]
 
     def __str__(self):
-        return f"{self.user_id} • {self.type} • {self.title[:32]}"
+        return f" {self.type} • {self.title[:32]}"
+
+
+class NotificationUser(models.Model):
+    """
+    Instance d'une notification pour un utilisateur donné
+    (permet de marquer lu / non-lu par user).
+    """
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="notifications",
+        related_query_name="notification",
+    )
+    notification = models.ForeignKey(
+        Notification,
+        on_delete=models.CASCADE,
+        related_name="user_entries",
+    )
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    read_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        unique_together = ("user", "notification")
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["user", "is_read"]),
+            models.Index(fields=["user", "created_at"]),
+        ]
+
+    def __str__(self):
+        return f"User={self.user_id} • Notif={self.notification_id} • {'LU' if self.is_read else 'NON LU'}"
+
 
 class Competence(models.Model):
     nom = models.CharField(max_length=100)
@@ -903,7 +937,6 @@ class VerseOfDay(models.Model):
     reference = models.CharField(max_length=128)
     created_at = models.DateTimeField(auto_now_add=True)
     notified_at = models.DateTimeField(null=True, blank=True, db_index=True)
-
 
     class Meta:
         unique_together = (('date', 'eglise'),)
