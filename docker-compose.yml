@@ -179,7 +179,6 @@ services:
 
   # Adminer on-demand, sous SOUS-DOMAINE dédié (évite le conflit Host)
   adminer:
-    profiles: [ "admin" ]
     image: adminer
     container_name: abmci-adminer
     networks:
