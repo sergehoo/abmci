@@ -190,11 +190,11 @@ services:
     labels:
       - traefik.enable=true
       - traefik.docker.network=proxy
-      - traefik.http.routers.adminer.rule=Host(`adminer.abmci.com`)
-      - traefik.http.routers.adminer.entrypoints=websecure
-#      - traefik.http.routers.adminer.tls=true
-      - traefik.http.routers.adminer.tls.certresolver=lets
-      - traefik.http.services.adminer.loadbalancer.server.port=8080
+      - traefik.http.routers.abmci-adminer.rule=Host(`adminer.abmci.com`)
+      - traefik.http.routers.abmci-adminer.entrypoints=websecure
+      - traefik.http.routers.abmci-adminer.tls=true
+      - traefik.http.routers.abmci-adminer.tls.certresolver=lets
+      - traefik.http.services.abmci-adminer.loadbalancer.server.port=8080
 #      - traefik.http.services.adminer.loadbalancer.server.scheme=http
 
 #networks:
