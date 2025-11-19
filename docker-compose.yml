@@ -196,7 +196,7 @@ services:
       - traefik.http.routers.adminer.tls.certresolver=lets
       - traefik.http.services.adminer.loadbalancer.server.port=8080
       # Optionnel: BasicAuth si middleware défini côté Traefik
-      - traefik.http.routers.adminer.middlewares=traefik-auth@docker
+#      - traefik.http.routers.adminer.middlewares=traefik-auth@docker
 
 #networks:
 #  proxy:
