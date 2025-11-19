@@ -547,74 +547,98 @@ class NotificationPagination(PageNumberPagination):
 #             notif.save(update_fields=["is_read"])
 #         return Response({"ok": True}, status=status.HTTP_200_OK)
 
-
 class UserNotificationViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    Liste et actions sur les notifications d'un utilisateur donné
+    (basé sur le modèle NotificationUser).
+    """
+
     serializer_class = UserNotificationSerializer
     permission_classes = [permissions.IsAuthenticated]
-
-    # def get_queryset(self):
-    #     qs = NotificationUser.objects.filter(user=self.request.user)
-    #     unread = self.request.query_params.get("unread")
-    #     if unread == "true":
-    #         qs = qs.filter(is_read=False)
-    #     return qs.select_related("notification")
+    pagination_class = NotificationPagination  # optionnel, si tu veux la même pagination que l’autre
 
     def get_queryset(self):
-        qs = NotificationUser.objects.filter(user=self.request.user)
+        """
+        On part de NotificationUser filtré par user,
+        puis on applique les filtres éventuels (?unread, ?type, ?after, ?before).
+        """
+        qs = (
+            NotificationUser.objects
+            .filter(user=self.request.user)
+            .select_related("notification")
+        )
 
+        # ?unread=true / 1 / yes
         unread = str(self.request.query_params.get("unread", "")).lower()
         if unread in ("1", "true", "yes"):
             qs = qs.filter(is_read=False)
 
+        # ?type=COMMENT_NEW, EVENT, ...
         ntype = self.request.query_params.get("type")
         if ntype:
-            qs = qs.filter(type=ntype)
+            # le type est sur Notification, pas sur NotificationUser
+            qs = qs.filter(notification__type=ntype)
 
+        # Filtres temporels sur la date de création de la "vraie" notif
         after = self.request.query_params.get("after")
         before = self.request.query_params.get("before")
         if after:
             dt = parse_datetime(after)
             if dt:
-                qs = qs.filter(created_at__gte=dt)
+                qs = qs.filter(notification__created_at__gte=dt)
         if before:
             dt = parse_datetime(before)
             if dt:
-                qs = qs.filter(created_at__lte=dt)
+                qs = qs.filter(notification__created_at__lte=dt)
 
-        return qs.order_by("-created_at")
+        return qs.order_by("-notification__created_at")
 
-    @action(detail=False, methods=["get"], url_path="unread-count")
+    # ---------- Compteur de non-lues ----------
+
+    @decorators.action(detail=False, methods=["get"], url_path="unread-count")
     def unread_count(self, request):
-        count = self.get_queryset().filter(is_read=False).count()
+        """
+        GET /notifications/unread-count/
+        → { "count": 3 }
+        """
+        count = NotificationUser.objects.filter(
+            user=request.user,
+            is_read=False,
+        ).count()
         return Response({"count": count}, status=status.HTTP_200_OK)
 
-    @action(detail=False, methods=["post"], url_path="mark-all-read")
-    def mark_all_read(self, request):
-        count = self.get_queryset().filter(is_read=False).update(is_read=True)
-        return Response({"updated": count}, status=status.HTTP_200_OK)
+    # ---------- Tout marquer comme lu ----------
 
-    @action(detail=True, methods=["post"], url_path="mark-read")
-    def mark_read(self, request, pk=None):
-        notif = self.get_queryset().filter(pk=pk).first()
-        if not notif:
-            return Response(status=status.HTTP_404_NOT_FOUND)
-        if not notif.is_read:
-            notif.is_read = True
-            notif.save(update_fields=["is_read"])
-        return Response({"ok": True}, status=status.HTTP_200_OK)
+    @decorators.action(detail=False, methods=["post"], url_path="mark-all-read")
+    def mark_all_read(self, request):
+        """
+        POST /notifications/mark-all-read/
+        """
+        updated = NotificationUser.objects.filter(
+            user=request.user,
+            is_read=False,
+        ).update(is_read=True, read_at=timezone.now())
+        return Response({"updated": updated}, status=status.HTTP_200_OK)
+
+    # ---------- Une seule notification lue ----------
 
     @decorators.action(detail=True, methods=["post"], url_path="mark-read")
     def mark_read(self, request, pk=None):
+        """
+        POST /notifications/{id}/mark-read/
+        Ici {id} = id de NotificationUser, pas de Notification.
+        """
         try:
             obj = self.get_queryset().get(pk=pk)
         except NotificationUser.DoesNotExist:
-            return response.Response(status=status.HTTP_404_NOT_FOUND)
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
         if not obj.is_read:
             obj.is_read = True
             obj.read_at = timezone.now()
             obj.save(update_fields=["is_read", "read_at"])
-        return response.Response(status=status.HTTP_200_OK)
 
+        return Response({"ok": True}, status=status.HTTP_200_OK)
 
 class BibleVersionViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
     queryset = BibleVersion.objects.all()
