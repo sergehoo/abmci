@@ -536,7 +536,7 @@ class BannerSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Banner
-        fields = ["id", "title", "subtitle", "image_url", "link_url", "order", "updated_at"]
+        fields = ["id", "title", "subtitle",'details', "image_url", "link_url", "order", "updated_at"]
 
     def get_image_url(self, obj):
         request = self.context.get("request")
