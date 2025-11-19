@@ -198,7 +198,7 @@ services:
       - traefik.http.services.adminer.loadbalancer.server.port=8080
       - traefik.http.services.adminer.loadbalancer.server.scheme=http
       # Optionnel: BasicAuth si middleware défini côté Traefik
-#      - traefik.http.routers.adminer.middlewares=traefik-auth@docker
+      - traefik.http.routers.adminer.middlewares=traefik-auth@docker
 
 #networks:
 #  proxy:
