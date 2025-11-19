@@ -178,7 +178,7 @@ services:
     mem_limit: "512m"
 
   # Adminer on-demand, sous SOUS-DOMAINE dédié (évite le conflit Host)
-  abmciner:
+  adminer:
     profiles: [ "admin" ]
     image: adminer
     container_name: abmci-adminer
@@ -191,12 +191,12 @@ services:
     labels:
       - traefik.enable=true
       - traefik.docker.network=proxy
-      - traefik.http.routers.abmciner.rule=Host(`adminer.abmci.com`)
-      - traefik.http.routers.abmciner.entrypoints=websecure
-      - traefik.http.routers.abmciner.tls=true
-      - traefik.http.routers.abmciner.tls.certresolver=lets
-      - traefik.http.services.abmciner.loadbalancer.server.port=8080
-      - traefik.http.services.abmciner.loadbalancer.server.scheme=http
+      - traefik.http.routers.adminer.rule=Host(`adminer.abmci.com`)
+      - traefik.http.routers.adminer.entrypoints=websecure
+      - traefik.http.routers.adminer.tls=true
+      - traefik.http.routers.adminer.tls.certresolver=lets
+      - traefik.http.services.adminer.loadbalancer.server.port=8080
+      - traefik.http.services.adminer.loadbalancer.server.scheme=http
       # Optionnel: BasicAuth si middleware défini côté Traefik
 #      - traefik.http.routers.adminer.middlewares=traefik-auth@docker
 
