@@ -688,7 +688,7 @@ class Notification(models.Model):
         indexes = [
 
             models.Index(fields=["type"]),
-            models.Index(fields=["-created_at"]),
+            # models.Index(fields=["-created_at"]),
         ]
 
     def __str__(self):
