@@ -1,144 +1,135 @@
-from datetime import timedelta
-
 from django.contrib import admin, messages
-from django.contrib.gis.admin import GISModelAdmin
-from django.contrib.gis.forms import OSMWidget
-from django.shortcuts import redirect, render
-from django.urls import reverse, NoReverseMatch, path
+from django.contrib.auth.admin import UserAdmin
+from django.urls import reverse, NoReverseMatch
 from django.utils import timezone
 from django.utils.formats import number_format
 from django.utils.html import format_html
-from simple_history.admin import SimpleHistoryAdmin
-from django.contrib.gis import admin as gis_admin
 
-from event.services.scheduling_verse import pick_candidate_verses, schedule_vod_for_period
-from fidele.form import ScheduleVODForm
-from fidele.models import Department, MembreType, Fidele, Location, TypeLocation, Fonction, OuvrierPermanence, \
-    Permanence, Eglise, Familles, SujetPriere, ProblemeParticulier, UserProfileCompletion, PrayerLike, PrayerComment, \
-    PrayerRequest, PrayerCategory, BibleVersion, BibleVerse, Banner, DonationCategory, Donation, VerseOfDay, \
-    FidelePosition, ProblemCategory, ProblemReport, Role
-from django.contrib.gis.db import models
-from event.services.scheduling_verse import pick_candidate_verses, schedule_vod_for_period
-from abmci.tasks import schedule_vod_task
+from abmci.services.notifications import User
+from fidele.models import (
+    Department,
+    MembreType,
+    Fidele,
+    Location,
+    TypeLocation,
+    Fonction,
+    OuvrierPermanence,
+    Permanence,
+    Eglise,
+    Familles,
+    SujetPriere,
+    ProblemeParticulier,
+    UserProfileCompletion,
+    PrayerLike,
+    PrayerComment,
+    PrayerRequest,
+    PrayerCategory,
+    BibleVersion,
+    BibleVerse,
+    Banner,
+    DonationCategory,
+    Donation,
+    VerseOfDay,
+    FidelePosition,
+    ProblemCategory,
+    ProblemReport,
+    Role,
+    Device,
+    ProblemAction,
+    EntretienPastoral,
+    NotePastorale,
+    Conseil,
+    DemandePriere,
+    TransferHistory,
+    Notification,
+    Competence,
+    Service,
+    ParticipationService,
+    Anniversaire,
+    Sacrement,
+    Deces,
+    PrayerAttachment,
+    BibleTag,
+    VerseUsage,
+    AccountDeletionRequest,
+)
 
-# Register your models here.
-admin.site.site_header = 'BACK-END ABMCI'
-admin.site.site_title = 'ABMCI Admin Pannel'
-admin.site.site_url = 'http://allianceconnect.com/'
-admin.site.index_title = 'ABMCI Connect'
-admin.empty_value_display = '**Empty**'
+# Configuration globale de l’admin
+admin.site.site_header = "BACK-END ABMCI"
+admin.site.site_title = "ABMCI Admin Pannel"
+admin.site.site_url = "http://allianceconnect.com/"
+admin.site.index_title = "ABMCI Connect"
+admin.empty_value_display = "**Empty**"
 
-admin.site.register(Permanence, SimpleHistoryAdmin)
-admin.site.register(OuvrierPermanence, SimpleHistoryAdmin)
-admin.site.register(Department, SimpleHistoryAdmin)
-admin.site.register(Fonction, SimpleHistoryAdmin)
-admin.site.register(MembreType, SimpleHistoryAdmin)
-# admin.site.register(Fidele, SimpleHistoryAdmin)
-admin.site.register(Location, SimpleHistoryAdmin)
-admin.site.register(TypeLocation, SimpleHistoryAdmin)
-# admin.site.register(Eglise, SimpleHistoryAdmin)
-admin.site.register(Familles, SimpleHistoryAdmin)
-admin.site.register(ProblemeParticulier, SimpleHistoryAdmin)
-admin.site.register(SujetPriere, SimpleHistoryAdmin)
 
+# ---------------------------------------------------------------------------
+# PROFIL UTILISATEUR / COMPLETION
+# ---------------------------------------------------------------------------
 
 @admin.register(UserProfileCompletion)
 class UserProfileCompletionAdmin(admin.ModelAdmin):
-    # Configuration de l'affichage de la liste
-    list_display = ('user', 'current_step', 'is_complete', 'last_updated')
-    list_filter = ('is_complete', 'current_step')
-    search_fields = ('user__username', 'user__first_name', 'user__last_name')
-    ordering = ('-last_updated',)
-    date_hierarchy = 'last_updated'
+    list_display = ("user", "current_step", "is_complete", "last_updated")
+    list_filter = ("is_complete", "current_step")
+    search_fields = ("user__username", "user__first_name", "user__last_name")
+    ordering = ("-last_updated",)
+    date_hierarchy = "last_updated"
 
-    # Configuration du formulaire d'édition
     fieldsets = (
-        (None, {
-            'fields': ('user', 'is_complete')
-        }),
-        ('Progression', {
-            'fields': ('current_step', 'last_updated'),
-            'classes': ('collapse',)
-        }),
+        (
+            None,
+            {
+                "fields": ("user", "is_complete"),
+            },
+        ),
+        (
+            "Progression",
+            {
+                "fields": ("current_step", "last_updated"),
+                "classes": ("collapse",),
+            },
+        ),
     )
 
-    # Champs en lecture seule
-    readonly_fields = ('last_updated',)
+    readonly_fields = ("last_updated",)
 
-    # Configuration des actions personnalisées
-    actions = ['mark_as_complete', 'reset_completion']
+    actions = ["mark_as_complete", "reset_completion"]
 
     def mark_as_complete(self, request, queryset):
         queryset.update(is_complete=True, current_step=5)
-        self.message_user(request, f"{queryset.count()} profils marqués comme complets")
+        self.message_user(
+            request, f"{queryset.count()} profils marqués comme complets"
+        )
 
     mark_as_complete.short_description = "Marquer comme complet"
 
     def reset_completion(self, request, queryset):
         queryset.update(is_complete=False, current_step=1)
-        self.message_user(request, f"{queryset.count()} profils réinitialisés")
+        self.message_user(
+            request, f"{queryset.count()} profils réinitialisés"
+        )
 
     reset_completion.short_description = "Réinitialiser la progression"
 
-    # Amélioration de l'affichage du user
     def get_queryset(self, request):
-        return super().get_queryset(request).select_related('user')
+        return super().get_queryset(request).select_related("user")
 
-    # Optionnel: Ajout d'une méthode pour afficher plus d'infos sur l'utilisateur
     def user_info(self, obj):
         return f"{obj.user.get_full_name()} ({obj.user.email})"
 
     user_info.short_description = "Informations utilisateur"
 
 
-class CustomOSMWidget(OSMWidget):
-    # Paramètres par défaut pour la Côte d'Ivoire (Abidjan)
-    default_lon = -3.961808   # Longitude
-    default_lat = 5.386192    # Latitude
-    default_zoom = 15
-
-
-# @admin.register(Eglise)
-# class EgliseAdmin(GISModelAdmin):
-#     list_display = ("name", "ville", "pasteur")
-#     search_fields = ("name", "ville", "pasteur")
-#     list_filter = ("ville",)
-#
-#     # Configuration du widget de carte
-#     formfield_overrides = {
-#         models.PointField: {
-#             "widget": CustomOSMWidget(
-#                 attrs={
-#                     'map_width': 1000,
-#                     'map_height': 500,
-#                     'display_raw': True,
-#                 }
-#             )
-#         }
-#     }
-
-@admin.register(Role)
-class RoleAdminSimple(admin.ModelAdmin):
-    list_display = ('code', 'name', 'description')
-    search_fields = ('code', 'name')
-    ordering = ('code',)
-
-@admin.register(Fidele)
-class FideleAdmin(SimpleHistoryAdmin):
-    list_display = ("id", "user", "phone", "eglise", "type_membre", "date_entree")
-    # IMPORTANT: provide search_fields (used by autocomplete)
-    search_fields = ("user__first_name", "user__last_name", "phone", "qlook_id")
-    autocomplete_fields = ("eglise",)
-    list_filter = ("eglise", "type_membre")
+# ---------------------------------------------------------------------------
+# PRIERES (feed, likes, commentaires)
+# ---------------------------------------------------------------------------
 
 @admin.register(PrayerCategory)
 class PrayerCategoryAdmin(admin.ModelAdmin):
-    list_display = ('name', 'icon', 'created_at')
-    list_filter = ('created_at',)
-    search_fields = ('name',)
-    # prepopulated_fields = {'slug': ('name',)}  # Si vous ajoutez un champ slug
-    ordering = ('name',)
-    date_hierarchy = 'created_at'
+    list_display = ("name", "icon", "created_at")
+    list_filter = ("created_at",)
+    search_fields = ("name",)
+    ordering = ("name",)
+    date_hierarchy = "created_at"
 
     def get_queryset(self, request):
         return super().get_queryset(request).select_related()
@@ -147,107 +138,160 @@ class PrayerCategoryAdmin(admin.ModelAdmin):
 @admin.register(PrayerRequest)
 class PrayerRequestAdmin(admin.ModelAdmin):
     list_display = (
-        'title',
-        'user',
-        'get_prayer_type_display',
-        'category',
-        'is_anonymous',
-        'created_at',
-        'comments_count',
-        'likes_count',
-        # 'audio_player'
+        "title",
+        "user",
+        "get_prayer_type_display",
+        "category",
+        "is_anonymous",
+        "created_at",
+        "comments_count",
+        "likes_count",
     )
-    list_filter = ('prayer_type', 'is_anonymous', 'category', 'created_at')
-    search_fields = ('title', 'content', 'user__username')
-    raw_id_fields = ('user', 'category')
-    date_hierarchy = 'created_at'
-    readonly_fields = ('created_at', 'updated_at', 'comments_count', 'likes_count')
+    list_filter = ("prayer_type", "is_anonymous", "category", "created_at")
+    search_fields = ("title", "content", "user__username")
+    raw_id_fields = ("user", "category")
+    date_hierarchy = "created_at"
+    readonly_fields = ("created_at", "updated_at", "comments_count", "likes_count")
     fieldsets = (
-        (None, {
-            'fields': ('user', 'title', 'content', 'prayer_type', 'category')
-        }),
-        ('Média', {
-            'fields': ['audio_note'],
-            'classes': ('collapse',)
-        }),
-        ('Options', {
-            'fields': ('is_anonymous',),
-            'classes': ('collapse',)
-        }),
-        ('Dates', {
-            'fields': ('created_at', 'updated_at'),
-            'classes': ('collapse',)
-        }),
-        ('Statistiques', {
-            'fields': ('comments_count', 'likes_count'),
-            'classes': ('collapse',)
-        }),
+        (
+            None,
+            {
+                "fields": ("user", "title", "content", "prayer_type", "category"),
+            },
+        ),
+        (
+            "Média",
+            {
+                "fields": ["audio_note"],
+                "classes": ("collapse",),
+            },
+        ),
+        (
+            "Options",
+            {
+                "fields": ("is_anonymous",),
+                "classes": ("collapse",),
+            },
+        ),
+        (
+            "Dates",
+            {
+                "fields": ("created_at", "updated_at"),
+                "classes": ("collapse",),
+            },
+        ),
+        (
+            "Statistiques",
+            {
+                "fields": ("comments_count", "likes_count"),
+                "classes": ("collapse",),
+            },
+        ),
     )
 
     def comments_count(self, obj):
         return obj.comments.count()
-    comments_count.short_description = 'Commentaires'
+
+    comments_count.short_description = "Commentaires"
 
     def likes_count(self, obj):
         return obj.likes.count()
-    likes_count.short_description = 'Likes'
+
+    likes_count.short_description = "Likes"
 
     def audio_player(self, obj):
         if obj.audio_note:
             return format_html(
                 '<audio controls src="{}" style="width: 100%"></audio>',
-                obj.audio_note.url
+                obj.audio_note.url,
             )
         return "-"
-    audio_player.short_description = 'Audio'
+
+    audio_player.short_description = "Audio"
 
     def get_queryset(self, request):
-        return super().get_queryset(request)\
-            .select_related('user', 'category')\
-            .prefetch_related('comments', 'likes')
+        return (
+            super()
+            .get_queryset(request)
+            .select_related("user", "category")
+            .prefetch_related("comments", "likes")
+        )
 
 
 @admin.register(PrayerComment)
 class PrayerCommentAdmin(admin.ModelAdmin):
-    list_display = ('content', 'user', 'prayer', 'created_at')
-    list_filter = ('created_at',)
-    search_fields = ('content', 'user__username', 'prayer__title')
-    raw_id_fields = ('user', 'prayer')
-    date_hierarchy = 'created_at'
-    readonly_fields = ('created_at',)
+    list_display = ("content", "user", "prayer", "created_at")
+    list_filter = ("created_at",)
+    search_fields = ("content", "user__username", "prayer__title")
+    raw_id_fields = ("user", "prayer")
+    date_hierarchy = "created_at"
 
     def get_queryset(self, request):
-        return super().get_queryset(request)\
-            .select_related('user', 'prayer')
+        return super().get_queryset(request).select_related("user", "prayer")
 
 
 @admin.register(PrayerLike)
 class PrayerLikeAdmin(admin.ModelAdmin):
-    list_display = ('user', 'prayer', 'created_at')
-    list_filter = ('created_at',)
-    search_fields = ('user__username', 'prayer__title')
-    raw_id_fields = ('user', 'prayer')
-    date_hierarchy = 'created_at'
-    readonly_fields = ('created_at',)
+    list_display = ("user", "prayer", "created_at")
+    list_filter = ("created_at",)
+    search_fields = ("user__username", "prayer__title")
+    raw_id_fields = ("user", "prayer")
+    date_hierarchy = "created_at"
 
     def get_queryset(self, request):
-        return super().get_queryset(request)\
-            .select_related('user', 'prayer')
+        return super().get_queryset(request).select_related("user", "prayer")
+
+
+@admin.register(PrayerAttachment)
+class PrayerAttachmentAdmin(admin.ModelAdmin):
+    list_display = ("prayer", "kind", "created_at")
+    list_filter = ("kind",)
+    search_fields = ("prayer__title",)
+
+
+# ---------------------------------------------------------------------------
+# BIBLE (versions, versets, tags, usage, verset du jour)
+# ---------------------------------------------------------------------------
 
 @admin.register(BibleVersion)
 class BibleVersionAdmin(admin.ModelAdmin):
-    list_display = ('code', 'name', 'language', 'total_verses', 'updated_at')
-    list_filter = ('language',)
-    search_fields = ('code', 'name')
-    ordering = ('code',)
+    list_display = ("code", "name", "language", "total_verses", "updated_at")
+    list_filter = ("language",)
+    search_fields = ("code", "name")
+    ordering = ("code",)
+
 
 @admin.register(BibleVerse)
 class BibleVerseAdmin(admin.ModelAdmin):
-    list_display = ('version', 'book', 'chapter', 'verse', 'updated_at')
-    list_filter = ('version', 'book')
-    search_fields = ('book', 'text')
-    list_select_related = ('version',)
-    ordering = ('version', 'book', 'chapter', 'verse')
+    list_display = ("version", "book", "chapter", "verse", "updated_at")
+    list_filter = ("version", "book")
+    search_fields = ("book", "text")
+    list_select_related = ("version",)
+    ordering = ("version", "book", "chapter", "verse")
+
+
+@admin.register(BibleTag)
+class BibleTagAdmin(admin.ModelAdmin):
+    list_display = ("sender", "recipient", "book", "chapter", "verse", "created_at")
+    search_fields = ("sender__username", "recipient__username", "book")
+
+
+@admin.register(VerseOfDay)
+class VerseOfDayAdmin(admin.ModelAdmin):
+    list_display = ("date", "eglise", "reference", "version", "language", "context_key", "created_at")
+    list_filter = ("date", "eglise", "version", "language", "context_key")
+    search_fields = ("reference",)
+
+
+@admin.register(VerseUsage)
+class VerseUsageAdmin(admin.ModelAdmin):
+    list_display = ("eglise", "used_on", "book", "chapter", "verse")
+    list_filter = ("used_on", "eglise")
+
+
+# ---------------------------------------------------------------------------
+# BANNIÈRES (annonces)
+# ---------------------------------------------------------------------------
 
 @admin.register(Banner)
 class BannerAdmin(admin.ModelAdmin):
@@ -257,11 +301,15 @@ class BannerAdmin(admin.ModelAdmin):
     ordering = ("order", "-updated_at")
 
 
+# ---------------------------------------------------------------------------
+# DONS
+# ---------------------------------------------------------------------------
+
 @admin.register(DonationCategory)
 class DonationCategoryAdmin(admin.ModelAdmin):
-    list_display = ('code', 'name', 'donation_count')
-    search_fields = ('code', 'name')
-    ordering = ('code',)
+    list_display = ("code", "name", "donation_count")
+    search_fields = ("code", "name")
+    ordering = ("code",)
 
     def donation_count(self, obj):
         return obj.donation_set.count()
@@ -308,7 +356,10 @@ class DonationAdmin(admin.ModelAdmin):
 
     fieldsets = (
         (None, {"fields": ("user", "anonymous", "category", "amount")}),
-        ("Paiement", {"fields": ("payment_method", "reference", "status", "authorization_url")}),
+        (
+            "Paiement",
+            {"fields": ("payment_method", "reference", "status", "authorization_url")},
+        ),
         ("Récurrence", {"fields": ("recurrence",)}),
         ("Dates", {"fields": ("created_at", "paid_at")}),
     )
@@ -317,7 +368,6 @@ class DonationAdmin(admin.ModelAdmin):
 
     @admin.display(description="Montant", ordering="amount")
     def formatted_amount(self, obj: Donation) -> str:
-        # number_format gère les séparateurs en respectant LANGUAGE_CODE
         return f"{number_format(obj.amount, force_grouping=True)} XOF"
 
     @admin.display(description="Catégorie", ordering="category__name")
@@ -325,8 +375,10 @@ class DonationAdmin(admin.ModelAdmin):
         if not obj.category_id:
             return "-"
         try:
-            url = reverse("admin:%s_%s_change" % (obj.category._meta.app_label, obj.category._meta.model_name),
-                          args=[obj.category.pk])
+            url = reverse(
+                f"admin:{obj.category._meta.app_label}_{obj.category._meta.model_name}_change",
+                args=[obj.category.pk],
+            )
         except NoReverseMatch:
             return obj.category.name
         return format_html('<a href="{}">{}</a>', url, obj.category.name)
@@ -337,8 +389,10 @@ class DonationAdmin(admin.ModelAdmin):
             return "Anonyme" if obj.anonymous else "Invité"
         label = obj.user.get_full_name() or obj.user.email or f"Utilisateur #{obj.user_id}"
         try:
-            url = reverse("admin:%s_%s_change" % (obj.user._meta.app_label, obj.user._meta.model_name),
-                          args=[obj.user.pk])
+            url = reverse(
+                f"admin:{obj.user._meta.app_label}_{obj.user._meta.model_name}_change",
+                args=[obj.user.pk],
+            )
         except NoReverseMatch:
             return label
         return format_html('<a href="{}">{}</a>', url, label)
@@ -346,15 +400,15 @@ class DonationAdmin(admin.ModelAdmin):
     @admin.display(description="Statut")
     def status_badge(self, obj: Donation) -> str:
         colors = {
-            "pending": "#f59e0b",    # orange-500
-            "success": "#10b981",    # emerald-500
-            "failed": "#ef4444",     # red-500
-            "abandoned": "#6b7280",  # gray-500
+            "pending": "#f59e0b",
+            "success": "#10b981",
+            "failed": "#ef4444",
+            "abandoned": "#6b7280",
         }
-        color = colors.get(obj.status, "#3b82f6")  # blue-500 par défaut
+        color = colors.get(obj.status, "#3b82f6")
         return format_html(
-            '<span style="background:{};color:white;padding:3px 8px;border-radius:10px;font-weight:600">'
-            "{}</span>",
+            '<span style="background:{};color:white;padding:3px 8px;'
+            'border-radius:10px;font-weight:600">{}</span>',
             color,
             obj.status.upper(),
         )
@@ -363,177 +417,332 @@ class DonationAdmin(admin.ModelAdmin):
     def authorization_link(self, obj: Donation) -> str:
         if not obj.authorization_url:
             return "-"
-        return format_html('<a href="{}" target="_blank" rel="noopener">Ouvrir</a>', obj.authorization_url)
+        return format_html(
+            '<a href="{}" target="_blank" rel="noopener">Ouvrir</a>',
+            obj.authorization_url,
+        )
 
     # ---------- Actions ----------
 
     @admin.action(description="Renvoyer le lien de paiement")
     def resend_payment_link(self, request, queryset):
-        # Exemple minimal : ici on se contente de compter les liens valides.
-        # Tu peux brancher un envoi email/SMS selon ton infra.
         count = 0
         for d in queryset:
             if d.authorization_url:
                 count += 1
                 # TODO: implémenter l’envoi (email/SMS) avec d.authorization_url
         if count:
-            self.message_user(request, f"{count} lien(s) de paiement renvoyé(s).", level=messages.SUCCESS)
+            self.message_user(
+                request, f"{count} lien(s) de paiement renvoyé(s).", level=messages.SUCCESS
+            )
         else:
-            self.message_user(request, "Aucun lien de paiement disponible à renvoyer.", level=messages.WARNING)
+            self.message_user(
+                request,
+                "Aucun lien de paiement disponible à renvoyer.",
+                level=messages.WARNING,
+            )
 
     @admin.action(description="Marquer comme payé (success)")
     def mark_as_successful(self, request, queryset):
-        # On ne touche qu’aux pending/failed/abandoned pour éviter d’écraser du 'success'
         updatable = queryset.exclude(status="success")
         updated = updatable.update(status="success", paid_at=timezone.now())
-        self.message_user(request, f"{updated} don(s) marqué(s) comme payé(s).", level=messages.SUCCESS)
+        self.message_user(
+            request, f"{updated} don(s) marqué(s) comme payé(s).", level=messages.SUCCESS
+        )
 
     @admin.action(description="Marquer comme échoué (failed)")
     def mark_as_failed(self, request, queryset):
         updatable = queryset.exclude(status="failed")
         updated = updatable.update(status="failed")
-        self.message_user(request, f"{updated} don(s) marqué(s) comme échoué(s).", level=messages.WARNING)
-
-    # ---------- Optimisations ----------
+        self.message_user(
+            request, f"{updated} don(s) marqué(s) comme échoué(s).", level=messages.WARNING
+        )
 
     def get_queryset(self, request):
-        # on garde select_related + possibilité d’annotations futures
-        qs = super().get_queryset(request).select_related("user", "category")
-        return qs
+        return super().get_queryset(request).select_related("user", "category")
 
 
-@admin.register(VerseOfDay)
-class VerseOfDayAdmin(admin.ModelAdmin):
-    list_display = ("date", "eglise", "reference", "version", "language", "context_key", "created_at")
-    list_filter = ("date", "eglise", "version", "language", "context_key")
-    search_fields = ("reference", "text")
-
-class EgliseAdmin(admin.ModelAdmin):
-    list_display = ("id", "name", "ville", "pasteur")
-    search_fields = ("name", "ville", "pasteur")
-    actions = ["programmer_versets"]
-
-    def get_urls(self):
-        urls = super().get_urls()
-        my = [
-            path("programmer-versets/", self.admin_site.admin_view(self.programmer_versets_view), name="eglise_programmer_versets"),
-        ]
-        return my + urls
-
-    def programmer_versets(self, request, queryset):
-        # redirige vers une page avec formulaire (on passe les IDs sélectionnés)
-        ids = ",".join(str(pk) for pk in queryset.values_list("pk", flat=True))
-        return redirect(f"programmer-versets/?ids={ids}")
-
-    programmer_versets.short_description = "Programmer des versets du jour…"
-
-    def programmer_versets_view(self, request):
-        # églises pré-sélectionnées depuis la selection admin
-        pre_ids = request.GET.get("ids", "")
-        initial = {}
-        if pre_ids:
-            initial["eglises"] = Eglise.objects.filter(id__in=[int(x) for x in pre_ids.split(",") if x])
-
-        if request.method == "POST":
-            form = ScheduleVODForm(request.POST)
-            if form.is_valid():
-                eglises = list(form.cleaned_data["eglises"])
-                start = form.cleaned_data["start_date"]
-                end = form.cleaned_data["end_date"]
-                version = form.cleaned_data["version"]
-                language = form.cleaned_data["language"]
-                context_key = form.cleaned_data["context_key"] or "DEFAULT"
-                keywords = [k.strip() for k in (form.cleaned_data["keywords"] or "").split(",") if k.strip()]
-                books = [b.strip() for b in (form.cleaned_data["books"] or "").split(",") if b.strip()]
-                shuffle = form.cleaned_data["shuffle"]
-                avoid_recent_days = form.cleaned_data["avoid_recent_days"] or 0
-                overwrite_existing = form.cleaned_data["overwrite_existing"]
-
-                payload = {
-                    "eglise_ids": [e.id for e in eglises],
-                    "start": start.isoformat(),
-                    "end": end.isoformat(),
-                    "version_id": version.id,
-                    "language": language,
-                    "context_key": context_key,
-                    "keywords": keywords,
-                    "books": books,
-                    "shuffle": shuffle,
-                    "avoid_recent_days": int(avoid_recent_days),
-                    "overwrite_existing": bool(overwrite_existing),
-                }
-
-                if form.cleaned_data["run_async"]:
-                    schedule_vod_task.delay(payload)
-                    messages.success(request, f"Planification envoyée à Celery pour {len(eglises)} église(s) du {start} au {end}.")
-                else:
-                    # synchrone
-                    candidates = pick_candidate_verses(version, language, keywords, books, limit=None, shuffle=shuffle)
-                    res = schedule_vod_for_period(
-                        eglises=eglises,
-                        start=start, end=end, version=version, language=language,
-                        candidates=candidates, context_key=context_key,
-                        avoid_recent_days=int(avoid_recent_days), overwrite_existing=overwrite_existing
-                    )
-                    total = sum(res.values())
-                    messages.success(request, f"Programmation terminée: {total} verset(s) créé(s).")
-
-                return redirect("..")  # retour à la liste des églises
-
-        else:
-            form = ScheduleVODForm(initial=initial)
-
-        context = dict(
-            self.admin_site.each_context(request),
-            title="Programmer des versets du jour",
-            form=form,
-        )
-        return render(request, "admin/programmer_versets.html", context)
-
-admin.site.register(Eglise, EgliseAdmin)
-
+# ---------------------------------------------------------------------------
+# LOCALISATION / POSITIONS
+# ---------------------------------------------------------------------------
 
 @admin.register(FidelePosition)
 class FidelePositionAdmin(admin.ModelAdmin):
-    # ... configuration existante ...
-
-    actions = ['export_positions_csv']
+    list_display = ["fidele", "latitude", "longitude", "captured_at", "source"]
+    list_filter = ["source", "captured_at"]
+    search_fields = ["fidele__user__username"]
+    actions = ["export_positions_csv"]
 
     def export_positions_csv(self, request, queryset):
         """Action pour exporter les positions sélectionnées en CSV"""
         import csv
         from django.http import HttpResponse
 
-        response = HttpResponse(content_type='text/csv')
-        response['Content-Disposition'] = 'attachment; filename="positions.csv"'
+        response = HttpResponse(content_type="text/csv")
+        response["Content-Disposition"] = 'attachment; filename="positions.csv"'
 
         writer = csv.writer(response)
-        writer.writerow(['Fidèle', 'Latitude', 'Longitude', 'Précision', 'Date', 'Source'])
+        writer.writerow(
+            ["Fidèle", "Latitude", "Longitude", "Précision", "Date", "Source"]
+        )
 
         for position in queryset:
-            writer.writerow([
-                str(position.fidele),
-                position.latitude,
-                position.longitude,
-                position.accuracy or '',
-                position.captured_at,
-                position.source
-            ])
+            writer.writerow(
+                [
+                    str(position.fidele),
+                    position.latitude,
+                    position.longitude,
+                    position.accuracy or "",
+                    position.captured_at,
+                    position.source,
+                ]
+            )
 
         return response
 
-    export_positions_csv.short_description = "Exporter les positions sélectionnées en CSV"
+    export_positions_csv.short_description = (
+        "Exporter les positions sélectionnées en CSV"
+    )
+
+
+# ---------------------------------------------------------------------------
+# PROBLEMS / SUPPORT
+# ---------------------------------------------------------------------------
 
 @admin.register(ProblemCategory)
 class ProblemCategoryAdmin(admin.ModelAdmin):
-    search_fields = ("name", "slug")
-    list_display = ("name", "slug", "is_active")
-    list_filter = ("is_active",)
+    list_display = ["name", "slug", "is_active"]
+    list_filter = ["is_active"]
+    search_fields = ["name"]
+    prepopulated_fields = {"slug": ["name"]}
+
 
 @admin.register(ProblemReport)
 class ProblemReportAdmin(admin.ModelAdmin):
-    list_display = ("title", "eglise", "reporter", "assignee", "status", "severity", "created_at", "due_date")
-    list_filter = ("eglise", "status", "severity", "category", "assignee")
-    search_fields = ("title", "description", "reporter__user__first_name", "reporter__user__last_name")
-    autocomplete_fields = ("reporter", "assignee", "watchers", "eglise", "category")
-    date_hierarchy = "created_at"
+    list_display = ["title", "eglise", "reporter", "assignee", "status", "severity", "created_at"]
+    list_filter = ["status", "severity", "created_at", "eglise"]
+    search_fields = ["title", "description", "reporter__user__username"]
+    raw_id_fields = ["reporter", "assignee"]
+
+
+@admin.register(ProblemAction)
+class ProblemActionAdmin(admin.ModelAdmin):
+    list_display = ["problem", "author", "type", "created_at"]
+    list_filter = ["type", "created_at"]
+    search_fields = ["problem__title", "author__user__username"]
+
+
+@admin.register(ProblemeParticulier)
+class ProblemeParticulierAdmin(admin.ModelAdmin):
+    list_display = ["fidele", "type_probleme", "gravite", "statut", "date_decouverte"]
+    list_filter = ["gravite", "statut", "date_decouverte"]
+    search_fields = ["fidele__user__username", "type_probleme"]
+
+
+# ---------------------------------------------------------------------------
+# SUJETS / FAMILLES / ROLES / EGLISE / LOCATIONS
+# ---------------------------------------------------------------------------
+
+@admin.register(SujetPriere)
+class SujetPriereAdmin(admin.ModelAdmin):
+    list_display = ["titre", "fidele", "date", "traitement"]
+    list_filter = ["traitement", "date"]
+    search_fields = ["titre", "fidele__user__username"]
+
+
+@admin.register(Familles)
+class FamillesAdmin(admin.ModelAdmin):
+    list_display = ["name", "mission"]
+    search_fields = ["name", "mission__name"]
+
+
+@admin.register(Role)
+class RoleAdmin(admin.ModelAdmin):
+    list_display = ["code", "name"]
+    search_fields = ["code", "name"]
+
+
+@admin.register(MembreType)
+class MembreTypeAdmin(admin.ModelAdmin):
+    list_display = ["name", "duree"]
+    search_fields = ["name"]
+
+
+@admin.register(TypeLocation)
+class TypeLocationAdmin(admin.ModelAdmin):
+    list_display = ["name"]
+    search_fields = ["name"]
+
+
+@admin.register(Location)
+class LocationAdmin(admin.ModelAdmin):
+    list_display = ["name", "type", "parent"]
+    list_filter = ["type"]
+    search_fields = ["name"]
+
+
+@admin.register(Eglise)
+class EgliseAdmin(admin.ModelAdmin):
+    list_display = ["name", "ville", "pasteur", "verse_date"]
+    search_fields = ["name", "ville", "pasteur"]
+    list_filter = ["ville"]
+
+
+# ---------------------------------------------------------------------------
+# FIDELES / USER
+# ---------------------------------------------------------------------------
+
+class FideleInline(admin.StackedInline):
+    model = Fidele
+    can_delete = False
+    verbose_name_plural = "Profil Fidèle"
+    fk_name = "user"
+
+
+class CustomUserAdmin(UserAdmin):
+    inlines = [FideleInline]
+    list_display = ["username", "email", "first_name", "last_name", "is_staff", "get_eglise"]
+
+    def get_eglise(self, obj):
+        if hasattr(obj, "fidele"):
+            return obj.fidele.eglise
+        return None
+
+    get_eglise.short_description = "Église"
+
+    def get_inline_instances(self, request, obj=None):
+        if not obj:
+            return []
+        return super().get_inline_instances(request, obj)
+
+
+@admin.register(Fidele)
+class FideleAdmin(admin.ModelAdmin):
+    list_display = ["user", "qlook_id", "eglise", "departement", "fonction", "sexe", "created_at"]
+    list_filter = ["eglise", "departement", "fonction", "sexe", "situation_matrimoniale", "created_at"]
+    search_fields = ["user__username", "user__first_name", "user__last_name", "qlook_id"]
+    raw_id_fields = ["user", "marie_a", "pere", "mere"]
+    filter_horizontal = ["frere", "soeur", "roles"]
+
+
+# ---------------------------------------------------------------------------
+# PASTORAL / CONSEILS / DEMANDES / TRANSFERTS
+# ---------------------------------------------------------------------------
+
+@admin.register(EntretienPastoral)
+class EntretienPastoralAdmin(admin.ModelAdmin):
+    list_display = ["fidele", "type_entretien", "date", "pasteur", "confidential"]
+    list_filter = ["type_entretien", "date", "confidential"]
+    search_fields = ["fidele__user__username", "pasteur__username"]
+
+
+@admin.register(NotePastorale)
+class NotePastoraleAdmin(admin.ModelAdmin):
+    list_display = ["fidele", "auteur", "titre", "date", "confidentialite"]
+    list_filter = ["confidentialite", "date"]
+    search_fields = ["fidele__user__username", "auteur__username", "titre"]
+
+
+@admin.register(Conseil)
+class ConseilAdmin(admin.ModelAdmin):
+    list_display = ["sujet", "type_conseil", "date_conseil", "confidential"]
+    list_filter = ["type_conseil", "date_conseil", "confidential"]
+    search_fields = ["sujet"]
+    filter_horizontal = ["conseillers", "participants"]
+
+
+@admin.register(DemandePriere)
+class DemandePriereAdmin(admin.ModelAdmin):
+    list_display = ["demandeur", "sujet", "statut", "date_demande", "publique"]
+    list_filter = ["statut", "date_demande", "publique"]
+    search_fields = ["demandeur__user__username", "sujet"]
+    filter_horizontal = ["equipe_priere"]
+
+
+@admin.register(TransferHistory)
+class TransferHistoryAdmin(admin.ModelAdmin):
+    list_display = ["fidele", "ancienne_eglise", "nouvelle_eglise", "date_transfert"]
+    list_filter = ["date_transfert"]
+    search_fields = ["fidele__user__username"]
+
+
+# ---------------------------------------------------------------------------
+# NOTIFICATIONS / DEVICES
+# ---------------------------------------------------------------------------
+
+@admin.register(Notification)
+class NotificationAdmin(admin.ModelAdmin):
+    list_display = ["user", "type", "title", "is_read", "created_at"]
+    list_filter = ["type", "is_read", "created_at"]
+    search_fields = ["user__username", "title"]
+
+
+@admin.register(Device)
+class DeviceAdmin(admin.ModelAdmin):
+    list_display = ["user", "platform", "last_seen", "created_at"]
+    list_filter = ["platform", "created_at"]
+    search_fields = ["user__username", "token"]
+
+
+# ---------------------------------------------------------------------------
+# COMPETENCES / SERVICES / PARTICIPATIONS / EVENEMENTS
+# ---------------------------------------------------------------------------
+
+@admin.register(Competence)
+class CompetenceAdmin(admin.ModelAdmin):
+    list_display = ["nom", "categorie"]
+    list_filter = ["categorie"]
+    search_fields = ["nom"]
+
+
+@admin.register(Service)
+class ServiceAdmin(admin.ModelAdmin):
+    list_display = ["nom", "date", "responsable"]
+    list_filter = ["date"]
+    search_fields = ["nom", "responsable__user__username"]
+
+
+@admin.register(ParticipationService)
+class ParticipationServiceAdmin(admin.ModelAdmin):
+    list_display = ["fidele", "service", "role", "presence"]
+    list_filter = ["role", "presence"]
+    search_fields = ["fidele__user__username", "service__nom"]
+
+
+@admin.register(Anniversaire)
+class AnniversaireAdmin(admin.ModelAdmin):
+    list_display = ["fidele", "date_anniversaire", "type_anniversaire", "celebration_organisee"]
+    list_filter = ["type_anniversaire", "celebration_organisee"]
+    search_fields = ["fidele__user__username"]
+
+
+@admin.register(Sacrement)
+class SacrementAdmin(admin.ModelAdmin):
+    list_display = ["fidele", "type_sacrement", "date", "officiant", "lieu"]
+    list_filter = ["type_sacrement", "date"]
+    search_fields = ["fidele__user__username", "officiant__username"]
+
+
+@admin.register(Deces)
+class DecesAdmin(admin.ModelAdmin):
+    list_display = ["defunt", "date_deces", "lieu_deces", "date_ceremonie"]
+    search_fields = ["defunt__user__username"]
+
+
+# ---------------------------------------------------------------------------
+# DEMANDE DE SUPPRESSION DE COMPTE
+# ---------------------------------------------------------------------------
+
+@admin.register(AccountDeletionRequest)
+class AccountDeletionRequestAdmin(admin.ModelAdmin):
+    list_display = ["user", "status", "requested_at", "processed_at"]
+    list_filter = ["status", "requested_at"]
+    search_fields = ["user__username"]
+
+
+# ---------------------------------------------------------------------------
+# USER CUSTOM ADMIN
+# ---------------------------------------------------------------------------
+
+admin.site.unregister(User)
+admin.site.register(User, CustomUserAdmin)
