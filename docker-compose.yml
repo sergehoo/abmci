@@ -128,7 +128,6 @@ services:
       options: { max-size: "10m", max-file: "3" }
 
   celery-beat:
-    profiles: [ "scheduler" ]   # 🚫 OFF par défaut
     build: .
     container_name: abmcicelerybeat
     command: >
