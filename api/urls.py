@@ -20,7 +20,7 @@ router.register(r'devices', DeviceViewSet, basename='devices')
 router.register("versions", BibleVersionViewSet, basename="bible-version")
 router.register("verses", BibleVerseViewSet, basename="bible-verse")
 router.register(r'bible/tags', BibleTagViewSet, basename='bible-tag')
-router.register(r"notifications", UserNotificationViewSet, basename="notifications")
+router.register(r"notifications", UserNotificationViewSet, basename="user-notifications")
 router.register(r"problems/categories", ProblemCategoryViewSet, basename="problem-category")
 router.register(r"problems/reports", ProblemReportViewSet, basename="problem-report")
 
