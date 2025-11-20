@@ -7,7 +7,7 @@ from django.utils import timezone
 from django.db.models import Q
 
 from event.models import Evenement
-from fidele.models import BibleVersion, BibleVerse, Eglise, VerseOfDay
+from fidele.models import BibleVersion, BibleVerse, Eglise, VerseOfDay, VerseUsage
 
 
 # ---------- helpers seed/offset ----------

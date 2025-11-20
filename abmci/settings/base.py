@@ -261,19 +261,18 @@ LOGGING = {
 
 CELERY_BEAT_SCHEDULE = {
     "push_verse_of_day_daily": {
-        "task": "abmci.task.push_vod_daily",
+        "task": "abmci.task_push.push_vod_daily",
         "schedule": crontab(minute=0, hour=6),  # 06:00 (UTC ou TZ de ton worker)
     },
     "remind-stale-problems-every-hour": {
         "task": "problems.tasks.remind_stale_problems",
         "schedule": crontab(minute=0),  # chaque heure
-        "args": (lambda: int(os.getenv("PROBLEM_REMINDER_DELAY_H", 48)),),  # ou fixe 48
+        "args": (),  # ou fixe 48
     },
     "send-daily-vod-0730": {
         "task": "abmci.tasks.send_daily_vod",
         "schedule": crontab(minute=30, hour=6),  # 06:30 tous les jours
-        "args": (),  # rien (prend localdate)
-        # "options": {"queue": "notifications"},  # si tu as des queues
+
     },
 }
 
