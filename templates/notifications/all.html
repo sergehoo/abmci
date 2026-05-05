@@ -1,0 +1,39 @@
+{% extends 'layout/base.html' %}
+{% load humanize %}
+{% block head_title %}Notifications – Alliance Connect{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto">
+    <header class="mb-6 lg:mb-8 flex flex-wrap items-end justify-between gap-3">
+        <div>
+            <div class="text-xs font-semibold tracking-wider uppercase text-brand-600 dark:text-brand-300 mb-1.5">Activité</div>
+            <h1 class="font-display text-2xl lg:text-3xl font-bold text-slate-900 dark:text-white">Notifications</h1>
+            <p class="text-sm text-slate-500 dark:text-slate-400 mt-1.5">Toutes vos notifications récentes.</p>
+        </div>
+        <a href="{% url 'mark_all_read' %}" class="inline-flex items-center gap-2 h-10 px-4 rounded-lg border border-slate-200 dark:border-slate-700 text-sm hover:bg-slate-100 dark:hover:bg-slate-800/50 transition">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+            <span>Tout marquer lu</span>
+        </a>
+    </header>
+
+    <div class="bg-white dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-soft divide-y divide-slate-100 dark:divide-slate-700/40 overflow-hidden">
+        {% for n in notifications %}
+            <a href="{% url 'mark_read' n.id %}{% if n.data.url %}?next={{ n.data.url|urlencode }}{% endif %}"
+               class="flex items-start gap-3 px-5 py-4 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition border-l-2 {% if not n.read %}border-brand-500 bg-brand-50/40 dark:bg-brand-900/10{% else %}border-transparent{% endif %}">
+                <div class="w-10 h-10 rounded-lg bg-brand-100 text-brand-600 dark:bg-brand-900/30 dark:text-brand-300 grid place-items-center shrink-0">
+                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <div class="text-sm text-slate-700 dark:text-slate-200">{{ n.message }}</div>
+                    <div class="text-xs text-slate-400 mt-1">{{ n.created|naturaltime|default:n.created|timesince }}</div>
+                </div>
+                {% if not n.read %}
+                    <span class="w-2 h-2 rounded-full bg-brand-500 mt-2 animate-pulse"></span>
+                {% endif %}
+            </a>
+        {% empty %}
+            {% include 'layout/_empty_state.html' with title="Aucune notification" message="Vous n'avez aucune notification pour le moment." %}
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

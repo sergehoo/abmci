@@ -1,0 +1,147 @@
+{% extends 'layout/base.html' %}
+{% load static %}
+{% block head_title %}Préparation au baptême – Alliance Connect{% endblock %}
+
+{% block content %}
+<div>
+    {# Breadcrumb #}
+    <nav class="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 mb-2">
+        <a href="{% url 'formations_index' %}" class="hover:text-cyan-600 transition">Formations</a>
+        <svg class="w-3 h-3 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+        <span class="text-slate-700 dark:text-slate-300 font-medium">Préparation au baptême</span>
+    </nav>
+
+    {# Hero #}
+    <section class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-cyan-500 via-sky-600 to-blue-700 p-6 lg:p-10 text-white shadow-soft-lg mb-6">
+        <div aria-hidden="true" class="absolute -top-24 -right-24 w-72 h-72 rounded-full bg-white/10 blur-3xl"></div>
+        <div aria-hidden="true" class="absolute -bottom-24 -left-12 w-64 h-64 rounded-full bg-white/10 blur-3xl"></div>
+
+        <div class="relative grid grid-cols-1 lg:grid-cols-[1fr_auto] items-end gap-6">
+            <div class="min-w-0 max-w-3xl">
+                <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/15 backdrop-blur text-[11px] font-semibold uppercase tracking-wider mb-4">
+                    <span>8 sessions</span>
+                </div>
+                <h1 class="font-display text-2xl lg:text-3xl xl:text-4xl font-bold leading-tight">Préparation au baptême</h1>
+                <p class="text-white/85 mt-3 text-sm lg:text-base">Découvrir les fondements de la foi, le sens du baptême et s'engager dans la vie de l'église.</p>
+            </div>
+            <svg class="w-24 h-24 text-white/85 hidden lg:block" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.2"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"/></svg>
+        </div>
+    </section>
+
+    {# Stats #}
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4 mb-6">
+        <div class="bg-white dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-soft p-4">
+            <div class="text-[11px] uppercase tracking-wider text-slate-400 font-semibold">Durée</div>
+            <div class="font-display text-xl font-bold text-slate-900 dark:text-white mt-1">2 mois</div>
+        </div>
+        <div class="bg-white dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-soft p-4">
+            <div class="text-[11px] uppercase tracking-wider text-slate-400 font-semibold">Sessions</div>
+            <div class="font-display text-xl font-bold text-slate-900 dark:text-white mt-1">8 sessions · 1 h 30</div>
+        </div>
+        <div class="bg-white dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-soft p-4">
+            <div class="text-[11px] uppercase tracking-wider text-slate-400 font-semibold">Format</div>
+            <div class="font-display text-xl font-bold text-slate-900 dark:text-white mt-1">Groupe de 8-12 personnes</div>
+        </div>
+        <div class="bg-white dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-soft p-4">
+            <div class="text-[11px] uppercase tracking-wider text-cyan-600 font-semibold">Prochaine session</div>
+            <div class="font-display text-xl font-bold text-cyan-600 dark:text-cyan-300 mt-1">Juin 2026</div>
+        </div>
+    </div>
+
+    {# Programme + Sidebar #}
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        <div class="lg:col-span-2 bg-white dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-soft p-5 lg:p-6">
+            <h2 class="font-display font-semibold text-slate-900 dark:text-white mb-1">Programme détaillé</h2>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mb-5">Modules et thématiques abordés tout au long du parcours.</p>
+            <ol class="space-y-3">
+                <li class="flex items-start gap-3 p-3 rounded-xl border border-slate-200/70 dark:border-slate-700/60 hover:border-cyan-300 hover:shadow-soft transition">
+                    <div class="w-8 h-8 rounded-lg bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-300 grid place-items-center font-display font-bold text-xs shrink-0 tabular-nums">01</div>
+                    <div class="flex-1 min-w-0">
+                        <div class="text-sm font-semibold text-slate-800 dark:text-slate-100">Pourquoi le baptême ?</div>
+                        <div class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Sens biblique et symbolique de l'eau.</div>
+                    </div>
+                </li>
+                <li class="flex items-start gap-3 p-3 rounded-xl border border-slate-200/70 dark:border-slate-700/60 hover:border-cyan-300 hover:shadow-soft transition">
+                    <div class="w-8 h-8 rounded-lg bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-300 grid place-items-center font-display font-bold text-xs shrink-0 tabular-nums">02</div>
+                    <div class="flex-1 min-w-0">
+                        <div class="text-sm font-semibold text-slate-800 dark:text-slate-100">Qui est Jésus-Christ ?</div>
+                        <div class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Personne, œuvre, autorité du Fils.</div>
+                    </div>
+                </li>
+                <li class="flex items-start gap-3 p-3 rounded-xl border border-slate-200/70 dark:border-slate-700/60 hover:border-cyan-300 hover:shadow-soft transition">
+                    <div class="w-8 h-8 rounded-lg bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-300 grid place-items-center font-display font-bold text-xs shrink-0 tabular-nums">03</div>
+                    <div class="flex-1 min-w-0">
+                        <div class="text-sm font-semibold text-slate-800 dark:text-slate-100">Le salut par la grâce</div>
+                        <div class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Repentance, foi, justification.</div>
+                    </div>
+                </li>
+                <li class="flex items-start gap-3 p-3 rounded-xl border border-slate-200/70 dark:border-slate-700/60 hover:border-cyan-300 hover:shadow-soft transition">
+                    <div class="w-8 h-8 rounded-lg bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-300 grid place-items-center font-display font-bold text-xs shrink-0 tabular-nums">04</div>
+                    <div class="flex-1 min-w-0">
+                        <div class="text-sm font-semibold text-slate-800 dark:text-slate-100">Vivre par l'Esprit</div>
+                        <div class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Régénération, fruits, dons.</div>
+                    </div>
+                </li>
+                <li class="flex items-start gap-3 p-3 rounded-xl border border-slate-200/70 dark:border-slate-700/60 hover:border-cyan-300 hover:shadow-soft transition">
+                    <div class="w-8 h-8 rounded-lg bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-300 grid place-items-center font-display font-bold text-xs shrink-0 tabular-nums">05</div>
+                    <div class="flex-1 min-w-0">
+                        <div class="text-sm font-semibold text-slate-800 dark:text-slate-100">La Bible, ma boussole</div>
+                        <div class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Lire, méditer, appliquer.</div>
+                    </div>
+                </li>
+                <li class="flex items-start gap-3 p-3 rounded-xl border border-slate-200/70 dark:border-slate-700/60 hover:border-cyan-300 hover:shadow-soft transition">
+                    <div class="w-8 h-8 rounded-lg bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-300 grid place-items-center font-display font-bold text-xs shrink-0 tabular-nums">06</div>
+                    <div class="flex-1 min-w-0">
+                        <div class="text-sm font-semibold text-slate-800 dark:text-slate-100">La prière au quotidien</div>
+                        <div class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Communion personnelle avec Dieu.</div>
+                    </div>
+                </li>
+                <li class="flex items-start gap-3 p-3 rounded-xl border border-slate-200/70 dark:border-slate-700/60 hover:border-cyan-300 hover:shadow-soft transition">
+                    <div class="w-8 h-8 rounded-lg bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-300 grid place-items-center font-display font-bold text-xs shrink-0 tabular-nums">07</div>
+                    <div class="flex-1 min-w-0">
+                        <div class="text-sm font-semibold text-slate-800 dark:text-slate-100">L'Église, ma famille</div>
+                        <div class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Engagement, dons, communion fraternelle.</div>
+                    </div>
+                </li>
+                <li class="flex items-start gap-3 p-3 rounded-xl border border-slate-200/70 dark:border-slate-700/60 hover:border-cyan-300 hover:shadow-soft transition">
+                    <div class="w-8 h-8 rounded-lg bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-300 grid place-items-center font-display font-bold text-xs shrink-0 tabular-nums">08</div>
+                    <div class="flex-1 min-w-0">
+                        <div class="text-sm font-semibold text-slate-800 dark:text-slate-100">La mission du chrétien</div>
+                        <div class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Témoigner, servir, persévérer.</div>
+                    </div>
+                </li>
+            </ol>
+        </div>
+
+        <aside class="space-y-5">
+            <div class="bg-white dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-soft p-5">
+                <h3 class="font-display font-semibold text-slate-900 dark:text-white mb-3">Formateur·rice principal</h3>
+                <div class="flex items-center gap-3">
+                    <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-700 text-white grid place-items-center font-display font-bold shrink-0">
+                        PM
+                    </div>
+                    <div class="min-w-0">
+                        <div class="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate">Pst Marie KONAN</div>
+                        <div class="text-xs text-slate-500 dark:text-slate-400">Responsable du parcours</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-700 p-5 text-white shadow-soft">
+                <h3 class="font-display font-semibold mb-1">S'inscrire à la prochaine session</h3>
+                <p class="text-xs text-white/85 mb-4">Démarrage prévu en <strong>Juin 2026</strong>. Places limitées.</p>
+                <a href="{% url 'pastorale_rdv_create' %}" class="inline-flex items-center justify-center gap-2 w-full h-10 rounded-lg bg-white text-cyan-700 hover:bg-white/90 text-sm font-semibold shadow-sm transition">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    <span>Manifester son intérêt</span>
+                </a>
+            </div>
+
+            <div class="bg-white dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-soft p-5">
+                <h3 class="font-display font-semibold text-slate-900 dark:text-white mb-3">Besoin d'aide ?</h3>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mb-3">Contactez le secrétariat de la formation pour toute question.</p>
+                <a href="mailto:formations@abmci.org" class="text-sm text-cyan-600 hover:underline font-medium">formations@abmci.org →</a>
+            </div>
+        </aside>
+    </div>
+</div>
+{% endblock %}

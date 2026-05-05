@@ -1,301 +1,209 @@
-<!-- event/eventview.html -->
 {% extends 'layout/base.html' %}
 {% load static %}
+{% block head_title %}Événements – Alliance Connect{% endblock %}
 
 {% block content %}
-<!-- content @s -->
-<div class="nk-content nk-content-fluid">
-    <div class="container-xl wide-xl">
-        <div class="nk-content-inner">
-            <div class="nk-content-body">
-                <div class="nk-block-head nk-block-head-sm">
-                    <div class="nk-block-between">
-                        <div class="nk-block-head-content">
-                            <h3 class="nk-block-title page-title">Liste des événements</h3>
-                            <div class="nk-block-des text-soft">
-                                <p>{{ nombre_event }} événement(s) disponible(s)</p>
-                            </div>
-                        </div>
-                        <div class="nk-block-head-content">
-                            <div class="toggle-wrap nk-block-tools-toggle">
-                                <a href="#" class="btn btn-icon btn-trigger toggle-expand mr-n1" data-target="pageMenu">
-                                    <em class="icon ni ni-menu-alt-r"></em>
-                                </a>
-                                <div class="toggle-expand-content" data-content="pageMenu">
-                                    <ul class="nk-block-tools g-3">
-                                        <li>
-                                            <a href="#" class="btn btn-white btn-outline-light">
-                                                <em class="icon ni ni-download-cloud"></em>
-                                                <span>Export</span>
-                                            </a>
-                                        </li>
-                                        <li class="nk-block-tools-opt">
-                                            <div class="drodown">
-                                                <a href="#" class="dropdown-toggle btn btn-icon btn-primary" data-toggle="dropdown">
-                                                    <em class="icon ni ni-plus"></em>
-                                                </a>
-                                                <div class="dropdown-menu dropdown-menu-right">
-                                                    <ul class="link-list-opt no-bdr">
-                                                        <li><a href="{% url 'evenement_create' %}"><span>Ajouter un événement</span></a></li>
-                                                    </ul>
-                                                </div>
-                                            </div>
-                                        </li>
-                                    </ul>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+<div x-data="{ filtersOpen: false }">
 
-                <!-- Filtres -->
-                <div class="card card-bordered mb-4">
-                    <div class="card-inner">
-                        <form method="get" class="row g-3">
-                            <div class="col-md-3">
-                                <label class="form-label">Recherche</label>
-                                <input type="text" name="search" class="form-control" placeholder="Titre, lieu..." value="{{ request.GET.search }}">
-                            </div>
-                            <div class="col-md-2">
-                                <label class="form-label">Type</label>
-                                <select name="type" class="form-select">
-                                    <option value="">Tous les types</option>
-                                    {% for type in event_types %}
-                                    <option value="{{ type.id }}" {% if request.GET.type == type.id|stringformat:"s" %}selected{% endif %}>
-                                        {{ type.nom }}
-                                    </option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-                            <div class="col-md-2">
-                                <label class="form-label">Statut</label>
-                                <select name="status" class="form-select">
-                                    <option value="">Tous</option>
-                                    <option value="upcoming" {% if request.GET.status == "upcoming" %}selected{% endif %}>À venir</option>
-                                    <option value="current" {% if request.GET.status == "current" %}selected{% endif %}>En cours</option>
-                                    <option value="past" {% if request.GET.status == "past" %}selected{% endif %}>Passés</option>
-                                </select>
-                            </div>
-                            <div class="col-md-2">
-                                <label class="form-label">Date spécifique</label>
-                                <input type="date" name="date" class="form-control" value="{{ request.GET.date }}">
-                            </div>
-                            <div class="col-md-2">
-                                <label class="form-label">Trier par</label>
-                                <select name="sort" class="form-select">
-                                    <option value="date_debut" {% if request.GET.sort == "date_debut" %}selected{% endif %}>Date de début</option>
-                                    <option value="date_fin" {% if request.GET.sort == "date_fin" %}selected{% endif %}>Date de fin</option>
-                                    <option value="titre" {% if request.GET.sort == "titre" %}selected{% endif %}>Titre</option>
-                                    <option value="lieu" {% if request.GET.sort == "lieu" %}selected{% endif %}>Lieu</option>
-                                </select>
-                            </div>
-                            <div class="col-md-1 d-flex align-items-end">
-                                <button type="submit" class="btn btn-primary w-100">Filtrer</button>
-                            </div>
-                            <div class="col-md-1 d-flex align-items-end">
-                                <a href="{% url 'event-list' %}" class="btn btn-light w-100">Reset</a>
-                            </div>
-                        </form>
-                    </div>
-                </div>
+    {# ===== Header ===== #}
+    <header class="mb-6 lg:mb-8 flex flex-wrap items-end justify-between gap-4">
+        <div class="min-w-0 max-w-2xl">
+            <div class="text-xs font-semibold tracking-wider uppercase text-brand-600 dark:text-brand-300 mb-1.5">Événements</div>
+            <h1 class="font-display text-2xl lg:text-3xl font-bold text-slate-900 dark:text-white">Liste des événements</h1>
+            <p class="text-sm text-slate-500 dark:text-slate-400 mt-1.5">
+                <span class="font-semibold text-slate-700 dark:text-slate-200">{{ nombre_event|default:0 }}</span> événement(s) disponible(s)
+            </p>
+        </div>
+        <div class="flex items-center gap-2">
+            <button @click="filtersOpen = !filtersOpen"
+                    class="lg:hidden inline-flex items-center gap-2 h-10 px-4 rounded-lg border border-slate-200 dark:border-slate-700 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/50 transition">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/></svg>
+                <span>Filtres</span>
+            </button>
+            <a href="#" class="inline-flex items-center gap-2 h-10 px-4 rounded-lg border border-slate-200 dark:border-slate-700 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/50 transition">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                <span class="hidden sm:inline">Exporter</span>
+            </a>
+            <a href="{% url 'evenement_create' %}" class="inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold shadow-soft transition">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+                <span>Nouvel événement</span>
+            </a>
+        </div>
+    </header>
 
-                <div class="nk-block">
-                    <div class="row g-gs">
-                        {% for event in ivent %}
-                                <div class="col-sm-6 col-lg-4 col-xxl-3">
-                                    <div class="card card-bordered">
-                                        <div class="card-header">
-                                            <div class="user-card user-card-s2">
-                                                <div style="position: relative;">
-                                                    {% if event.banner %}
-    <img src="{{ event.banner.url }}" class="card-img-top" alt="">
-{% else %}
-    <img src="{% static 'images/default-banner.jpg' %}" class="card-img-top" alt="default banner">
-{% endif %}
-                                                    <div class="user-avatar user-avatar sq xl bg-primary "
-                                                         style="position: absolute; top: 70%; left: 30%;">
-                                                        <span><img src="{{ event.qr_code.url }}" alt=""></span>
-                                                    </div>
-                                                </div>
-                                                <div class="user-info pt-5">
-                                                    <h6 class="pt-2">{{ event.titre }}</h6>
-
-                                                    {% if event.is_same_date %}
-                                                        {{ event.date_debut|date:"d F Y" }}<br>
-                                                        <span class="badge badge-outline-secondary">{{ event.date_debut|time:"G:i A" }}</span>
-                                                        <span class="badge badge-outline-secondary">{{ event.date_fin|time:"G:i A" }}</span>
-                                                    {% else %}
-                                                        {{ event.date_debut }} <br> {{ event.date_fin }}
-                                                    {% endif %}
-
-
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="card-inner">
-
-                                            <ul class="team-statistics">
-                                                <li>
-                                                    <span>{{ event.nombre_participants }}</span><span>Participants</span>
-                                                </li>
-                                                <li>
-                                                    <span>{{ event.taux_participation }}%</span><span>Taux d'interet</span>
-                                                </li>
-                                                <li><span>{{ event.nombre_invite }}</span><span>Invités </span></li>
-                                            </ul>
-                                            <div class="team-view">
-                                                <a href="{% url 'event-detail' event.pk %}"
-                                                   class="btn btn-round btn-outline-light w-150px"><span>Voir détail</span></a>
-                                            </div>
-
-                                        </div><!-- .card-inner -->
-                                    </div><!-- .card -->
-                                </div><!-- .col -->
-                            {% empty %}
-                                aucun evenement disponible
-                            {% endfor %}
-                    </div>
-
-                    <!-- Pagination -->
-                    {% if is_paginated and page_obj.paginator.num_pages > 1 %}
-<div class="mt-4">
-  <ul class="pagination justify-content-center">
-
-    {# Précédent #}
-    {% if page_obj.has_previous %}
-      <li class="page-item">
-        <a class="page-link"
-           href="event-list?page={{ page_obj.previous_page_number }}{% if querystring_no_page %}&{{ querystring_no_page }}{% endif %}">
-          Précédent
-        </a>
-      </li>
-    {% else %}
-      <li class="page-item disabled"><span class="page-link">Précédent</span></li>
-    {% endif %}
-
-    {# Numéros autour de la page courante (-2 à +2) #}
-    {% for num in page_obj.paginator.page_range %}
-      {% if num == page_obj.number %}
-        <li class="page-item active"><span class="page-link">{{ num }}</span></li>
-      {% elif num >= page_obj.number|add:"-2" and num <= page_obj.number|add:"2" %}
-        <li class="page-item">
-          <a class="page-link"
-             href="event-list?page={{ num }}{% if querystring_no_page %}&{{ querystring_no_page }}{% endif %}">
-            {{ num }}
-          </a>
-        </li>
-      {% endif %}
-    {% endfor %}
-
-    {# Suivant #}
-    {% if page_obj.has_next %}
-      <li class="page-item">
-        <a class="page-link"
-           href="event-list?page={{ page_obj.next_page_number }}{% if querystring_no_page %}&{{ querystring_no_page }}{% endif %}">
-          Suivant
-        </a>
-      </li>
-    {% else %}
-      <li class="page-item disabled"><span class="page-link">Suivant</span></li>
-    {% endif %}
-
-  </ul>
-</div>
-{% endif %}
+    {# ===== Filtres ===== #}
+    <section class="mb-6 bg-white dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-soft"
+             :class="filtersOpen ? '' : 'hidden lg:block'">
+        <form method="get" class="p-4 lg:p-5 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-3">
+            <div class="lg:col-span-2">
+                <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">Recherche</label>
+                <div class="relative">
+                    <svg class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                    <input type="text" name="search" placeholder="Titre, lieu…" value="{{ request.GET.search }}"
+                           class="w-full h-10 pl-10 pr-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400">
                 </div>
             </div>
-        </div>
-    </div>
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">Type</label>
+                <select name="type" class="w-full h-10 px-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400">
+                    <option value="">Tous les types</option>
+                    {% for type in event_types %}
+                        <option value="{{ type.id }}" {% if request.GET.type == type.id|stringformat:"s" %}selected{% endif %}>{{ type.nom }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">Statut</label>
+                <select name="status" class="w-full h-10 px-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400">
+                    <option value="">Tous</option>
+                    <option value="upcoming" {% if request.GET.status == "upcoming" %}selected{% endif %}>À venir</option>
+                    <option value="current" {% if request.GET.status == "current" %}selected{% endif %}>En cours</option>
+                    <option value="past" {% if request.GET.status == "past" %}selected{% endif %}>Passés</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">Date</label>
+                <input type="date" name="date" value="{{ request.GET.date }}"
+                       class="w-full h-10 px-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400">
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">Tri</label>
+                <select name="sort" class="w-full h-10 px-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400">
+                    <option value="date_debut" {% if request.GET.sort == "date_debut" %}selected{% endif %}>Date de début</option>
+                    <option value="date_fin"   {% if request.GET.sort == "date_fin"   %}selected{% endif %}>Date de fin</option>
+                    <option value="titre"      {% if request.GET.sort == "titre"      %}selected{% endif %}>Titre</option>
+                    <option value="lieu"       {% if request.GET.sort == "lieu"       %}selected{% endif %}>Lieu</option>
+                </select>
+            </div>
+            <div class="md:col-span-2 lg:col-span-6 flex flex-wrap items-center gap-2 pt-1">
+                <button type="submit" class="inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold transition">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/></svg>
+                    <span>Appliquer les filtres</span>
+                </button>
+                <a href="{% url 'event-list' %}" class="inline-flex items-center gap-2 h-10 px-4 rounded-lg border border-slate-200 dark:border-slate-700 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/50 transition">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                    <span>Réinitialiser</span>
+                </a>
+            </div>
+        </form>
+    </section>
+
+    {# ===== Grille événements ===== #}
+    <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 lg:gap-5">
+        {% for event in ivent %}
+            <article class="group relative overflow-hidden bg-white dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-soft hover:shadow-soft-lg hover:-translate-y-0.5 transition-all duration-300 flex flex-col">
+                {# Banner #}
+                <div class="relative aspect-[16/9] overflow-hidden bg-gradient-to-br from-brand-500 to-violet-600">
+                    {% if event.banner %}
+                        <img src="{{ event.banner.url }}" alt="{{ event.titre }}" class="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                    {% else %}
+                        <div class="absolute inset-0 grid place-items-center text-white/40 font-display text-3xl font-bold">
+                            {{ event.titre|first|upper }}
+                        </div>
+                    {% endif %}
+                    {# QR badge #}
+                    {% if event.qr_code %}
+                        <div class="absolute bottom-2 right-2 w-12 h-12 bg-white rounded-lg p-1 shadow-soft-lg ring-1 ring-slate-200">
+                            <img src="{{ event.qr_code.url }}" alt="QR" class="w-full h-full object-contain">
+                        </div>
+                    {% endif %}
+                    {# Status badge #}
+                    {% if event.is_same_date %}
+                        <span class="absolute top-2 left-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/90 backdrop-blur text-[10px] font-semibold text-brand-700">
+                            <span class="w-1.5 h-1.5 rounded-full bg-brand-500"></span>
+                            <span>{{ event.date_debut|date:"d M Y" }}</span>
+                        </span>
+                    {% endif %}
+                </div>
+
+                {# Body #}
+                <div class="p-5 flex-1 flex flex-col">
+                    <h3 class="font-display font-semibold text-slate-900 dark:text-white line-clamp-2 group-hover:text-brand-700 transition">
+                        {{ event.titre }}
+                    </h3>
+                    <div class="text-xs text-slate-500 dark:text-slate-400 mt-1.5 flex items-center gap-1.5">
+                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        {% if event.is_same_date %}
+                            {{ event.date_debut|time:"G:i" }} – {{ event.date_fin|time:"G:i" }}
+                        {% else %}
+                            {{ event.date_debut|date:"d M" }} → {{ event.date_fin|date:"d M Y" }}
+                        {% endif %}
+                    </div>
+                    {% if event.lieu %}
+                        <div class="text-xs text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-1.5">
+                            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                            <span class="truncate">{{ event.lieu }}</span>
+                        </div>
+                    {% endif %}
+
+                    {# Stats #}
+                    <div class="grid grid-cols-3 gap-2 mt-4 pt-4 border-t border-slate-100 dark:border-slate-700/60">
+                        <div class="text-center">
+                            <div class="font-display font-bold text-brand-600 dark:text-brand-300 tabular-nums">{{ event.nombre_participants|default:0 }}</div>
+                            <div class="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">Participants</div>
+                        </div>
+                        <div class="text-center border-x border-slate-100 dark:border-slate-700/60">
+                            <div class="font-display font-bold text-emerald-600 dark:text-emerald-300 tabular-nums">{{ event.taux_participation|default:0 }}%</div>
+                            <div class="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">Intérêt</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="font-display font-bold text-amber-600 dark:text-amber-300 tabular-nums">{{ event.nombre_invite|default:0 }}</div>
+                            <div class="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">Invités</div>
+                        </div>
+                    </div>
+
+                    <a href="{% url 'event-detail' event.pk %}"
+                       class="mt-4 inline-flex items-center justify-center gap-2 h-10 rounded-lg bg-brand-50 hover:bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-300 dark:hover:bg-brand-900/50 text-sm font-semibold transition">
+                        <span>Voir le détail</span>
+                        <svg class="w-4 h-4 group-hover:translate-x-0.5 transition" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+                    </a>
+                </div>
+            </article>
+        {% empty %}
+            <div class="col-span-full">
+                {% include 'layout/_empty_state.html' with title="Aucun événement" message="Créez votre premier événement pour commencer à organiser la vie de l'église." cta_url='/evenements/evenement/creer/' cta_label="Créer un événement" %}
+            </div>
+        {% endfor %}
+    </section>
+
+    {# ===== Pagination ===== #}
+    {% if is_paginated and page_obj.paginator.num_pages > 1 %}
+        <nav class="mt-8 flex items-center justify-center gap-1" aria-label="Pagination">
+            {% if page_obj.has_previous %}
+                <a href="?page={{ page_obj.previous_page_number }}{% if querystring_no_page %}&{{ querystring_no_page }}{% endif %}"
+                   class="inline-flex items-center gap-1 h-9 px-3 rounded-lg border border-slate-200 dark:border-slate-700 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/50 transition">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+                    <span>Précédent</span>
+                </a>
+            {% else %}
+                <span class="inline-flex items-center gap-1 h-9 px-3 rounded-lg border border-slate-200 dark:border-slate-700 text-sm text-slate-300 dark:text-slate-600">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+                    <span>Précédent</span>
+                </span>
+            {% endif %}
+
+            {% for num in page_obj.paginator.page_range %}
+                {% if num == page_obj.number %}
+                    <span class="w-9 h-9 grid place-items-center rounded-lg bg-brand-600 text-white text-sm font-semibold shadow-soft">{{ num }}</span>
+                {% elif num >= page_obj.number|add:"-2" and num <= page_obj.number|add:"2" %}
+                    <a href="?page={{ num }}{% if querystring_no_page %}&{{ querystring_no_page }}{% endif %}"
+                       class="w-9 h-9 grid place-items-center rounded-lg border border-slate-200 dark:border-slate-700 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/50 transition">{{ num }}</a>
+                {% endif %}
+            {% endfor %}
+
+            {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}{% if querystring_no_page %}&{{ querystring_no_page }}{% endif %}"
+                   class="inline-flex items-center gap-1 h-9 px-3 rounded-lg border border-slate-200 dark:border-slate-700 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/50 transition">
+                    <span>Suivant</span>
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                </a>
+            {% else %}
+                <span class="inline-flex items-center gap-1 h-9 px-3 rounded-lg border border-slate-200 dark:border-slate-700 text-sm text-slate-300 dark:text-slate-600">
+                    <span>Suivant</span>
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                </span>
+            {% endif %}
+        </nav>
+    {% endif %}
 </div>
-<!-- content @e -->
-
-<style>
-.card {
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 10px 20px rgba(0,0,0,0.1);
-}
-
-.banner-image {
-    width: 100%;
-    height: 160px;
-    object-fit: cover;
-    transition: transform 0.3s ease;
-}
-
-.card:hover .banner-image {
-    transform: scale(1.05);
-}
-
-.qr-code-container {
-    position: absolute;
-    bottom: -20px;
-    right: 20px;
-    width: 80px;
-    height: 80px;
-    background: white;
-    border-radius: 8px;
-    padding: 5px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    border: 1px solid #eee;
-}
-
-.event-title {
-    font-weight: 600;
-    color: var(--dark);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-}
-
-.team-statistics {
-    display: flex;
-    justify-content: space-around;
-    text-align: center;
-    margin: 15px 0;
-}
-
-.team-statistics li {
-    display: flex;
-    flex-direction: column;
-}
-
-.team-statistics span:first-child {
-    font-weight: 700;
-    font-size: 1.2rem;
-    color: var(--primary);
-}
-
-.team-statistics span:last-child {
-    font-size: 0.75rem;
-    color: var(--secondary);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.pagination {
-    margin: 20px 0;
-}
-
-.pagination .page-item.active .page-link {
-    background-color: var(--primary);
-    border-color: var(--primary);
-}
-
-.pagination .page-link {
-    color: var(--dark);
-    border: 1px solid #dee2e6;
-    padding: 0.5rem 0.75rem;
-}
-
-.pagination .page-link:hover {
-    background-color: #e9ecef;
-    border-color: #dee2e6;
-}
-</style>
 {% endblock %}

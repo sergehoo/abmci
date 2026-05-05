@@ -1,0 +1,13 @@
+
+{% url url_name as link_url %}
+<a href="{{ link_url }}"
+   :class="isActive('{{ link_url }}')
+       ? 'bg-brand-600 text-white shadow-soft'
+       : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/60'"
+   :title="sidebarCollapsed ? '{{ label|escapejs }}' : ''"
+   class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition">
+    <i data-lucide="{{ icon }}"
+       :class="isActive('{{ link_url }}') ? 'text-white' : 'text-brand-500'"
+       class="w-5 h-5 shrink-0"></i>
+    <span x-show="!sidebarCollapsed">{{ label }}</span>
+</a>

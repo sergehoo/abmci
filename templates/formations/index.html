@@ -1,0 +1,103 @@
+{% extends 'layout/base.html' %}
+{% load static %}
+{% block head_title %}Formations – Alliance Connect{% endblock %}
+
+{% block content %}
+<div>
+    {# ===== Hero ===== #}
+    <section class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-violet-600 via-violet-700 to-fuchsia-700 p-6 lg:p-8 text-white shadow-soft-lg mb-6">
+        <div aria-hidden="true" class="absolute -top-24 -right-24 w-72 h-72 rounded-full bg-fuchsia-400/30 blur-3xl"></div>
+        <div aria-hidden="true" class="absolute -bottom-24 -left-12 w-64 h-64 rounded-full bg-violet-300/20 blur-3xl"></div>
+
+        <div class="relative flex flex-wrap items-center justify-between gap-6">
+            <div class="min-w-0 max-w-2xl">
+                <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/15 backdrop-blur text-[11px] font-semibold uppercase tracking-wider text-white/90 mb-4">
+                    <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M12 14l9-5-9-5-9 5 9 5z"/></svg>
+                    <span>Catalogue de formations</span>
+                </div>
+                <h1 class="font-display text-2xl lg:text-3xl xl:text-4xl font-bold leading-tight">Grandir ensemble dans la foi</h1>
+                <p class="text-white/85 mt-2 text-sm lg:text-base max-w-xl">
+                    Programmez des sessions, inscrivez les fidèles et suivez les présences.
+                    Chaque parcours allie enseignement biblique et pratique.
+                </p>
+            </div>
+            <div class="flex items-center gap-2">
+                <a href="{% url 'formation_session_create' %}"
+                   class="inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-white text-violet-700 hover:bg-violet-50 text-sm font-semibold shadow-sm transition">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+                    <span>Programmer une session</span>
+                </a>
+                <a href="{% url 'formations_mes_inscriptions' %}"
+                   class="inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-white/15 hover:bg-white/25 backdrop-blur border border-white/20 text-sm font-medium transition">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    <span>Mes inscriptions</span>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    {# ===== KPIs ===== #}
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4 mb-6">
+        <div class="bg-white dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-soft p-4">
+            <div class="text-[11px] uppercase tracking-wider text-slate-400 font-semibold">Stagiaires en cours</div>
+            <div class="font-display text-2xl font-bold text-slate-900 dark:text-white tabular-nums mt-1">{{ stats.actifs }}</div>
+        </div>
+        <div class="bg-white dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-soft p-4">
+            <div class="text-[11px] uppercase tracking-wider text-emerald-600 font-semibold">Diplômés</div>
+            <div class="font-display text-2xl font-bold text-emerald-600 dark:text-emerald-300 tabular-nums mt-1">{{ stats.diplomes }}</div>
+        </div>
+        <div class="bg-white dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-soft p-4">
+            <div class="text-[11px] uppercase tracking-wider text-amber-600 font-semibold">Sessions actives</div>
+            <div class="font-display text-2xl font-bold text-amber-600 dark:text-amber-300 tabular-nums mt-1">{{ stats.sessions }}</div>
+        </div>
+        <div class="bg-white dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-soft p-4">
+            <div class="text-[11px] uppercase tracking-wider text-brand-600 font-semibold">Formateurs</div>
+            <div class="font-display text-2xl font-bold text-brand-600 dark:text-brand-300 tabular-nums mt-1">{{ stats.formateurs }}</div>
+        </div>
+    </div>
+
+    {# ===== Catalogue ===== #}
+    <h2 class="font-display font-semibold text-slate-900 dark:text-white mb-4">Parcours disponibles</h2>
+    {% if formations %}
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-5">
+            {% for f in formations %}
+                {% with g=f.gradient %}
+                {% if f.slug %}
+                <a href="{% url 'formation_detail' f.slug %}" class="group relative overflow-hidden bg-white dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-soft hover:shadow-soft-lg hover:-translate-y-0.5 transition-all duration-300">
+                {% else %}
+                <div class="group relative overflow-hidden bg-white dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-soft transition-all duration-300 opacity-60" title="Slug manquant — exécutez la migration 0002_auto_populate_slug">
+                {% endif %}
+                    <div class="aspect-[16/9] bg-gradient-to-br from-{{ g.from }} via-{{ g.via }} to-{{ g.to }} relative overflow-hidden">
+                        <div aria-hidden="true" class="absolute inset-0 opacity-20" style="background-image: radial-gradient(circle at 30% 30%, white 0, transparent 50%);"></div>
+                        <div class="absolute inset-0 grid place-items-center">
+                            <svg class="w-14 h-14 text-white/90" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 14l9-5-9-5-9 5 9 5z"/></svg>
+                        </div>
+                        <span class="absolute top-3 left-3 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/95 text-{{ g.accent }}-700 text-[10px] font-bold uppercase tracking-wider">
+                            {{ f.nb_sessions }} session(s)
+                        </span>
+                    </div>
+                    <div class="p-5">
+                        <h3 class="font-display font-semibold text-slate-900 dark:text-white text-lg group-hover:text-{{ g.accent }}-700 transition">{{ f.nom }}</h3>
+                        <p class="text-sm text-slate-500 dark:text-slate-400 mt-1.5 line-clamp-2">{{ f.description|default:"Parcours de formation Alliance Connect." }}</p>
+                        <div class="mt-4 pt-4 border-t border-slate-100 dark:border-slate-700/60 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+                            <span class="flex items-center gap-1.5">
+                                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                <span>{{ f.duree_mois }} mois</span>
+                            </span>
+                            <span class="flex items-center gap-1.5 font-semibold text-{{ g.accent }}-700">
+                                Découvrir
+                                <svg class="w-3.5 h-3.5 group-hover:translate-x-0.5 transition" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+                            </span>
+                        </div>
+                    </div>
+                {% if f.slug %}</a>{% else %}</div>{% endif %}
+                {% endwith %}
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="bg-white dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-soft">
+            {% include 'layout/_empty_state.html' with title="Aucune formation au catalogue" message="Ajoutez votre premier parcours via l'admin Django ou le bouton ci-dessous." cta_url='/formations/nouveau/' cta_label="Créer un parcours" %}
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

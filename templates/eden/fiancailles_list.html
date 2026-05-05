@@ -1,147 +1,60 @@
 {% extends 'layout/base.html' %}
 {% load static %}
+{% block head_title %}Fiançailles – Alliance Connect{% endblock %}
 
 {% block content %}
-<div class="nk-content nk-content-fluid">
-  <div class="container-xl wide-xl">
-    <div class="nk-content-inner">
-      <div class="nk-content-body">
-
-        <div class="nk-block-head nk-block-head-sm">
-          <div class="nk-block-between">
-            <div class="nk-block-head-content">
-              <h3 class="nk-block-title page-title">Fiançailles</h3>
-              <div class="nk-block-des text-soft">
-                <p>Suivi des couples en préparation au mariage.</p>
-              </div>
-            </div>
-            <div class="nk-block-head-content">
-              <div class="d-flex gap-2">
-                <form method="get" class="d-flex gap-2">
-                  <select name="statut" class="form-select">
-                    <option value="">— Filtrer par statut —</option>
+<div>
+    <header class="mb-6 lg:mb-8 flex flex-wrap items-end justify-between gap-4">
+        <div>
+            <div class="text-xs font-semibold tracking-wider uppercase text-brand-600 dark:text-brand-300 mb-1.5">Eden</div>
+            <h1 class="font-display text-2xl lg:text-3xl font-bold text-slate-900 dark:text-white">Fiançailles</h1>
+            <p class="text-sm text-slate-500 dark:text-slate-400 mt-1.5">Suivi des couples en préparation au mariage.</p>
+        </div>
+        <div class="flex items-center gap-2">
+            <form method="get" class="flex items-center gap-2">
+                <select name="statut" class="h-10 px-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400">
+                    <option value="">Tous les statuts</option>
                     <option value="En cours" {% if request.GET.statut == "En cours" %}selected{% endif %}>En cours</option>
-                    <option value="Terminé" {% if request.GET.statut == "Terminé" %}selected{% endif %}>Terminé</option>
+                    <option value="Terminé"  {% if request.GET.statut == "Terminé"  %}selected{% endif %}>Terminé</option>
                     <option value="Suspendu" {% if request.GET.statut == "Suspendu" %}selected{% endif %}>Suspendu</option>
-                  </select>
-                  <button class="btn btn-outline-primary">Filtrer</button>
-                </form>
-                <a href="{% url 'fiancailles-create' %}" class="btn btn-primary">
-                  <em class="icon ni ni-plus"></em><span> Nouveau dossier</span>
-                </a>
-              </div>
+                </select>
+                <button class="inline-flex items-center h-10 px-4 rounded-lg border border-slate-200 dark:border-slate-700 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/50 transition">Filtrer</button>
+            </form>
+            <a href="{% url 'fiancailles-create' %}" class="inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold shadow-soft transition">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+                <span>Nouveau dossier</span>
+            </a>
+        </div>
+    </header>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-5">
+        {% for f in object_list %}
+            <article class="group bg-white dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-soft hover:shadow-soft-lg hover:-translate-y-0.5 transition-all duration-300 overflow-hidden">
+                <div class="relative aspect-[16/8] bg-gradient-to-br from-rose-400 via-pink-500 to-fuchsia-500 grid place-items-center text-white">
+                    <svg class="w-14 h-14 opacity-90" fill="currentColor" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+                    {% if f.statut %}
+                        <span class="absolute top-3 right-3 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/95 backdrop-blur text-[11px] font-bold {% if f.statut == 'Terminé' %}text-emerald-700{% elif f.statut == 'Suspendu' %}text-amber-700{% else %}text-brand-700{% endif %}">{{ f.statut }}</span>
+                    {% endif %}
+                </div>
+                <div class="p-5">
+                    <h3 class="font-display font-semibold text-slate-900 dark:text-white">
+                        {{ f.homme.user.get_full_name }} <span class="text-rose-500">&hearts;</span> {{ f.femme.user.get_full_name }}
+                    </h3>
+                    <div class="text-xs text-slate-500 dark:text-slate-400 mt-1.5 space-y-1">
+                        {% if f.date_debut %}<div class="flex items-center gap-1.5"><svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg><span>Début : {{ f.date_debut|date:"d M Y" }}</span></div>{% endif %}
+                        {% if f.date_fin %}<div class="flex items-center gap-1.5"><svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg><span>Fin prévue : {{ f.date_fin|date:"d M Y" }}</span></div>{% endif %}
+                    </div>
+                    <a href="{% url 'fiancailles-detail' f.pk %}" class="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-brand-600 hover:underline">
+                        Voir le dossier
+                        <svg class="w-3.5 h-3.5 group-hover:translate-x-0.5 transition" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+                    </a>
+                </div>
+            </article>
+        {% empty %}
+            <div class="col-span-full">
+                {% include 'layout/_empty_state.html' with title="Aucun dossier de fiançailles" message="Créez le premier dossier pour démarrer le suivi." cta_url='/eden/fiancailles/nouveau/' cta_label="Nouveau dossier" %}
             </div>
-          </div>
-        </div>
-
-        {% if messages %}
-        <div class="mb-3">
-          {% for m in messages %}
-          <div class="alert alert-{{ m.tags }}">{{ m }}</div>
-          {% endfor %}
-        </div>
-        {% endif %}
-
-        <div class="card card-bordered">
-          <div class="card-inner">
-            <div class="table-responsive">
-              <table class="table">
-                <thead class="thead-light">
-                  <tr>
-                    <th>Couple</th>
-                    <th>Demande</th>
-                    <th>Cérémonie</th>
-                    <th>Conseiller</th>
-                    <th>Progression</th>
-                    <th>Statut</th>
-                    <th class="text-end">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                {% for f in fiancailles_list %}
-                  <tr>
-                    <td>
-                      <div class="d-flex align-items-center">
-                        <div class="user-avatar bg-primary me-2"><span><em class="icon ni ni-heart"></em></span></div>
-                        <div>
-                          <div class="fw-bold">{{ f.homme.user.first_name }} {{ f.homme.user.last_name }}</div>
-                          <div class="text-soft small">et {{ f.femme.user.first_name }} {{ f.femme.user.last_name }}</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td>{{ f.date_demande|date:"d/m/Y" }}</td>
-                    <td>{{ f.date_ceremonie|date:"d/m/Y" }}</td>
-                    <td>{{ f.conseiller.get_full_name|default:f.conseiller.username|default:"—" }}</td>
-                    <td style="min-width:180px;">
-  {% with done=f.sessions_terminees total=f.sessions_conseil %}
-    <div class="d-flex justify-content-between small text-soft">
-      <span>{{ done }}/{{ total }} sessions</span>
-      {% widthratio done total 100 as pct %}
-      <span>{{ pct }}%</span>
+        {% endfor %}
     </div>
-    <div class="progress" style="height:8px;">
-      <div
-        class="progress-bar
-          {% if pct|floatformat:0 >= 66 %}bg-success
-          {% elif pct|floatformat:0 >= 33 %}bg-info
-          {% else %}bg-warning{% endif %}"
-        role="progressbar"
-        style="width: {{ pct }}%;"
-        aria-valuenow="{{ pct }}" aria-valuemin="0" aria-valuemax="100">
-      </div>
-    </div>
-  {% endwith %}
-</td>
-                    <td>
-                      <span class="badge 
-                        {% if f.statut == 'En cours' %}badge-dim bg-primary
-                        {% elif f.statut == 'Terminé' %}badge-dim bg-success
-                        {% elif f.statut == 'Suspendu' %}badge-dim bg-warning
-                        {% else %}badge-dim bg-secondary{% endif %}">
-                        {{ f.statut }}
-                      </span>
-                    </td>
-                    <td class="text-end">
-                      <a class="btn btn-sm btn-outline-secondary" href="{% url 'fiancailles-detail' f.pk %}">
-                        <em class="icon ni ni-eye"></em>
-                      </a>
-                      <a class="btn btn-sm btn-outline-primary" href="{% url 'fiancailles-update' f.pk %}">
-                        <em class="icon ni ni-edit"></em>
-                      </a>
-                      <a class="btn btn-sm btn-outline-danger" href="{% url 'fiancailles-delete' f.pk %}">
-                        <em class="icon ni ni-trash"></em>
-                      </a>
-                    </td>
-                  </tr>
-                {% empty %}
-                  <tr><td colspan="7" class="text-center text-soft">Aucun dossier pour le moment.</td></tr>
-                {% endfor %}
-                </tbody>
-              </table>
-            </div>
-
-            {% if is_paginated %}
-            <nav class="mt-3">
-              <ul class="pagination justify-content-end">
-                {% if page_obj.has_previous %}
-                  <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">&laquo;</a></li>
-                {% endif %}
-                {% for i in paginator.page_range %}
-                  <li class="page-item {% if page_obj.number == i %}active{% endif %}">
-                    <a class="page-link" href="?page={{ i }}">{{ i }}</a>
-                  </li>
-                {% endfor %}
-                {% if page_obj.has_next %}
-                  <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">&raquo;</a></li>
-                {% endif %}
-              </ul>
-            </nav>
-            {% endif %}
-          </div>
-        </div>
-
-      </div>
-    </div>
-  </div>
 </div>
 {% endblock %}

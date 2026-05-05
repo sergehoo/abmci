@@ -80,7 +80,8 @@ INSTALLED_APPS = [
     'mathfilters',
     "django_celery_beat",
     'widget_tweaks',
-    'tinymce'
+    'tinymce',
+    'formation',
 ]
 
 MIDDLEWARE = [

@@ -57,6 +57,7 @@ INSTALLED_APPS = [
 
     'eden',
     'event',
+    'formation',
     'recurrence',
     'fidele',
     'crispy_forms',

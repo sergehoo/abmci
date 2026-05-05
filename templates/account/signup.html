@@ -1,0 +1,92 @@
+{% extends 'layout/account_base.html' %}
+{% load allauth i18n %}
+{% block head_title %}{% trans "Créer un compte" %} – Alliance Connect{% endblock %}
+
+{% block content %}
+<div x-data="{ showPwd: false, showPwd2: false }">
+    <div class="mb-8">
+        <h1 class="font-display text-2xl font-bold text-slate-900 dark:text-white">Bienvenue dans Alliance Connect ✨</h1>
+        <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Créez votre compte en moins d'une minute.</p>
+    </div>
+
+    {% if form.non_field_errors %}
+        <div class="mb-4 p-3 rounded-lg bg-rose-50 dark:bg-rose-900/20 text-rose-700 dark:text-rose-300 text-sm border border-rose-200 dark:border-rose-700/40">
+            {% for err in form.non_field_errors %}{{ err }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+        </div>
+    {% endif %}
+
+    <form method="post" class="space-y-4">
+        {% csrf_token %}
+        {% for field in form %}
+            <div>
+                <label for="{{ field.id_for_label }}"
+                       class="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">
+                    {{ field.label }}{% if field.field.required %} <span class="text-rose-500">*</span>{% endif %}
+                </label>
+
+                {% if field.field.widget.input_type == 'password' %}
+                    <div class="relative" x-data="{ local: false }">
+                        <i data-lucide="lock" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"></i>
+                        <input type="password" name="{{ field.html_name }}" id="{{ field.id_for_label }}"
+                               :type="local ? 'text' : 'password'"
+                               autocomplete="new-password"
+                               class="w-full h-11 pl-10 pr-10 rounded-lg border border-slate-200 dark:border-slate-700
+                                      bg-slate-50 dark:bg-slate-800/50 text-sm text-slate-700 dark:text-slate-100
+                                      focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400 transition">
+                        <button type="button" @click="local = !local"
+                                class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                            <span x-show="!local"><i data-lucide="eye" class="w-4 h-4"></i></span>
+                            <span x-show="local" x-cloak><i data-lucide="eye-off" class="w-4 h-4"></i></span>
+                        </button>
+                    </div>
+                {% elif field.field.widget.input_type == 'checkbox' %}
+                    <label class="flex items-start gap-2 text-sm text-slate-600 dark:text-slate-300 cursor-pointer">
+                        <input type="checkbox" name="{{ field.html_name }}"
+                               class="mt-0.5 w-4 h-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500">
+                        <span>{{ field.label }}</span>
+                    </label>
+                {% else %}
+                    <div class="relative">
+                        {% if field.name == 'email' %}
+                            <i data-lucide="mail" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"></i>
+                        {% elif field.name == 'username' %}
+                            <i data-lucide="user" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"></i>
+                        {% else %}
+                            <i data-lucide="type" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"></i>
+                        {% endif %}
+                        <input type="{{ field.field.widget.input_type }}" name="{{ field.html_name }}" id="{{ field.id_for_label }}"
+                               value="{{ field.value|default:'' }}"
+                               {% if field.field.required %}required{% endif %}
+                               class="w-full h-11 pl-10 pr-3 rounded-lg border border-slate-200 dark:border-slate-700
+                                      bg-slate-50 dark:bg-slate-800/50 text-sm text-slate-700 dark:text-slate-100
+                                      focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400 transition">
+                    </div>
+                {% endif %}
+
+                {% if field.help_text %}
+                    <p class="mt-1 text-xs text-slate-400 dark:text-slate-500">{{ field.help_text|safe }}</p>
+                {% endif %}
+                {% for error in field.errors %}
+                    <p class="mt-1 text-xs text-rose-600 dark:text-rose-400">{{ error }}</p>
+                {% endfor %}
+            </div>
+        {% endfor %}
+
+        {% if redirect_field_value %}
+            <input type="hidden" name="{{ redirect_field_name }}" value="{{ redirect_field_value }}">
+        {% endif %}
+
+        <button type="submit"
+                class="w-full h-11 rounded-lg bg-brand-600 hover:bg-brand-700 text-white font-semibold text-sm
+                       transition shadow-sm hover:shadow flex items-center justify-center gap-2">
+            <i data-lucide="user-plus" class="w-4 h-4"></i>
+            <span>Créer mon compte</span>
+        </button>
+    </form>
+
+    <p class="mt-6 text-center text-sm text-slate-500 dark:text-slate-400">
+        Déjà un compte ?
+        <a href="{% url 'account_login' %}" class="text-brand-600 font-medium hover:underline">Se connecter</a>
+    </p>
+</div>
+{% endblock %}

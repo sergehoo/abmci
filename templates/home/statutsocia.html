@@ -1,199 +1,80 @@
 {% extends 'layout/base.html' %}
+{% load static %}
+{% block head_title %}Statut social – {{ fidele|default:"Fidèle" }}{% endblock %}
 
 {% block content %}
-  <!-- content @s -->
-            <div class="nk-content nk-content-fluid">
-                <div class="container-xl wide-xl">
-                <div class="d-flex justify-content-between w-100" style="justify-content: space-between">
-                    <div></div>
-                    <a  href="{% url 'membres' %}" class="" ><em class="icon ni ni-arrow-left-circle"></em><span>Retour</span></a>
-                </div>
-                    <div class="nk-content-inner">
-                        <div class="nk-content-body">
-                            <div class="nk-block">
-                                <div class="card card-bordered">
-                                    <div class="card-aside-wrap">
-                                        <div class="card-inner card-inner-lg">
-                                            <div class="nk-block-head nk-block-head-lg">
-                                                <div class="nk-block-between">
-                                                    <div class="nk-block-head-content">
-                                                        <h4 class="nk-block-title">Statut Social</h4>
-                                                        <div class="nk-block-des">
-                                                            <p>{{ fidele_detail.signe }}</p>
-                                                        </div>
-                                                    </div>
-                                                    <div class="nk-block-head-content align-self-start d-lg-none">
-                                                        <a href="#" class="toggle btn btn-icon btn-trigger mt-n1" data-target="userAside"><em class="icon ni ni-menu-alt-r"></em></a>
-                                                    </div>
-                                                </div>
-                                            </div><!-- .nk-block-head -->
-                                            <div class="nk-block">
-                                                <div class="nk-data data-list">
-                                                    <div class="data-head">
-                                                        <h6 class="overline-title">Infos Familiales</h6>
-                                                    </div>
-                                                    <div class="data-item" data-toggle="modal" data-target="#profile-edit">
-                                                        <div class="data-col">
-                                                            <span class="data-label">Situation Matrimoniale</span>
-                                                            <span class="data-value">{{  fidele_detail.situation_matrimoniale }}</span>
-                                                        </div>
-                                                        <div class="data-col data-col-end"><span class="data-more"><em class="icon ni ni-forward-ios"></em></span></div>
-                                                    </div><!-- data-item -->
-                                                    {% if fidele_detail.situation_matrimoniale == 'MARIE'  %}
-                                                       <div class="data-item" data-toggle="modal" data-target="#profile-edit">
-                                                        <div class="data-col">
-                                                            <span class="data-label">Marié à </span>
-                                                            <span class="data-value">{{  fidele_detail.marie_a }}</span>
-                                                        </div>
-                                                        <div class="data-col data-col-end"><span class="data-more"><em class="icon ni ni-forward-ios"></em></span></div>
-                                                    </div><!-- data-item -->
-                                                    {% endif %}
-                                                    <div class="data-item" data-toggle="modal" data-target="#profile-edit">
-                                                        <div class="data-col">
-                                                            <span class="data-label">Nombre d'enfants</span>
-                                                            <span class="data-value">{{  enfantnbr }}</span>
-                                                        </div>
-                                                        <div class="data-col data-col-end"><span class="data-more"><em class="icon ni ni-forward-ios"></em></span></div>
-                                                    </div><!-- data-item -->
-                                                    <div class="data-item">
-                                                        <div class="data-col">
-                                                            <span class="data-label">Profession</span>
-                                                            <span class="data-value">{{  fidele_detail.profession }}</span>
-                                                        </div>
-                                                        <div class="data-col data-col-end"><span class="data-more disable"><em class="icon ni ni-lock-alt"></em></span></div>
-                                                    </div><!-- data-item -->
-                                                    <div class="data-item" data-toggle="modal" data-target="#profile-edit">
-                                                        <div class="data-col">
-                                                            <span class="data-label">Entréprise</span>
-                                                            <span class="data-value text-soft">{{  fidele_detail.entreprise}}</span>
-                                                        </div>
-                                                        <div class="data-col data-col-end"><span class="data-more"><em class="icon ni ni-forward-ios"></em></span></div>
-                                                    </div><!-- data-item -->
-                                                    <div class="data-item" data-toggle="modal" data-target="#profile-edit">
-                                                        <div class="data-col">
-                                                            <span class="data-label">Révénue Mensuel</span>
-                                                            <span class="data-value">{{  fidele_detail.mensual_revenue }} {{ fidele_detail.salary_currency }}</span>
-                                                        </div>
-                                                        <div class="data-col data-col-end"><span class="data-more"><em class="icon ni ni-forward-ios"></em></span></div>
-                                                    </div>
-
-                                                </div><!-- data-list -->
-                                                <div class="nk-data data-list">
-                                                    <div class="data-head">
-                                                        <h6 class="overline-title">FILIATION</h6>
-                                                    </div>
-                                                   <!-- data-item -->
-                                                  <div class="data-item" data-toggle="modal" data-target="#profile-edit">
-                                                        <div class="data-col">
-                                                            <span class="data-label">Père</span>
-                                                            {% if fidele_detail.pere %}
-                                                              <a href="{% url 'membre' fidele_detail.pere.slug %}" > <span class="badge badge-secondary ml-2">{{  fidele_detail.pere }}</span></a>
-                                                            {% else %}
-                                                                aucun pere signalé
-                                                            {% endif %}
-                                                        </div>
-                                                        <div class="data-col data-col-end"><span class="data-more"><em class="icon ni ni-forward-ios"></em></span></div>
-                                                    </div>
-                                                    <div class="data-item" data-toggle="modal" data-target="#profile-edit">
-                                                        <div class="data-col">
-                                                            <span class="data-label">Mère</span>
-                                                            {% if fidele_detail.mere %}
-                                                            <a href="{% url 'membre' fidele_detail.mere.slug %}" > <span class="badge badge-secondary ml-2">{{  fidele_detail.mere }}</span></a>
-                                                              {% else %}
-                                                                aucune mère signalé
-                                                            {% endif %}
-                                                        </div>
-                                                        <div class="data-col data-col-end"><span class="data-more"><em class="icon ni ni-forward-ios"></em></span></div>
-                                                    </div>
-                                                <div class="data-item" data-toggle="modal" data-target="#profile-edit">
-                                                        <div class="data-col">
-                                                            <span class="data-label">Frère(s)</span>
-
-                                                        {% for frere in frere %}
-      <a href="{% url 'membre' frere.slug %}" > <span class="badge badge-secondary ml-2">{{ frere }}</span></a>
-                                                            {% empty %}
-                                                            aucun
-    {% endfor %}
-                                                        </div>
-                                                        <div class="data-col data-col-end"><span class="data-more"><em class="icon ni ni-forward-ios"></em></span></div>
-                                                    </div>
-                                                <div class="data-item" data-toggle="modal" data-target="#profile-edit">
-                                                        <div class="data-col">
-                                                            <span class="data-label">Soeure</span>
-                                                              {% for soeur in soeur %}
-      <a href="{% url 'membre' soeur.slug %}" > <span class="badge badge-danger ml-2">{{ soeur }}</span></a>
-                                                                  {% empty %}
-                                                                  aucune soeur
-    {% endfor %}
-                                                        </div>
-                                                        <div class="data-col data-col-end"><span class="data-more"><em class="icon ni ni-forward-ios"></em></span></div>
-                                                    </div>
-                                                    <div class="data-item" data-toggle="modal" data-target="#profile-edit" data-tab-target="#address">
-                                                        <div class="data-col">
-                                                            <span class="data-label">Enfants </span>
-                                                            {% for enfant in enfant %}
-                                                                <a href="{% url 'membre' enfant.slug %}" > <span class="badge badge-primary ml-2">{{  enfant }}</span></a>
-                                                                {% empty %}
-                                                                aucun enfant signalé
-                                                            {% endfor %}
-
-
-                                                        </div>
-                                                        <div class="data-col data-col-end"><span class="data-more"><em class="icon ni ni-forward-ios"></em></span></div>
-                                                    </div><!-- data-item -->
-
-                                                </div><!-- data-list -->
-                                            </div><!-- .nk-block -->
-                                        </div>
-                                        <div class="card-aside card-aside-left user-aside toggle-slide toggle-slide-left toggle-break-lg" data-content="userAside" data-toggle-screen="lg" data-toggle-overlay="true">
-                                            <div class="card-inner-group" data-simplebar>
-                                                <div class="card-inner">
-                                                    <div class="user-card">
-                                                        <div class="user-avatar bg-primary">
-                                                            <span><img src="{{ fidele_detail.photo.url }}"></span>
-                                                        </div>
-                                                        <div class="user-info">
-                                                            <span class="lead-text">{{ fidele_detail }}</span>
-                                                            <span class="sub-text">{{ fidele_detail.email }}</span>
-                                                        </div>
-                                                        <div class="user-action">
-                                                            <div class="dropdown">
-                                                                <a class="btn btn-icon btn-trigger mr-n2" data-toggle="dropdown" href="#"><em class="icon ni ni-more-v"></em></a>
-                                                                <div class="dropdown-menu dropdown-menu-right">
-                                                                    <ul class="link-list-opt no-bdr">
-                                                                        <li><a href="#"><em class="icon ni ni-camera-fill"></em><span>Change Photo</span></a></li>
-                                                                        <li><a href="{% url 'update' fidele_detail.pk  %}"><em class="icon ni ni-edit-fill"></em><span>Update Profile</span></a></li>
-                                                                    </ul>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    </div><!-- .user-card -->
-                                                </div><!-- .menu de gauche -->
-                                                <div class="card-inner">
-                                                    <div class="user-account-info py-0">
-                                                        <h6 class="overline-title-alt text-primary">{{  fidele_detail.type_membre }}</h6>
-                                                        <h6 class="overline-title-alt">a Intégré l'église dépuis</h6>
-                                                        <div class="user-balance">{{  fidele_detail.anciennete }}<small class="currency currency-btc"></small></div>
-                                                        <div class="user-balance-sub"><span>{{ fidele_detail.profession }} | <span class="currency currency-btc text-warning">{{ fidele_detail.entreprise }}</span></span></div>
-                                                    </div>
-                                                </div><!-- .card-inner -->
-                                                <div class="card-inner p-0">
-                                                    <ul class="link-list-menu">
-                                                        <li><a href="{%  url 'infos_generale' fidele_detail.id  %} "><em class="icon ni ni-user-fill-c"></em><span>Infomation Générale</span></a></li>
-                                                        <li><a href="{% url 'vie_de_leglise' fidele_detail.id %}"><em class="icon ni ni-bell-fill"></em><span>Vie de l'Eglise</span></a></li>
-                                                        <li><a href="{% url 'engagement' fidele_detail.id%}"><em class="icon ni ni-activity-round-fill"></em><span>Engagement</span></a></li>
-                                                        <li><a class="active" href="{% url 'statut_social' fidele_detail.id %}"><em class="icon ni ni-lock-alt-fill"></em><span>Statut Social</span></a></li>
-                                                        <li><a href="{% url 'messagerie' fidele_detail.id %}"><em class="icon ni ni-grid-add-fill-c"></em><span>Messagérie</span></a></li>
-                                                    </ul>
-                                                </div><!-- .card-inner -->
-                                            </div><!-- .card-inner-group -->
-                                        </div><!-- card-aside -->
-                                    </div><!-- .card-aside-wrap -->
-                                </div><!-- .card -->
-                            </div><!-- .nk-block -->
-                        </div>
-                    </div>
-                </div>
+{% with active='statut' %}
+<div class="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-6">
+    <aside class="bg-white dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-soft p-5 h-fit lg:sticky lg:top-20">
+        <div class="flex flex-col items-center text-center">
+            <div class="w-24 h-24 rounded-2xl bg-gradient-to-br from-brand-500 to-violet-600 grid place-items-center text-white font-display text-2xl font-bold overflow-hidden ring-4 ring-white dark:ring-slate-800 shadow-soft-lg">
+                {% if fidele_detail.photo %}
+                    <img src="{{ fidele_detail.photo.url }}" alt="" class="w-full h-full object-cover">
+                {% else %}
+                    {{ fidele_detail.user.first_name|first|upper }}{{ fidele_detail.user.last_name|first|upper }}
+                {% endif %}
             </div>
-            <!-- content @e -->
+            <h2 class="font-display font-bold text-slate-900 dark:text-white mt-4">{{ fidele_detail }}</h2>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 truncate w-full">{{ fidele_detail.email|default:"" }}</p>
+        </div>
+        <nav class="mt-5 pt-5 border-t border-slate-200 dark:border-slate-700/60 space-y-1.5">
+            <a href="{% url 'infos_generale' fidele_detail.id %}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/60 transition">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                Infos générales
+            </a>
+            <a href="{% url 'vie_de_leglise' fidele_detail.id %}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm {% if active == 'vie' %}bg-brand-50 dark:bg-brand-900/30 text-brand-700 dark:text-brand-300 font-semibold{% else %}text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/60{% endif %} transition">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 21h18M5 21V7l8-4v18"/></svg>
+                Vie d'église
+            </a>
+            <a href="{% url 'engagement' fidele_detail.id %}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm {% if active == 'engagement' %}bg-brand-50 dark:bg-brand-900/30 text-brand-700 dark:text-brand-300 font-semibold{% else %}text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/60{% endif %} transition">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                Engagement
+            </a>
+            <a href="{% url 'statut_social' fidele_detail.id %}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm {% if active == 'statut' %}bg-brand-50 dark:bg-brand-900/30 text-brand-700 dark:text-brand-300 font-semibold{% else %}text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/60{% endif %} transition">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857"/></svg>
+                Statut social
+            </a>
+            <a href="{% url 'messagerie' fidele_detail.id %}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm {% if active == 'messagerie' %}bg-brand-50 dark:bg-brand-900/30 text-brand-700 dark:text-brand-300 font-semibold{% else %}text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/60{% endif %} transition">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+                Messagerie
+            </a>
+        </nav>
+    </aside>
+
+    <div>
+        <header class="mb-6 flex flex-wrap items-end justify-between gap-3">
+            <div>
+                <div class="text-xs font-semibold tracking-wider uppercase text-brand-600 dark:text-brand-300 mb-1.5">Profil</div>
+                <h1 class="font-display text-2xl lg:text-3xl font-bold text-slate-900 dark:text-white">Statut social</h1>
+                <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Situation et statut social du fidèle</p>
+            </div>
+            <a href="{% url 'membres' %}" class="inline-flex items-center gap-2 h-10 px-4 rounded-lg border border-slate-200 dark:border-slate-700 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/50 transition">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+                <span>Retour</span>
+            </a>
+        </header>
+
+        <div class="bg-white dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-soft p-5 lg:p-6">
+            {% if object_list %}
+                <ul class="divide-y divide-slate-100 dark:divide-slate-700/40">
+                    {% for item in object_list %}
+                        <li class="py-4 flex items-start gap-4">
+                            <div class="w-10 h-10 rounded-lg bg-brand-100 text-brand-600 dark:bg-brand-900/30 dark:text-brand-300 grid place-items-center shrink-0">
+                                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857"/></svg>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="text-sm font-semibold text-slate-800 dark:text-slate-100">{{ item }}</div>
+                                {% if item.date %}<div class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{{ item.date|date:"d M Y" }}</div>{% endif %}
+                                {% if item.description %}<p class="text-sm text-slate-600 dark:text-slate-300 mt-1 line-clamp-2">{{ item.description }}</p>{% endif %}
+                            </div>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                {% include 'layout/_empty_state.html' with title="Aucun élément" message="Aucune donnée à afficher pour cette section." %}
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endwith %}
 {% endblock %}

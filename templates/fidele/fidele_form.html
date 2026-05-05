@@ -1,256 +1,122 @@
 {% extends 'layout/base.html' %}
-{% load crispy_forms_tags %}
 {% load static %}
+{% block head_title %}{{ title|default:"Fidèle" }} – Alliance Connect{% endblock %}
+
+{% block extra_head %}
+<style>
+    /* Form fields styling */
+    #fidele-form input[type="text"],
+    #fidele-form input[type="email"],
+    #fidele-form input[type="number"],
+    #fidele-form input[type="url"],
+    #fidele-form input[type="tel"],
+    #fidele-form input[type="date"],
+    #fidele-form input[type="datetime-local"],
+    #fidele-form input[type="time"],
+    #fidele-form input[type="password"],
+    #fidele-form select,
+    #fidele-form textarea {
+        width: 100%;
+        height: 2.625rem;
+        padding: 0 0.875rem;
+        border: 1px solid rgb(226, 232, 240);
+        border-radius: 0.5rem;
+        background-color: rgb(248, 250, 252);
+        font-size: 0.875rem;
+        color: rgb(51, 65, 85);
+        transition: border-color .15s, box-shadow .15s;
+    }
+    .dark #fidele-form input, .dark #fidele-form select, .dark #fidele-form textarea {
+        background-color: rgba(30, 41, 59, .5);
+        border-color: rgb(51, 65, 85);
+        color: rgb(241, 245, 249);
+    }
+    #fidele-form textarea { height: auto; padding: 0.75rem 0.875rem; min-height: 100px; }
+    #fidele-form input:focus, #fidele-form select:focus, #fidele-form textarea:focus {
+        outline: none;
+        border-color: rgb(129, 140, 248);
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, .2);
+    }
+    #fidele-form input[type="checkbox"], #fidele-form input[type="radio"] {
+        width: 1rem; height: 1rem; vertical-align: middle;
+    }
+    #fidele-form input[type="file"] { padding: 0.5rem; height: auto; }
+    #fidele-form label { font-weight: 500; font-size: 0.875rem; color: rgb(51, 65, 85); margin-bottom: 0.375rem; display: block; }
+    .dark #fidele-form label { color: rgb(226, 232, 240); }
+    #fidele-form .asteriskField { color: rgb(244, 63, 94); margin-left: 0.25rem; }
+    #fidele-form .form-text, #fidele-form .help-block { font-size: 0.75rem; color: rgb(148, 163, 184); margin-top: 0.25rem; }
+    #fidele-form .invalid-feedback, #fidele-form .errorlist { font-size: 0.75rem; color: rgb(220, 38, 38); margin-top: 0.25rem; list-style: none; padding: 0; }
+    #fidele-form .form-group, #fidele-form .mb-3 { margin-bottom: 1rem; }
+    #fidele-form .row.g-3 > [class*="col-"] { padding: 0.5rem; }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="nk-content nk-content-fluid">
-    <div class="container-xl wide-xl">
-        <div class="nk-content-inner">
-            <div class="nk-content-body">
-                <div class="components-preview wide-md mx-auto">
-                    <div class="nk-block-head nk-block-head-lg">
-                        <div class="nk-block-between">
-                            <div class="nk-block-head-content">
-                                <h2 class="nk-block-title fw-normal">{{ title }}</h2>
-                                <nav>
-                                    <ol class="breadcrumb breadcrumb-arrow">
-                                        <li class="breadcrumb-item"><a href="{% url 'home' %}">Tableau de bord</a></li>
-                                        <li class="breadcrumb-item"><a href="{% url 'membres' %}">Membres</a></li>
-                                        <li class="breadcrumb-item active" aria-current="page">{{ title }}</li>
-                                    </ol>
-                                </nav>
-                            </div>
-                            <div class="nk-block-head-content">
-                                <a href="{% url 'membres' %}" class="btn btn-outline-light bg-white d-none d-sm-inline-flex">
-                                    <em class="icon ni ni-arrow-left"></em><span>Retour</span>
-                                </a>
-                            </div>
-                        </div>
+<div class="max-w-5xl mx-auto">
+
+    {# ===== Header ===== #}
+    <header class="mb-6 lg:mb-8">
+        <nav class="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 mb-2">
+            <a href="{% url 'home' %}" class="hover:text-brand-600 transition">Tableau de bord</a>
+            <svg class="w-3 h-3 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+            <a href="{% url 'membres' %}" class="hover:text-brand-600 transition">Membres</a>
+            <svg class="w-3 h-3 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+            <span class="text-slate-700 dark:text-slate-300 font-medium">{{ title|default:"Fidèle" }}</span>
+        </nav>
+        <div class="flex flex-wrap items-end justify-between gap-4">
+            <div>
+                <h1 class="font-display text-2xl lg:text-3xl font-bold text-slate-900 dark:text-white">{{ title|default:"Nouveau fidèle" }}</h1>
+                <p class="text-sm text-slate-500 dark:text-slate-400 mt-1.5">Renseignez les informations du fidèle.</p>
+            </div>
+            <a href="{% url 'membres' %}" class="inline-flex items-center gap-2 h-10 px-4 rounded-lg border border-slate-200 dark:border-slate-700 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/50 transition">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+                <span>Retour</span>
+            </a>
+        </div>
+    </header>
+
+    <form method="post" enctype="multipart/form-data" id="fidele-form" class="space-y-6">
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+            <div class="p-3 rounded-lg bg-rose-50 dark:bg-rose-900/20 text-rose-700 dark:text-rose-300 text-sm border border-rose-200 dark:border-rose-700/40">
+                {% for err in form.non_field_errors %}{{ err }}<br>{% endfor %}
+            </div>
+        {% endif %}
+
+        <div class="bg-white dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-soft p-5 lg:p-6">
+            <h2 class="font-display font-semibold text-slate-900 dark:text-white mb-1">Informations</h2>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mb-5">Tous les champs nécessaires.</p>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {% for field in form %}
+                    <div class="{% if field.field.widget.input_type == 'textarea' or field.name == 'description' or field.name == 'adresse' %}md:col-span-2{% endif %}">
+                        <label for="{{ field.id_for_label }}">
+                            {{ field.label }}{% if field.field.required %} <span class="asteriskField">*</span>{% endif %}
+                        </label>
+                        {{ field }}
+                        {% if field.help_text %}<p class="form-text">{{ field.help_text|safe }}</p>{% endif %}
+                        {% for e in field.errors %}<p class="invalid-feedback">{{ e }}</p>{% endfor %}
                     </div>
-                    
-                    <div class="nk-block nk-block-lg">
-                        <div class="card card-bordered">
-                            <div class="card-inner">
-                                <form method="post" enctype="multipart/form-data" id="fidele-form" class="form-validate">
-                                    {% csrf_token %}
-                                    
-                                    <div class="row g-4">
-                                        <!-- Colonne de gauche -->
-                                        <div class="col-lg-6">
-                                            <div class="gy-3">
-                                                <div class="g-item">
-                                                    <h5 class="title">Informations personnelles</h5>
-                                                    <div class="row g-3">
-                                                        <div class="col-md-4">
-                                                            {{ form.birthdate|as_crispy_field }}
-                                                        </div>
-                                                        <div class="col-md-3">
-                                                            {{ form.sexe|as_crispy_field }}
-                                                        </div>
-                                                        <div class="col-md-6">
-                                                            {{ form.situation_matrimoniale|as_crispy_field }}
-                                                        </div>
-                                                        <div class="col-12">
-                                                            {{ form.signe|as_crispy_field }}
-                                                        </div>
-                                                        <div class="col-md-6">
-                                                            {{ form.nbr_enfants|as_crispy_field }}
-                                                        </div>
-                                                        <div class="col-md-6">
-                                                            {{ form.nationalite|as_crispy_field }}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                
-                                                <div class="g-item">
-                                                    <h5 class="title">Coordonnées</h5>
-                                                    <div class="row g-3">
-                                                        <div class="col-md-6">
-                                                            {{ form.phone|as_crispy_field }}
-                                                        </div>
-                                                        
-                                                        <div class="col-12">
-                                                            {{ form.contry|as_crispy_field }}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                
-                                                <div class="g-item">
-                                                    <h5 class="title">Situation professionnelle</h5>
-                                                    <div class="row g-3">
-                                                        <div class="col-md-6">
-                                                            {{ form.profession|as_crispy_field }}
-                                                        </div>
-                                                        <div class="col-md-6">
-                                                            {{ form.entreprise|as_crispy_field }}
-                                                        </div>
-                                                        <div class="col-md-6">
-                                                            {{ form.mensual_revenue|as_crispy_field }}
-                                                        </div>
-                                                        <div class="col-md-6">
-                                                            {{ form.salary_currency|as_crispy_field }}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        
-                                        <!-- Colonne de droite -->
-                                        <div class="col-lg-6">
-                                            <div class="gy-3">
-                                                <div class="g-item">
-                                                    <h5 class="title">Informations spirituelles</h5>
-                                                    <div class="row g-3">
-                                                        <div class="col-md-6">
-                                                            {{ form.date_entree|as_crispy_field }}
-                                                        </div>
-                                                        <div class="col-md-6">
-                                                            {{ form.eglise|as_crispy_field }}
-                                                        </div>
-                                                        <div class="col-md-6">
-                                                            {{ form.date_bapteme|as_crispy_field }}
-                                                        </div>
-                                                        <div class="col-md-6">
-                                                            {{ form.type_bapteme|as_crispy_field }}
-                                                        </div>
-                                                        <div class="col-12">
-                                                            {{ form.lieu_bapteme|as_crispy_field }}
-                                                        </div>
-                                                        <div class="col-md-6">
-                                                            {{ form.membre|as_crispy_field }}
-                                                        </div>
-                                                        <div class="col-md-6">
-                                                            {{ form.type_membre|as_crispy_field }}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                
-                                                <div class="g-item">
-                                                    <h5 class="title">Relations familiales</h5>
-                                                    <div class="row g-3">
-                                                        <div class="col-md-4">
-                                                            {{ form.pere|as_crispy_field }}
-                                                        </div>
-                                                        <div class="col-md-4">
-                                                            {{ form.mere|as_crispy_field }}
-                                                        </div>
-                                                        <div class="col-md-4">
-                                                            {{ form.marie_a|as_crispy_field }}
-                                                        </div>
-                                                        <div class="col-12">
-                                                            {{ form.famille_alliance|as_crispy_field }}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                
-                                                <div class="g-item">
-                                                    <h5 class="title">Implication dans l'église</h5>
-                                                    <div class="row g-3">
-                                                        <div class="col-md-6">
-                                                            {{ form.departement|as_crispy_field }}
-                                                        </div>
-                                                        <div class="col-md-6">
-                                                            {{ form.fonction|as_crispy_field }}
-                                                        </div>
-                                                        <div class="col-12">
-                                                            {{ form.location|as_crispy_field }}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                
-                                                <div class="g-item">
-                                                    <h5 class="title">Photo</h5>
-                                                    <div class="row g-3">
-                                                        <div class="col-12">
-                                                            {{ form.photo|as_crispy_field }}
-                                                            {% if form.instance.photo %}
-                                                            <div class="mt-2 text-center">
-                                                                <img src="{{ form.instance.photo.url }}" alt="Photo actuelle" class="img-thumbnail" style="max-height: 200px;">
-                                                            </div>
-                                                            {% endif %}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="row g-3 mt-4">
-                                        <div class="col-12">
-                                            <div class="form-group text-end">
-                                                <button type="submit" class="btn btn-lg btn-primary">
-                                                    <em class="icon ni ni-save"></em> Enregistrer
-                                                </button>
-                                                <a href="{% url 'membres' %}" class="btn btn-lg btn-light">
-                                                    <em class="icon ni ni-arrow-left"></em> Annuler
-                                                </a>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </form>
-                            </div>
-                        </div>
-                    </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        {# Sticky actions footer #}
+        <div class="sticky bottom-0 bg-gradient-to-t from-slate-50 dark:from-slate-900 from-50% pt-4">
+            <div class="bg-white dark:bg-slate-800/80 backdrop-blur rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-soft-lg p-4 flex flex-wrap items-center justify-between gap-3">
+                <p class="text-xs text-slate-500 dark:text-slate-400">Champs marqués <span class="text-rose-500">*</span> obligatoires.</p>
+                <div class="flex items-center gap-2">
+                    <a href="{% url 'membres' %}" class="inline-flex items-center h-10 px-4 rounded-lg border border-slate-200 dark:border-slate-700 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/50 transition">
+                        Annuler
+                    </a>
+                    <button type="submit" class="inline-flex items-center gap-2 h-10 px-5 rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold shadow-soft transition">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                        <span>Enregistrer</span>
+                    </button>
                 </div>
             </div>
         </div>
-    </div>
+    </form>
 </div>
-
-<script>
-$(document).ready(function() {
-    // Initialisation des sélecteurs avec select2
-    $('select').each(function() {
-        $(this).select2({
-            theme: 'bootstrap4',
-            width: '100%',
-            placeholder: $(this).attr('placeholder') || 'Sélectionnez une option',
-            allowClear: Boolean($(this).data('allow-clear')),
-            dropdownParent: $(this).closest('.modal').length ? $(this).closest('.modal') : document.body
-        });
-    });
-
-    // Datepicker pour les champs de date
-    $('.dateinput').datepicker({
-        format: 'yyyy-mm-dd',
-        autoclose: true,
-        todayHighlight: true,
-        language: 'fr',
-        orientation: 'auto'
-    });
-
-    // Validation du formulaire
-    $('#fidele-form').validate({
-        errorClass: 'is-invalid',
-        validClass: 'is-valid',
-        errorPlacement: function(error, element) {
-            if (element.hasClass('select2-hidden-accessible')) {
-                error.insertAfter(element.next('.select2-container'));
-            } else {
-                error.insertAfter(element);
-            }
-        },
-        highlight: function(element, errorClass, validClass) {
-            $(element).addClass(errorClass).removeClass(validClass);
-            $(element).closest('.form-group').find('.select2-selection').addClass(errorClass);
-        },
-        unhighlight: function(element, errorClass, validClass) {
-            $(element).removeClass(errorClass).addClass(validClass);
-            $(element).closest('.form-group').find('.select2-selection').removeClass(errorClass);
-        }
-    });
-
-    // Gestion dynamique des relations familiales
-    function updateFamilyFields() {
-        const familleId = $('#id_famille_alliance').val();
-        if (familleId) {
-            // Ici vous pouvez ajouter une requête AJAX pour pré-remplir les champs
-            // en fonction de la famille sélectionnée
-        }
-    }
-
-    $('#id_famille_alliance').change(updateFamilyFields);
-    updateFamilyFields();
-});
-</script>
 {% endblock %}

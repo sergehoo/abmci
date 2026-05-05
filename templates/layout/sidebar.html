@@ -1,0 +1,194 @@
+{% load static %}
+
+
+<aside x-data="acSidebar()"
+       :class="[
+           sidebarCollapsed ? 'lg:w-[72px]' : 'lg:w-[260px]',
+           mobileNavOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+       ]"
+       class="fixed inset-y-0 left-0 z-50 w-[280px] lg:w-[260px] flex flex-col
+              bg-white dark:bg-slate-900 border-r border-slate-200/70 dark:border-slate-800/70
+              transition-all duration-300 ease-out shadow-soft-lg lg:shadow-none">
+
+    {# === Logo & brand === #}
+    <div class="h-16 flex items-center justify-between px-4 border-b border-slate-200/70 dark:border-slate-800/70 shrink-0">
+        <a href="{% url 'home' %}" class="flex items-center gap-3 min-w-0 group">
+            <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 grid place-items-center shadow-soft shrink-0 group-hover:scale-105 transition">
+                <img src="{% static 'images/logo-abmci-min.png' %}" alt="ABMCI" class="w-6 h-6 object-contain">
+            </div>
+            <div x-show="!sidebarCollapsed"
+                 x-transition.opacity
+                 class="min-w-0 leading-tight">
+                <div class="font-display font-bold text-slate-900 dark:text-white text-sm">Alliance Connect</div>
+                <div class="text-[11px] text-slate-500 dark:text-slate-400 truncate">ABMCI · Monde</div>
+            </div>
+        </a>
+        <button @click="mobileNavOpen = false"
+                aria-label="Fermer le menu"
+                class="lg:hidden text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 p-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+    </div>
+
+    {# === Navigation === #}
+    <nav class="flex-1 overflow-y-auto py-4 px-3 space-y-1">
+
+        {# Section label (caché en collapsed) #}
+        <div x-show="!sidebarCollapsed" class="px-3 pt-1 pb-2 text-[10px] uppercase tracking-wider text-slate-400 dark:text-slate-500 font-semibold">
+            Pilotage
+        </div>
+
+        {# ---- Dashboard ---- #}
+        {% include 'layout/_nav_link.html' with url_name='home' icon='layout-dashboard' label='Tableau de bord' %}
+
+        {# ---- L'Église ---- #}
+        <div x-data="{ open: isAnyActive(['/fidele/membres', '/fidele/problemes', '/fidele/donations', '/fidele/direction']) }" class="pt-2">
+            <button @click="open = !open"
+                    class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium
+                           text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/60 transition group">
+                <svg class="w-5 h-5 shrink-0 text-brand-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 21h18M5 21V7l8-4v18M19 21V11l-6-4M9 9v.01M9 12v.01M9 15v.01M9 18v.01"/></svg>
+                <span x-show="!sidebarCollapsed" class="flex-1 text-left">L'Église</span>
+                <svg x-show="!sidebarCollapsed" :class="open ? 'rotate-180' : ''" class="w-4 h-4 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+            </button>
+            <div x-show="open && !sidebarCollapsed"
+                 x-collapse
+                 class="ml-3 mt-1 pl-5 border-l border-slate-200 dark:border-slate-700 space-y-0.5">
+                {% include 'layout/_sub_link.html' with url_name='membres' label='Fidèles' %}
+                {% include 'layout/_sub_link.html' with url_name='problemreport_list' label='Signalements' %}
+                {% include 'layout/_sub_link.html' with url_name='donation-list' label='Dons & Offrandes' %}
+                {% include 'layout/_sub_link.html' with url_name='pastorale_index' label='Pastorale' %}
+                {% if department %}
+                    <div class="pt-1.5 px-3 text-[10px] uppercase tracking-wider text-slate-400 font-semibold">Directions</div>
+                    {% for d in department %}
+                        <a href="{% url 'direction' d.pk %}"
+                           :class="isActive('{% url 'direction' d.pk %}') ? 'text-brand-600 dark:text-brand-300 font-semibold bg-brand-50 dark:bg-brand-900/30' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60'"
+                           class="block px-3 py-1.5 text-sm rounded-md transition">
+                            {{ d.name }}
+                        </a>
+                    {% endfor %}
+                {% endif %}
+            </div>
+        </div>
+
+        {# ---- Suivi ---- #}
+        <div x-data="{ open: isAnyActive(['/fidele/suivie']) }" class="pt-1">
+            <button @click="open = !open"
+                    class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium
+                           text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/60 transition">
+                <svg class="w-5 h-5 shrink-0 text-brand-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/></svg>
+                <span x-show="!sidebarCollapsed" class="flex-1 text-left">Suivi</span>
+                <svg x-show="!sidebarCollapsed" :class="open ? 'rotate-180' : ''" class="w-4 h-4 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+            </button>
+            <div x-show="open && !sidebarCollapsed" x-collapse
+                 class="ml-3 mt-1 pl-5 border-l border-slate-200 dark:border-slate-700 space-y-0.5">
+                {% include 'layout/_sub_link.html' with url_name='suivie' label='Visiteurs' %}
+                {% include 'layout/_sub_link.html' with url_name='pastorale_visites' label='Visites à domicile' %}
+                {% include 'layout/_sub_link.html' with url_name='pastorale_rdv' label='Rendez-vous pastoraux' %}
+                {% include 'layout/_sub_link.html' with url_name='pastorale_permanences' label='Permanences' %}
+            </div>
+        </div>
+
+        {# ---- Eden ---- #}
+        <div x-data="{ open: isAnyActive(['/eden/']) }" class="pt-1">
+            <button @click="open = !open"
+                    class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium
+                           text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/60 transition">
+                <svg class="w-5 h-5 shrink-0 text-brand-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
+                <span x-show="!sidebarCollapsed" class="flex-1 text-left">Eden</span>
+                <svg x-show="!sidebarCollapsed" :class="open ? 'rotate-180' : ''" class="w-4 h-4 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+            </button>
+            <div x-show="open && !sidebarCollapsed" x-collapse
+                 class="ml-3 mt-1 pl-5 border-l border-slate-200 dark:border-slate-700 space-y-0.5">
+                {% include 'layout/_sub_link.html' with url_name='fiancailles-list' label='Fiançailles' %}
+                {% include 'layout/_sub_link.html' with url_name='mariage-list' label='Mariages' %}
+                <a href="#" class="block px-3 py-1.5 text-sm text-slate-500 dark:text-slate-400 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800/60 transition">Anniversaires</a>
+            </div>
+        </div>
+
+        <div x-show="!sidebarCollapsed" class="px-3 pt-4 pb-2 text-[10px] uppercase tracking-wider text-slate-400 dark:text-slate-500 font-semibold">
+            Vie de l'église
+        </div>
+
+        {# ---- Événements ---- #}
+        <div x-data="{ open: isAnyActive(['/evenements/']) }" class="pt-1">
+            <button @click="open = !open"
+                    class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium
+                           text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/60 transition">
+                <svg class="w-5 h-5 shrink-0 text-brand-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                <span x-show="!sidebarCollapsed" class="flex-1 text-left">Événements</span>
+                <svg x-show="!sidebarCollapsed" :class="open ? 'rotate-180' : ''" class="w-4 h-4 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+            </button>
+            <div x-show="open && !sidebarCollapsed" x-collapse
+                 class="ml-3 mt-1 pl-5 border-l border-slate-200 dark:border-slate-700 space-y-0.5">
+                {% include 'layout/_sub_link.html' with url_name='event-calend' label='Calendrier' %}
+                {% include 'layout/_sub_link.html' with url_name='event-list' label='Liste des événements' %}
+                {% include 'layout/_sub_link.html' with url_name='evenement_create' label='Nouvel événement' %}
+                <a href="#" class="block px-3 py-1.5 text-sm text-slate-500 dark:text-slate-400 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800/60 transition">Programmes spéciaux</a>
+            </div>
+        </div>
+
+        {# ---- Formations ---- #}
+        <div x-data="{ open: isAnyActive(['/fidele/formations']) }" class="pt-1">
+            <button @click="open = !open"
+                    class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium
+                           text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/60 transition">
+                <svg class="w-5 h-5 shrink-0 text-brand-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 14l9-5-9-5-9 5 9 5z"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14zm-4 6v-7.5l4-2.222"/></svg>
+                <span x-show="!sidebarCollapsed" class="flex-1 text-left">Formations</span>
+                <svg x-show="!sidebarCollapsed" :class="open ? 'rotate-180' : ''" class="w-4 h-4 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+            </button>
+            <div x-show="open && !sidebarCollapsed" x-collapse
+                 class="ml-3 mt-1 pl-5 border-l border-slate-200 dark:border-slate-700 space-y-0.5">
+                {% include 'layout/_sub_link.html' with url_name='formations_index' label='Catalogue' %}
+                {% include 'layout/_sub_link.html' with url_name='formation_session_create' label='Programmer une session' %}
+                {% include 'layout/_sub_link.html' with url_name='formations_mes_inscriptions' label='Mes inscriptions' %}
+            </div>
+        </div>
+
+    </nav>
+
+    {# === Card "Aide / pro" (visible quand expanded) === #}
+    <div x-show="!sidebarCollapsed" class="px-3 pb-3 shrink-0">
+        <div class="rounded-xl bg-gradient-to-br from-brand-600 to-violet-600 p-4 text-white relative overflow-hidden">
+            <div aria-hidden="true" class="absolute -top-8 -right-8 w-24 h-24 rounded-full bg-white/10 blur-2xl"></div>
+            <div class="relative">
+                <div class="text-xs font-bold uppercase tracking-wider text-white/80">Besoin d'aide ?</div>
+                <p class="text-xs text-white/85 mt-1 leading-relaxed">Contactez le support Alliance Connect pour toute question.</p>
+                <a href="mailto:support@abmci.org" class="inline-flex items-center gap-1.5 mt-3 px-3 py-1.5 rounded-md bg-white/15 hover:bg-white/25 text-xs font-semibold transition">
+                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                    <span>Écrire au support</span>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    {# === Footer sidebar : collapse + version === #}
+    <div class="border-t border-slate-200/70 dark:border-slate-800/70 px-3 py-3 shrink-0">
+        <button @click="sidebarCollapsed = !sidebarCollapsed"
+                aria-label="Réduire / étendre le menu"
+                class="hidden lg:flex items-center gap-2 w-full px-3 py-2 rounded-lg text-xs font-medium
+                       text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 transition">
+            <svg x-show="!sidebarCollapsed" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+            <svg x-show="sidebarCollapsed" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+            <span x-show="!sidebarCollapsed">Réduire le menu</span>
+        </button>
+    </div>
+</aside>
+
+<script>
+    function acSidebar() {
+        return {
+            activePath: window.location.pathname,
+            isActive(linkPath) {
+                if (!linkPath) return false;
+                if (linkPath === '/') return this.activePath === '/';
+                // strict equality OR exact prefix match (segment boundary)
+                return this.activePath === linkPath
+                    || this.activePath === linkPath.replace(/\/$/, '')
+                    || this.activePath.startsWith(linkPath.endsWith('/') ? linkPath : linkPath + '/');
+            },
+            isAnyActive(prefixes) {
+                return prefixes.some(p => this.activePath.startsWith(p));
+            },
+        };
+    }
+</script>

@@ -1,0 +1,117 @@
+{% extends 'layout/base.html' %}
+{% load static %}
+{% block head_title %}Nouveau rendez-vous – Alliance Connect{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto" x-data="{ duree: 60 }">
+    <header class="mb-6">
+        <nav class="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 mb-2">
+            <a href="{% url 'pastorale_index' %}" class="hover:text-brand-600 transition">Pastorale</a>
+            <svg class="w-3 h-3 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+            <a href="{% url 'pastorale_rdv' %}" class="hover:text-brand-600 transition">Rendez-vous</a>
+            <svg class="w-3 h-3 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+            <span class="text-slate-700 dark:text-slate-300 font-medium">Nouveau</span>
+        </nav>
+        <h1 class="font-display text-2xl lg:text-3xl font-bold text-slate-900 dark:text-white">Nouveau rendez-vous pastoral</h1>
+        <p class="text-sm text-slate-500 dark:text-slate-400 mt-1.5">Réserver un créneau avec un membre du corps pastoral.</p>
+    </header>
+
+    <form method="post" class="bg-white dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-soft p-5 lg:p-6 space-y-5">
+        {% csrf_token %}
+
+        {# Fidèle #}
+        <div>
+            <label for="fidele" class="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">Fidèle <span class="text-rose-500">*</span></label>
+            <div class="relative">
+                <svg class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                <input type="text" name="fidele" id="fidele" placeholder="Rechercher un membre…" required
+                       class="w-full h-11 pl-10 pr-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400 transition">
+            </div>
+        </div>
+
+        {# Pasteur + Type #}
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <label for="pasteur" class="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">Pasteur / Conseiller <span class="text-rose-500">*</span></label>
+                <select name="pasteur" id="pasteur" required class="w-full h-11 px-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400">
+                    <option value="">Sélectionnez…</option>
+                    <option value="koffi">Pst Étienne KOFFI</option>
+                    <option value="konan">Pst Marie KONAN</option>
+                    <option value="bamba">Diacre Paul BAMBA</option>
+                </select>
+            </div>
+            <div>
+                <label for="motif" class="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">Motif <span class="text-rose-500">*</span></label>
+                <select name="motif" id="motif" required class="w-full h-11 px-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400">
+                    <option value="">Choisir un motif…</option>
+                    <option value="bapteme">Préparation au baptême</option>
+                    <option value="mariage">Préparation au mariage</option>
+                    <option value="conseil">Conseils familiaux</option>
+                    <option value="deuil">Soutien (deuil)</option>
+                    <option value="vocation">Discernement vocationnel</option>
+                    <option value="autre">Autre</option>
+                </select>
+            </div>
+        </div>
+
+        {# Date + heure + durée #}
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+                <label for="date" class="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">Date <span class="text-rose-500">*</span></label>
+                <input type="date" name="date" id="date" required class="w-full h-11 px-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400">
+            </div>
+            <div>
+                <label for="heure" class="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">Heure <span class="text-rose-500">*</span></label>
+                <input type="time" name="heure" id="heure" required class="w-full h-11 px-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">Durée <span class="text-slate-400 font-normal" x-text="duree + ' min'"></span></label>
+                <input type="range" name="duree" min="15" max="120" step="15" x-model="duree"
+                       class="w-full h-11 accent-brand-600">
+            </div>
+        </div>
+
+        {# Lieu #}
+        <div>
+            <label for="lieu" class="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">Lieu</label>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <label class="flex items-center gap-2 p-3 rounded-lg border border-slate-200 dark:border-slate-700 hover:border-brand-400 cursor-pointer transition has-[:checked]:border-brand-500 has-[:checked]:bg-brand-50 dark:has-[:checked]:bg-brand-900/20">
+                    <input type="radio" name="lieu" value="eglise" checked class="w-4 h-4 text-brand-600 focus:ring-brand-500">
+                    <span class="text-sm font-medium">À l'église</span>
+                </label>
+                <label class="flex items-center gap-2 p-3 rounded-lg border border-slate-200 dark:border-slate-700 hover:border-brand-400 cursor-pointer transition has-[:checked]:border-brand-500 has-[:checked]:bg-brand-50 dark:has-[:checked]:bg-brand-900/20">
+                    <input type="radio" name="lieu" value="domicile" class="w-4 h-4 text-brand-600 focus:ring-brand-500">
+                    <span class="text-sm font-medium">À domicile</span>
+                </label>
+                <label class="flex items-center gap-2 p-3 rounded-lg border border-slate-200 dark:border-slate-700 hover:border-brand-400 cursor-pointer transition has-[:checked]:border-brand-500 has-[:checked]:bg-brand-50 dark:has-[:checked]:bg-brand-900/20">
+                    <input type="radio" name="lieu" value="visio" class="w-4 h-4 text-brand-600 focus:ring-brand-500">
+                    <span class="text-sm font-medium">Visioconférence</span>
+                </label>
+            </div>
+        </div>
+
+        {# Notes #}
+        <div>
+            <label for="notes" class="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">Notes / Sujet</label>
+            <textarea name="notes" id="notes" rows="3" placeholder="Précisions sur la demande, contexte…"
+                      class="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400 transition"></textarea>
+        </div>
+
+        {# Confidentialité #}
+        <div class="p-4 rounded-xl bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-700/40 flex items-start gap-3">
+            <svg class="w-5 h-5 text-amber-600 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+            <div class="text-xs text-amber-900 dark:text-amber-200">
+                <strong>Confidentialité pastorale</strong> — Le contenu de cet entretien restera confidentiel. Seules les informations nécessaires au suivi seront enregistrées.
+            </div>
+        </div>
+
+        <div class="flex items-center justify-end gap-2 pt-4 border-t border-slate-100 dark:border-slate-700/60">
+            <a href="{% url 'pastorale_rdv' %}" class="inline-flex items-center h-10 px-4 rounded-lg border border-slate-200 dark:border-slate-700 text-sm hover:bg-slate-100 transition">Annuler</a>
+            <button type="submit" class="inline-flex items-center gap-2 h-10 px-5 rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold shadow-soft transition">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                <span>Confirmer le rendez-vous</span>
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

@@ -1,610 +1,138 @@
 {% extends 'layout/base.html' %}
 {% load humanize %}
-{% load mathfilters %}
-{% load custom_filters %}
+{% block head_title %}Signalements – Alliance Connect{% endblock %}
 
 {% block content %}
-<div class="nk-content nk-content-fluid">
-    <div class="container-xl wide-xl">
-        <div class="nk-content-inner">
-            <div class="nk-content-body">
-                <!-- Header amélioré avec filtre rapide -->
-                <div class="nk-block-head nk-block-head-sm">
-                    <div class="nk-block-between">
-                        <div class="nk-block-head-content">
-                            <h3 class="nk-block-title page-title">Gestion des Signalements</h3>
-                            <div class="nk-block-des">
-                                <p class="lead-text">
-                                    {% if current_filters.status or current_filters.severity or current_filters.category %}
-                                        Filtres appliqués : 
-                                        {% if current_filters.status %}<span class="text-primary">{{ current_filters.status }}</span>{% endif %}
-                                        {% if current_filters.severity %}<span class="text-warning">{{ current_filters.severity }}</span>{% endif %}
-                                        {% if current_filters.category %}<span class="text-info">{{ current_filters.category }}</span>{% endif %}
-                                    {% else %}
-                                        Affichage de tous les signalements
-                                    {% endif %}
-                                    - <strong>{{ problems.paginator.count }}</strong> signalement(s) au total
-                                </p>
-                            </div>
-                        </div>
-                        <div class="nk-block-head-content">
-                            <div class="toggle-wrap nk-block-tools-toggle">
-                                <a href="#" class="btn btn-icon btn-trigger toggle-expand" data-target="pageMenu">
-                                    <em class="icon ni ni-menu-alt-r"></em>
-                                </a>
-                                <div class="toggle-expand-content" data-content="pageMenu">
-                                    <ul class="nk-block-tools g-3">
-                                        <li>
-                                            <a href="{% url 'problemreport_create' %}" class="btn btn-primary">
-                                                <em class="icon ni ni-plus"></em>
-                                                <span>Nouveau signalement</span>
-                                            </a>
-                                        </li>
-                                        <li>
-                                            <div class="dropdown">
-                                                <a href="#" class="dropdown-toggle btn btn-outline-light" data-toggle="dropdown">
-                                                    <em class="icon ni ni-download-cloud"></em>
-                                                    <span>Exporter</span>
-                                                </a>
-                                                <div class="dropdown-menu dropdown-menu-right">
-                                                    <ul class="link-list-opt no-bdr">
-                                                        <li><a href="#" onclick="exportToPDF()"><em class="icon ni ni-file-pdf"></em><span>PDF</span></a></li>
-                                                        <li><a href="#" onclick="exportToExcel()"><em class="icon ni ni-file-excel"></em><span>Excel</span></a></li>
-                                                        <li><a href="#" onclick="exportToCSV()"><em class="icon ni ni-file-text"></em><span>CSV</span></a></li>
-                                                    </ul>
-                                                </div>
-                                            </div>
-                                        </li>
-                                        <li>
-                                            <button type="button" class="btn btn-outline-info" onclick="showStatsModal()">
-                                                <em class="icon ni ni-bar-chart-fill"></em>
-                                                <span>Statistiques</span>
-                                            </button>
-                                        </li>
-                                    </ul>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+<div>
+    <header class="mb-6 lg:mb-8 flex flex-wrap items-end justify-between gap-4">
+        <div>
+            <div class="text-xs font-semibold tracking-wider uppercase text-amber-600 dark:text-amber-300 mb-1.5">Pastoral</div>
+            <h1 class="font-display text-2xl lg:text-3xl font-bold text-slate-900 dark:text-white">Gestion des signalements</h1>
+            <p class="text-sm text-slate-500 dark:text-slate-400 mt-1.5">
+                {% if current_filters.status or current_filters.severity or current_filters.category %}
+                    Filtres appliqués :
+                    {% if current_filters.status %}<span class="font-semibold text-brand-600">{{ current_filters.status }}</span>{% endif %}
+                    {% if current_filters.severity %}<span class="font-semibold text-amber-600">{{ current_filters.severity }}</span>{% endif %}
+                    {% if current_filters.category %}<span class="font-semibold text-violet-600">{{ current_filters.category }}</span>{% endif %}
+                {% else %}
+                    Affichage de tous les signalements
+                {% endif %}
+            </p>
+        </div>
+        <a href="{% url 'problemreport_create' %}" class="inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold shadow-soft transition">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+            <span>Nouveau signalement</span>
+        </a>
+    </header>
 
-                <!-- Filtres avancés -->
-                <div class="nk-block mb-4">
-                    <div class="card card-bordered">
-                        <div class="card-inner">
-                            <form method="get" class="row g-3" id="advancedFilterForm">
-                                <div class="col-md-2">
-                                    <select name="status" class="form-select">
-                                        <option value="">Tous statuts</option>
-                                        {% for value, label in status_choices %}
-                                        <option value="{{ value }}" {% if current_filters.status == value %}selected{% endif %}>{{ label }}</option>
-                                        {% endfor %}
-                                    </select>
-                                </div>
-                                <div class="col-md-2">
-                                    <select name="severity" class="form-select">
-                                        <option value="">Toutes sévérités</option>
-                                        {% for value, label in severity_choices %}
-                                        <option value="{{ value }}" {% if current_filters.severity == value %}selected{% endif %}>{{ label }}</option>
-                                        {% endfor %}
-                                    </select>
-                                </div>
-                                <div class="col-md-2">
-                                    <select name="category" class="form-select">
-                                        <option value="">Toutes catégories</option>
-                                        {% for category in categories %}
-                                        <option value="{{ category.id }}" {% if current_filters.category == category.id|stringformat:"s" %}selected{% endif %}>{{ category.name }}</option>
-                                        {% endfor %}
-                                    </select>
-                                </div>
-                                <div class="col-md-2">
-                                    <select name="overdue" class="form-select">
-                                        <option value="">Tous</option>
-                                        <option value="true" {% if current_filters.overdue == 'true' %}selected{% endif %}>En retard</option>
-                                        <option value="false" {% if current_filters.overdue == 'false' %}selected{% endif %}>Dans les temps</option>
-                                    </select>
-                                </div>
-                                <div class="col-md-3">
-                                    <div class="input-group">
-                                        <input type="text" class="form-control" name="search" placeholder="Rechercher..." value="{{ current_filters.search }}">
-                                        <button class="btn btn-primary" type="submit">
-                                            <em class="icon ni ni-search"></em>
-                                        </button>
-                                        {% if current_filters.status or current_filters.severity or current_filters.category or current_filters.overdue or current_filters.search %}
-                                            <a href="{% url 'problemreport_list' %}" class="btn btn-outline-danger" title="Réinitialiser">
-                                                <em class="icon ni ni-reload"></em>
-                                            </a>
-                                        {% endif %}
-                                    </div>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Cartes de statistiques -->
-                <div class="nk-block mb-4">
-                    <div class="row g-gs">
-                        <div class="col-md-3">
-                            <div class="card card-stat bg-gradient-primary" onclick="filterByStatus('OPEN')" style="cursor: pointer;">
-                                <div class="card-body">
-                                    <div class="card-stat-head">
-                                        <h6 class="title">Signalements ouverts</h6>
-                                        <em class="icon ni ni-alert-fill"></em>
-                                    </div>
-                                    <div class="card-stat-body">
-                                        <h3 class="amount">{{ stats.open }}</h3>
-                                        <span class="change up">+{{ stats.open|percentage:stats.total }}%</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="card card-stat bg-gradient-warning" onclick="filterByStatus('WIP')" style="cursor: pointer;">
-                                <div class="card-body">
-                                    <div class="card-stat-head">
-                                        <h6 class="title">En cours</h6>
-                                        <em class="icon ni ni-progress"></em>
-                                    </div>
-                                    <div class="card-stat-body">
-                                        <h3 class="amount">{{ stats.in_progress }}</h3>
-                                        <span class="change up">+{{ stats.in_progress|percentage:stats.total }}%</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="card card-stat bg-gradient-info" onclick="filterByStatus('DONE')" style="cursor: pointer;">
-                                <div class="card-body">
-                                    <div class="card-stat-head">
-                                        <h6 class="title">Résolus</h6>
-                                        <em class="icon ni ni-check-circle-fill"></em>
-                                    </div>
-                                    <div class="card-stat-body">
-                                        <h3 class="amount">{{ stats.resolved }}</h3>
-                                        <span class="change up">+{{ stats.resolved|percentage:stats.total }}%</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="card card-stat bg-gradient-danger" onclick="filterByOverdue(true)" style="cursor: pointer;">
-                                <div class="card-body">
-                                    <div class="card-stat-head">
-                                        <h6 class="title">En retard</h6>
-                                        <em class="icon ni ni-clock-fill"></em>
-                                    </div>
-                                    <div class="card-stat-body">
-                                        <h3 class="amount">{{ stats.overdue }}</h3>
-                                        <span class="change down">-{{ stats.overdue|percentage:stats.total }}%</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Tableau des signalements -->
-                <div class="nk-block">
-                    <div class="card card-bordered card-stretch">
-                        <div class="card-inner-group">
-                            <div class="card-inner position-relative">
-                                <div class="card-title-group">
-                                    <div class="card-tools">
-                                        <div class="form-inline flex-nowrap gx-3">
-                                            <div class="form-wrap">
-                                                <div class="custom-control custom-control-sm custom-checkbox">
-                                                    <input type="checkbox" class="custom-control-input" id="selectAll">
-                                                    <label class="custom-control-label" for="selectAll">Tout sélectionner</label>
-                                                </div>
-                                            </div>
-                                            <div class="btn-wrap">
-                                                <button class="btn btn-outline-light btn-sm" id="batchActionsBtn" disabled>
-                                                    <em class="icon ni ni-tool"></em>
-                                                    <span>Actions groupées</span>
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="card-tools">
-                                        <div class="dropdown">
-                                            <a href="#" class="btn btn-trigger btn-icon dropdown-toggle" data-toggle="dropdown">
-                                                <em class="icon ni ni-setting"></em>
-                                            </a>
-                                            <div class="dropdown-menu dropdown-menu-right">
-                                                <ul class="link-list-opt no-bdr">
-                                                    <li><a href="#" onclick="exportVisibleToExcel()"><span>Exporter visible</span></a></li>
-                                                    <li><a href="#" onclick="printTable()"><span>Imprimer la liste</span></a></li>
-                                                    <li class="divider"></li>
-                                                    <li><a href="#" data-toggle="modal" data-target="#columnsModal"><span>Colonnes visibles</span></a></li>
-                                                </ul>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="card-inner p-0">
-                                <div class="table-responsive">
-                                    <table class="table table-hover nk-tb-list" id="problemsTable">
-                                        <thead>
-                                            <tr class="nk-tb-item nk-tb-head">
-                                                <th class="nk-tb-col" width="40px"><span class="sub-text">#</span></th>
-                                                <th class="nk-tb-col"><span class="sub-text">Titre</span></th>
-                                                <th class="nk-tb-col"><span class="sub-text">Catégorie</span></th>
-                                                <th class="nk-tb-col"><span class="sub-text">Statut</span></th>
-                                                <th class="nk-tb-col"><span class="sub-text">Sévérité</span></th>
-                                                <th class="nk-tb-col"><span class="sub-text">Assigné à</span></th>
-                                                <th class="nk-tb-col"><span class="sub-text">Créé le</span></th>
-                                                <th class="nk-tb-col text-end"><span class="sub-text">Actions</span></th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {% for problem in problems %}
-                                            <tr class="nk-tb-item {% if problem.is_overdue %}table-danger{% endif %}" data-id="{{ problem.id }}">
-                                                <td class="nk-tb-col">
-                                                    <div class="custom-control custom-control-sm custom-checkbox">
-                                                        <input type="checkbox" class="custom-control-input problem-checkbox" id="cb{{ problem.id }}">
-                                                        <label class="custom-control-label" for="cb{{ problem.id }}"></label>
-                                                    </div>
-                                                </td>
-                                                <td class="nk-tb-col">
-                                                    <div class="user-info">
-                                                        <span class="tb-lead">{{ problem.title }}</span>
-                                                        <span class="text-soft">{{ problem.description|truncatewords:10 }}</span>
-                                                    </div>
-                                                </td>
-                                                <td class="nk-tb-col">
-                                                    <span class="badge badge-dim bg-outline-primary">{{ problem.category.name|default:"-" }}</span>
-                                                </td>
-                                                <td class="nk-tb-col">
-                                                    {% if problem.status == 'OPEN' %}
-                                                        <span class="badge badge-dim bg-warning">{{ problem.get_status_display }}</span>
-                                                    {% elif problem.status == 'WIP' %}
-                                                        <span class="badge badge-dim bg-info">{{ problem.get_status_display }}</span>
-                                                    {% elif problem.status == 'DONE' %}
-                                                        <span class="badge badge-dim bg-success">{{ problem.get_status_display }}</span>
-                                                    {% elif problem.status == 'HOLD' %}
-                                                        <span class="badge badge-dim bg-secondary">{{ problem.get_status_display }}</span>
-                                                    {% elif problem.status == 'CANC' %}
-                                                        <span class="badge badge-dim bg-danger">{{ problem.get_status_display }}</span>
-                                                    {% endif %}
-                                                </td>
-                                                <td class="nk-tb-col">
-                                                    {% if problem.severity == 'LOW' %}
-                                                        <span class="badge badge-dim bg-success">{{ problem.get_severity_display }}</span>
-                                                    {% elif problem.severity == 'MED' %}
-                                                        <span class="badge badge-dim bg-info">{{ problem.get_severity_display }}</span>
-                                                    {% elif problem.severity == 'HIGH' %}
-                                                        <span class="badge badge-dim bg-warning">{{ problem.get_severity_display }}</span>
-                                                    {% elif problem.severity == 'CRIT' %}
-                                                        <span class="badge badge-dim bg-danger">{{ problem.get_severity_display }}</span>
-                                                    {% endif %}
-                                                </td>
-                                                <td class="nk-tb-col">
-                                                    {% if problem.assignee %}
-                                                        <div class="user-card">
-                                                            <div class="user-avatar bg-primary">
-                                                                {% if problem.assignee.photo %}
-                                                                    <img src="{{ problem.assignee.photo.url }}" alt="{{ problem.assignee }}">
-                                                                {% else %}
-                                                                    <span>{{ problem.assignee.user.get_initials }}</span>
-                                                                {% endif %}
-                                                            </div>
-                                                            <div class="user-info">
-                                                                <span class="tb-lead">{{ problem.assignee.user.get_full_name }}</span>
-                                                            </div>
-                                                        </div>
-                                                    {% else %}
-                                                        <span class="text-soft">Non assigné</span>
-                                                    {% endif %}
-                                                </td>
-                                                <td class="nk-tb-col">
-                                                    <span>{{ problem.created_at|date:"d/m/Y" }}</span>
-                                                </td>
-                                                <td class="nk-tb-col nk-tb-col-tools text-end">
-                                                    <ul class="nk-tb-actions gx-1">
-                                                        <li>
-                                                            <a href="{% url 'problemreport_detail' problem.pk %}" class="btn btn-icon btn-info" title="Voir détails">
-                                                                <em class="icon ni ni-eye"></em>
-                                                            </a>
-                                                        </li>
-                                                        <li>
-                                                            <a href="{% url 'problemreport_update' problem.pk %}" class="btn btn-icon btn-warning" title="Modifier">
-                                                                <em class="icon ni ni-edit"></em>
-                                                            </a>
-                                                        </li>
-                                                        <li>
-                                                            <div class="dropdown">
-                                                                <a href="#" class="dropdown-toggle btn btn-icon btn-trigger" data-toggle="dropdown">
-                                                                    <em class="icon ni ni-more-h"></em>
-                                                                </a>
-                                                                <div class="dropdown-menu dropdown-menu-end">
-                                                                    <ul class="link-list-opt no-bdr">
-                                                                        <li><a href="{% url 'problemreport_assign' problem.pk %}"><em class="icon ni ni-user"></em><span>Assigner</span></a></li>
-                                                                        <li><a href="{% url 'treat' problem.pk %}"><em class="icon ni ni-refresh"></em><span>Changer statut</span></a></li>
-                                                                        <li class="divider"></li>
-                                                                        <li><a href="#" class="text-danger" onclick="confirmDelete({{ problem.id }})"><em class="icon ni ni-trash"></em><span>Supprimer</span></a></li>
-                                                                    </ul>
-                                                                </div>
-                                                            </div>
-                                                        </li>
-                                                    </ul>
-                                                </td>
-                                            </tr>
-                                            {% empty %}
-                                            <tr class="nk-tb-item">
-                                                <td class="nk-tb-col text-center" colspan="8">
-                                                    <div class="nk-block-content p-4">
-                                                        <em class="icon ni ni-info text-soft" style="font-size: 2rem;"></em>
-                                                        <h5 class="mt-3">Aucun signalement trouvé</h5>
-                                                        <p class="text-soft">Aucun signalement ne correspond à vos critères de recherche</p>
-                                                        <a href="{% url 'problemreport_list' %}" class="btn btn-outline-primary btn-sm">Réinitialiser les filtres</a>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                            {% endfor %}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-
-                            <!-- Pagination améliorée -->
-                            <div class="card-inner">
-                                <div class="nk-block-between-md g-3">
-                                    <div class="g">
-                                        <div class="pagination-goto d-flex justify-content-center justify-content-md-start gx-3">
-                                            <div>Afficher</div>
-                                            <div>
-                                                <select class="form-select form-select-sm" onchange="updatePerPage(this.value)">
-                                                    <option value="10" {% if paginate_by == 10 %}selected{% endif %}>10</option>
-                                                    <option value="25" {% if paginate_by == 25 %}selected{% endif %}>25</option>
-                                                    <option value="50" {% if paginate_by == 50 %}selected{% endif %}>50</option>
-                                                    <option value="100" {% if paginate_by == 100 %}selected{% endif %}>100</option>
-                                                </select>
-                                            </div>
-                                            <div>sur {{ problems.paginator.count }} signalements</div>
-                                        </div>
-                                    </div>
-                                    <div class="g">
-                                        <ul class="pagination justify-content-center justify-content-md-start">
-                                            {% if problems.has_previous %}
-                                                <li class="page-item">
-                                                    <a class="page-link" href="?page=1{% for key,value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
-                                                        <em class="icon ni ni-chevrons-left"></em>
-                                                    </a>
-                                                </li>
-                                                <li class="page-item">
-                                                    <a class="page-link" href="?page={{ problems.previous_page_number }}{% for key,value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
-                                                        <em class="icon ni ni-chevron-left"></em>
-                                                    </a>
-                                                </li>
-                                            {% endif %}
-
-                                            {% for page_num in problems.paginator.page_range %}
-                                                {% if page_num >= problems.number|add:-2 and page_num <= problems.number|add:2 %}
-                                                    <li class="page-item {% if page_num == problems.number %}active{% endif %}">
-                                                        <a class="page-link" href="?page={{ page_num }}{% for key,value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
-                                                            {{ page_num }}
-                                                        </a>
-                                                    </li>
-                                                {% endif %}
-                                            {% endfor %}
-
-                                            {% if problems.has_next %}
-                                                <li class="page-item">
-                                                    <a class="page-link" href="?page={{ problems.next_page_number }}{% for key,value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
-                                                        <em class="icon ni ni-chevron-right"></em>
-                                                    </a>
-                                                </li>
-                                                <li class="page-item">
-                                                    <a class="page-link" href="?page={{ problems.paginator.num_pages }}{% for key,value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
-                                                        <em class="icon ni ni-chevrons-right"></em>
-                                                    </a>
-                                                </li>
-                                            {% endif %}
-                                        </ul>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+    {# Quick stats #}
+    {% if stats %}
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4 mb-6">
+        <div class="bg-white dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-soft p-4">
+            <div class="text-[11px] uppercase tracking-wider text-slate-400 font-semibold">Total</div>
+            <div class="font-display text-2xl font-bold text-slate-900 dark:text-white tabular-nums">{{ stats.total|default:0 }}</div>
+        </div>
+        <div class="bg-white dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-soft p-4">
+            <div class="text-[11px] uppercase tracking-wider text-amber-600 font-semibold">Ouverts</div>
+            <div class="font-display text-2xl font-bold text-amber-600 dark:text-amber-300 tabular-nums">{{ stats.open|default:0 }}</div>
+        </div>
+        <div class="bg-white dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-soft p-4">
+            <div class="text-[11px] uppercase tracking-wider text-brand-600 font-semibold">En cours</div>
+            <div class="font-display text-2xl font-bold text-brand-600 dark:text-brand-300 tabular-nums">{{ stats.in_progress|default:0 }}</div>
+        </div>
+        <div class="bg-white dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-soft p-4">
+            <div class="text-[11px] uppercase tracking-wider text-emerald-600 font-semibold">Résolus</div>
+            <div class="font-display text-2xl font-bold text-emerald-600 dark:text-emerald-300 tabular-nums">{{ stats.resolved|default:0 }}</div>
         </div>
     </div>
+    {% endif %}
+
+    <section class="mb-6 bg-white dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-soft p-4">
+        <form method="get" class="grid grid-cols-1 md:grid-cols-4 gap-3">
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">Recherche</label>
+                <input type="text" name="q" value="{{ request.GET.q }}" placeholder="Titre, description…"
+                       class="w-full h-10 px-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400">
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">Statut</label>
+                <select name="status" class="w-full h-10 px-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 text-sm">
+                    <option value="">Tous</option>
+                    <option value="open"        {% if request.GET.status == 'open'        %}selected{% endif %}>Ouvert</option>
+                    <option value="in_progress" {% if request.GET.status == 'in_progress' %}selected{% endif %}>En cours</option>
+                    <option value="resolved"    {% if request.GET.status == 'resolved'    %}selected{% endif %}>Résolu</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">Sévérité</label>
+                <select name="severity" class="w-full h-10 px-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 text-sm">
+                    <option value="">Toutes</option>
+                    <option value="low"      {% if request.GET.severity == 'low'      %}selected{% endif %}>Faible</option>
+                    <option value="medium"   {% if request.GET.severity == 'medium'   %}selected{% endif %}>Moyenne</option>
+                    <option value="high"     {% if request.GET.severity == 'high'     %}selected{% endif %}>Élevée</option>
+                    <option value="critical" {% if request.GET.severity == 'critical' %}selected{% endif %}>Critique</option>
+                </select>
+            </div>
+            <div class="flex items-end gap-2">
+                <button type="submit" class="inline-flex items-center justify-center gap-2 h-10 px-4 rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold transition">Filtrer</button>
+            </div>
+        </form>
+    </section>
+
+    <section class="bg-white dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-soft overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700/60">
+                <thead class="bg-slate-50 dark:bg-slate-800/60">
+                    <tr>
+                        <th class="px-4 py-3 text-left text-[10px] uppercase tracking-wider text-slate-500 font-semibold">#</th>
+                        <th class="px-4 py-3 text-left text-[10px] uppercase tracking-wider text-slate-500 font-semibold">Titre</th>
+                        <th class="px-4 py-3 text-left text-[10px] uppercase tracking-wider text-slate-500 font-semibold">Concerné</th>
+                        <th class="px-4 py-3 text-left text-[10px] uppercase tracking-wider text-slate-500 font-semibold">Sévérité</th>
+                        <th class="px-4 py-3 text-left text-[10px] uppercase tracking-wider text-slate-500 font-semibold">Statut</th>
+                        <th class="px-4 py-3 text-left text-[10px] uppercase tracking-wider text-slate-500 font-semibold">Date</th>
+                        <th class="px-4 py-3"></th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 dark:divide-slate-700/40">
+                    {% for p in problems %}
+                    <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition">
+                        <td class="px-4 py-3 text-sm font-mono text-slate-500">#{{ p.id }}</td>
+                        <td class="px-4 py-3 text-sm">
+                            <a href="{% url 'problemreport_detail' p.pk %}" class="font-medium text-slate-800 dark:text-slate-100 hover:text-brand-600 transition line-clamp-1">{{ p.title }}</a>
+                            <div class="text-xs text-slate-500 line-clamp-1">{{ p.category|default:"—" }}</div>
+                        </td>
+                        <td class="px-4 py-3 text-sm text-slate-600 dark:text-slate-300">{{ p.fidele.user.get_full_name|default:"—" }}</td>
+                        <td class="px-4 py-3">
+                            {% if p.severity == 'critical' %}
+                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300 text-xs font-semibold"><span class="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse"></span>Critique</span>
+                            {% elif p.severity == 'high' %}
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300 text-xs font-semibold">Élevée</span>
+                            {% elif p.severity == 'medium' %}
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 text-xs font-medium">Moyenne</span>
+                            {% else %}
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 dark:bg-slate-700 text-xs">Faible</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-4 py-3">
+                            {% if p.status == 'resolved' %}
+                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 text-xs font-medium"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>Résolu</span>
+                            {% elif p.status == 'in_progress' %}
+                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-300 text-xs font-medium"><span class="w-1.5 h-1.5 rounded-full bg-brand-500 animate-pulse"></span>En cours</span>
+                            {% else %}
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 dark:bg-slate-700 text-xs">Ouvert</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-4 py-3 text-sm text-slate-600 dark:text-slate-300">{{ p.created_at|naturalday|default:"—" }}</td>
+                        <td class="px-4 py-3 text-right">
+                            <a href="{% url 'problemreport_detail' p.pk %}" class="inline-flex items-center gap-1 text-sm text-brand-600 hover:underline font-medium">Voir <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg></a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                        <tr><td colspan="7" class="p-0">{% include 'layout/_empty_state.html' with title="Aucun signalement" message="Aucun signalement ne correspond aux filtres." cta_url='/fidele/problemes/repportes' cta_label="Tous les signalements" %}</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
 </div>
-
-<style>
-    .card-stat {
-        border: none;
-        border-radius: 10px;
-        color: white;
-        overflow: hidden;
-        transition: transform 0.3s, box-shadow 0.3s;
-    }
-
-    .card-stat:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 10px 20px rgba(0,0,0,0.1);
-    }
-
-    .card-stat .card-body {
-        padding: 20px;
-    }
-
-    .card-stat-head {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 15px;
-    }
-
-    .card-stat-head .icon {
-        font-size: 1.5rem;
-        opacity: 0.7;
-    }
-
-    .card-stat-body .amount {
-        font-size: 1.8rem;
-        font-weight: 600;
-        margin-bottom: 5px;
-    }
-
-    .card-stat-body .change {
-        font-size: 0.875rem;
-    }
-
-    .bg-gradient-primary {
-        background: linear-gradient(135deg, #6576ff 0%, #6a11cb 100%);
-    }
-
-    .bg-gradient-warning {
-        background: linear-gradient(135deg, #fbc434 0%, #f76b1c 100%);
-    }
-
-    .bg-gradient-info {
-        background: linear-gradient(135deg, #47c5fb 0%, #47b8f8 100%);
-    }
-
-    .bg-gradient-danger {
-        background: linear-gradient(135deg, #f5365c 0%, #f56036 100%);
-    }
-
-    .user-avatar {
-        width: 32px;
-        height: 32px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: 600;
-        font-size: 0.8rem;
-    }
-
-    .user-card {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    }
-
-    .user-info .tb-lead {
-        display: block;
-        font-weight: 500;
-    }
-
-    .badge-dim {
-        opacity: 0.9;
-    }
-
-    .table-responsive {
-        overflow-x: auto;
-    }
-
-    #problemsTable th {
-        white-space: nowrap;
-    }
-
-    .nk-tb-item:hover {
-        background-color: rgba(101, 118, 255, 0.05);
-    }
-
-    .table-danger {
-        background-color: rgba(245, 54, 92, 0.05) !important;
-    }
-</style>
-
-<script>
-    // Gestion de la sélection multiple
-    document.addEventListener('DOMContentLoaded', function() {
-        const selectAll = document.getElementById('selectAll');
-        const checkboxes = document.querySelectorAll('.problem-checkbox');
-        const batchActionsBtn = document.getElementById('batchActionsBtn');
-
-        selectAll.addEventListener('change', function() {
-            checkboxes.forEach(checkbox => {
-                checkbox.checked = selectAll.checked;
-            });
-            updateBatchActionsBtn();
-        });
-
-        checkboxes.forEach(checkbox => {
-            checkbox.addEventListener('change', function() {
-                updateBatchActionsBtn();
-                selectAll.checked = [...checkboxes].every(cb => cb.checked);
-            });
-        });
-
-        function updateBatchActionsBtn() {
-            const checkedCount = [...checkboxes].filter(cb => cb.checked).length;
-            batchActionsBtn.disabled = checkedCount === 0;
-            if (checkedCount > 0) {
-                batchActionsBtn.innerHTML = `<em class="icon ni ni-tool"></em><span>Actions (${checkedCount})</span>`;
-            } else {
-                batchActionsBtn.innerHTML = `<em class="icon ni ni-tool"></em><span>Actions groupées</span>`;
-            }
-        }
-    });
-
-    // Fonctions utilitaires
-    function filterByStatus(status) {
-        const form = document.getElementById('advancedFilterForm');
-        form.querySelector('[name="status"]').value = status;
-        form.submit();
-    }
-
-    function filterByOverdue(isOverdue) {
-        const form = document.getElementById('advancedFilterForm');
-        form.querySelector('[name="overdue"]').value = isOverdue;
-        form.submit();
-    }
-
-    function updatePerPage(value) {
-        const url = new URL(window.location.href);
-        url.searchParams.set('per_page', value);
-        window.location.href = url.toString();
-    }
-
-    function showStatsModal() {
-        // Implémentation de la modale de statistiques
-        alert('Statistiques détaillées en cours de développement');
-    }
-
-    function exportToPDF() {
-        alert('Export PDF en cours de développement');
-    }
-
-    function exportToExcel() {
-        alert('Export Excel en cours de développement');
-    }
-
-    function exportToCSV() {
-        alert('Export CSV en cours de développement');
-    }
-
-    function exportVisibleToExcel() {
-        alert('Export des données visibles en cours de développement');
-    }
-
-    function printTable() {
-        window.print();
-    }
-
-    function confirmDelete(id) {
-        Swal.fire({
-            title: 'Confirmer la suppression',
-            text: "Êtes-vous sûr de vouloir supprimer ce signalement ?",
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#6576ff',
-            cancelButtonColor: '#f5365c',
-            confirmButtonText: 'Oui, supprimer',
-            cancelButtonText: 'Annuler'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                // Redirection vers la suppression
-                window.location.href = "{% url 'problemreport_delete' 0 %}".replace('0', id);
-            }
-        });
-    }
-</script>
 {% endblock %}

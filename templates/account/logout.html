@@ -1,27 +1,37 @@
-{% extends 'registration/auth-base.html' %}
-{% load allauth i18n %}
-{% block head_title %}
-    {% trans "Sign Out" %}
-{% endblock head_title %}
+{% extends 'layout/account_base.html' %}
+{% load i18n %}
+{% block head_title %}{% trans "Déconnexion" %} – Alliance Connect{% endblock %}
+
 {% block content %}
-    {% element h1 %}
-        {% trans "Sign Out" %}
-    {% endelement %}
-    <p>{% trans 'Are you sure you want to sign out?' %}</p>
+<div>
+    <div class="mb-8">
+        <div class="w-14 h-14 rounded-2xl bg-amber-100 dark:bg-amber-900/30 grid place-items-center mb-5 ring-4 ring-amber-50 dark:ring-amber-900/10">
+            <svg class="w-7 h-7 text-amber-600 dark:text-amber-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+        </div>
+        <h1 class="font-display text-2xl font-bold text-slate-900 dark:text-white">{% trans "Se déconnecter" %}</h1>
+        <p class="text-sm text-slate-500 dark:text-slate-400 mt-1.5">
+            {% trans "Êtes-vous sûr de vouloir quitter votre session ?" %}
+        </p>
+    </div>
+
     {% url 'account_logout' as action_url %}
-    {% element form method="post" action=action_url no_visible_fields=True %}
-        {% slot body %}
-            {% csrf_token %}
-            {% if redirect_field_value %}
-                <input type="hidden"
-                       name="{{ redirect_field_name }}"
-                       value="{{ redirect_field_value }}" />
-            {% endif %}
-        {% endslot %}
-        {% slot actions %}
-            {% element button type="submit" %}
-                {% trans 'Sign Out' %}
-            {% endelement %}
-        {% endslot %}
-    {% endelement %}
-{% endblock content %}
+    <form method="post" action="{{ action_url }}" class="space-y-3">
+        {% csrf_token %}
+        {% if redirect_field_value %}
+            <input type="hidden" name="{{ redirect_field_name }}" value="{{ redirect_field_value }}">
+        {% endif %}
+        <button type="submit"
+                class="w-full h-11 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-semibold text-sm
+                       transition shadow-sm hover:shadow-soft-lg flex items-center justify-center gap-2">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+            <span>{% trans "Confirmer la déconnexion" %}</span>
+        </button>
+        <a href="{% url 'home' %}"
+           class="w-full h-11 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200
+                  font-medium text-sm transition hover:bg-slate-50 dark:hover:bg-slate-800/50 flex items-center justify-center gap-2">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+            <span>{% trans "Annuler" %}</span>
+        </a>
+    </form>
+</div>
+{% endblock %}

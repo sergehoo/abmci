@@ -1,72 +1,235 @@
 {% load static %}
-{% load account %}
 <!DOCTYPE html>
-<html lang="zxx" class="js">
-
+<html lang="fr"
+      x-data="acAuth()"
+      x-init="init()"
+      :class="{ 'dark': dark }"
+      class="h-full antialiased">
 <head>
-    <base href="./">
     <meta charset="utf-8">
-    <meta name="author" content="ABMCI-Serge OGAH">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <meta name="description" content="A powerful and conceptual apps base dashboard template that especially build for developers and programmers.">
-    <!-- Fav Icon  -->
-    <link rel="shortcut icon" href="{% static 'images/favicon.png'%}">
-    <!-- Page Title  -->
-    <title>Alliance Connect</title>
-    <!-- StyleSheets  -->
-    <link rel="stylesheet" href="{% static 'assets/css/dashlite.css'%}">
-    <link id="skin-default" rel="stylesheet" href="{% static 'assets/css/theme.css' %}">
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.9.0/css/bootstrap-datepicker.min.css">
+    <meta name="theme-color" content="#4F46E5">
+    <link rel="shortcut icon" href="{% static 'images/favicon.png' %}">
+    <title>{% block head_title %}Alliance Connect – ABMCI{% endblock %}</title>
 
-<!-- Avant la fermeture du body -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.9.0/js/bootstrap-datepicker.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.9.0/locales/bootstrap-datepicker.fr.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                        display: ['Poppins', 'Inter', 'system-ui', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50:'#EEF2FF',100:'#E0E7FF',200:'#C7D2FE',300:'#A5B4FC',
+                            400:'#818CF8',500:'#6366F1',600:'#4F46E5',700:'#4338CA',
+                            800:'#3730A3',900:'#312E81',
+                        },
+                    },
+                    boxShadow: {
+                        'soft':    '0 4px 24px -2px rgba(15, 23, 42, 0.06)',
+                        'soft-lg': '0 12px 40px -4px rgba(15, 23, 42, 0.08)',
+                    },
+                },
+            },
+        };
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@500;600;700&display=swap">
 
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+    <style>
+        body { font-family: 'Inter', system-ui, sans-serif; }
+        h1, h2, h3 { font-family: 'Poppins', 'Inter', sans-serif; }
+        [x-cloak] { display: none !important; }
+
+        /* Animation gradient background */
+        @keyframes ac-blob {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            33%      { transform: translate(20px, -30px) scale(1.05); }
+            66%      { transform: translate(-10px, 20px) scale(0.97); }
+        }
+        .ac-blob { animation: ac-blob 14s ease-in-out infinite; }
+        .ac-blob-2 { animation: ac-blob 18s ease-in-out infinite reverse; }
+
+        :focus-visible { outline: 2px solid #6366F1; outline-offset: 2px; border-radius: 4px; }
+    </style>
+    {% block extra_head %}{% endblock %}
 </head>
+<body class="min-h-full bg-gradient-to-br from-slate-50 via-white to-brand-50/40 dark:from-slate-950 dark:via-slate-900 dark:to-slate-900">
+<div class="min-h-screen flex">
 
-<body class="nk-body npc-invest bg-lighter ">
-    <div class="nk-app-root">
-        <!-- wrap @s -->
-        <div class="nk-wrap ">
-            <!-- main header @s -->
-  
-            <!-- main header @e -->
-            <!-- content @s -->
-            {% block content %}
-            {% endblock %}
-            <!-- content @e -->
-            <!-- footer @s -->
-            <!-- footer @e -->
+    {# === Visuel gauche (caché sur mobile) === #}
+    <div class="hidden lg:flex lg:w-1/2 relative overflow-hidden">
+        <div class="absolute inset-0 bg-gradient-to-br from-brand-700 via-brand-600 to-violet-700"></div>
+
+        {# Blobs animés #}
+        <div aria-hidden="true" class="ac-blob absolute -top-32 -left-32 w-[480px] h-[480px] rounded-full bg-violet-400/30 blur-3xl"></div>
+        <div aria-hidden="true" class="ac-blob-2 absolute -bottom-40 right-0 w-[460px] h-[460px] rounded-full bg-brand-300/30 blur-3xl"></div>
+
+        {# Pattern subtil #}
+        <div class="absolute inset-0 opacity-[0.07]"
+             style="background-image:
+                radial-gradient(circle at 1px 1px, white 1px, transparent 0);
+                background-size: 28px 28px;"></div>
+
+        <div class="relative z-10 flex flex-col justify-between p-12 text-white w-full">
+            <div class="flex items-center gap-3">
+                <div class="w-12 h-12 rounded-2xl bg-white/15 backdrop-blur grid place-items-center ring-1 ring-white/20">
+                    <img src="{% static 'images/logo-abmci-min.png' %}" alt="ABMCI" class="w-8 h-8 object-contain">
+                </div>
+                <div>
+                    <div class="font-display font-bold text-xl">Alliance Connect</div>
+                    <div class="text-xs text-white/70">Alliance Biblique Missionnaire · ABMCI</div>
+                </div>
+            </div>
+
+            <div class="space-y-6 max-w-md">
+                <div>
+                    <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/15 backdrop-blur text-[11px] font-semibold uppercase tracking-wider text-white/90 mb-4">
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-300 animate-pulse"></span>
+                        <span>Plateforme officielle ABMCI</span>
+                    </div>
+                    <h2 class="font-display text-3xl xl:text-4xl font-bold leading-tight">
+                        Une famille d'alliance, transformée par la grâce.
+                    </h2>
+                    <p class="text-white/80 leading-relaxed mt-3">
+                        La plateforme qui rassemble la vie de votre église :
+                        fidèles, événements, prières, dons et accompagnement pastoral.
+                    </p>
+                </div>
+
+                <div class="grid grid-cols-3 gap-3">
+                    <div class="bg-white/10 backdrop-blur p-4 rounded-xl border border-white/15 hover:bg-white/15 transition">
+                        <svg class="w-5 h-5 text-white/90" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+                        <div class="text-xs text-white/85 mt-2 font-medium">Fidèles</div>
+                        <div class="text-[10px] text-white/60">Annuaire complet</div>
+                    </div>
+                    <div class="bg-white/10 backdrop-blur p-4 rounded-xl border border-white/15 hover:bg-white/15 transition">
+                        <svg class="w-5 h-5 text-white/90" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                        <div class="text-xs text-white/85 mt-2 font-medium">Événements</div>
+                        <div class="text-[10px] text-white/60">Calendrier unifié</div>
+                    </div>
+                    <div class="bg-white/10 backdrop-blur p-4 rounded-xl border border-white/15 hover:bg-white/15 transition">
+                        <svg class="w-5 h-5 text-white/90" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
+                        <div class="text-xs text-white/85 mt-2 font-medium">Pastorale</div>
+                        <div class="text-[10px] text-white/60">Accompagnement</div>
+                    </div>
+                </div>
+
+                <blockquote class="border-l-2 border-white/30 pl-4 italic text-sm text-white/85">
+                    « Voici, qu'il est agréable, qu'il est doux pour des frères de demeurer ensemble. »
+                    <span class="block text-xs text-white/60 not-italic mt-1">— Psaume 133:1</span>
+                </blockquote>
+            </div>
+
+            <div class="text-xs text-white/60 flex items-center gap-3">
+                <span>© 2024 ABMCI Monde</span>
+                <span class="w-1 h-1 rounded-full bg-white/40"></span>
+                <a href="#" class="hover:text-white transition">CGU</a>
+                <a href="#" class="hover:text-white transition">Confidentialité</a>
+            </div>
         </div>
-        <!-- wrap @e -->
     </div>
-    <!-- app-root @e -->
-    <!-- JavaScript -->
 
-{#    <script src="{% static 'assets/js/example-toastr.js'%}"></script>#}
-      {% if messages %}
+    {# === Card auth à droite === #}
+    <div class="flex-1 flex items-center justify-center px-4 sm:px-6 py-10 relative">
+
+        {# Toggle dark mode discret en haut à droite #}
+        <button @click="dark = !dark"
+                aria-label="Basculer mode sombre / clair"
+                class="absolute top-4 right-4 w-10 h-10 rounded-lg flex items-center justify-center text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/60 transition">
+            <svg x-show="!dark" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
+            <svg x-show="dark" x-cloak class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m12.728 0l-.707-.707M6.343 6.343l-.707-.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+        </button>
+
+        <div class="w-full max-w-md">
+            <div class="lg:hidden flex items-center gap-3 mb-8">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 grid place-items-center shadow-soft">
+                    <img src="{% static 'images/logo-abmci-min.png' %}" alt="ABMCI" class="w-7 h-7 object-contain">
+                </div>
+                <div>
+                    <div class="font-display font-bold text-slate-900 dark:text-white">Alliance Connect</div>
+                    <div class="text-xs text-slate-500 dark:text-slate-400">ABMCI · Monde</div>
+                </div>
+            </div>
+
+            {% block content %}{% endblock %}
+        </div>
+    </div>
+</div>
+
+{# === Toasts === #}
+<div x-data="toastStack()" x-cloak class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 max-w-sm w-[calc(100%-2rem)] sm:w-auto">
+    {% if messages %}
         {% for message in messages %}
-            {% if message.tags == 'success'%}
-                <script type=text/javascript>toastr.{{ message.tags }}('{{ message }}')</script>
-            {% elif message.tags == 'info' %}
-                <script type=text/javascript>toastr.{{ message.tags }}('{{ message }}')</script>
-            {% elif message.tags == 'warning' %}
-                <script type=text/javascript>toastr.{{ message.tags }}('{{ message }}')</script>
-            {% elif message.tags == 'error' %}
-                <script type=text/javascript>toastr.{{ message.tags }}('{{ message }}')</script>
-            {% endif %}
+            <template x-init="push({ kind: '{{ message.tags|default:'info' }}', text: `{{ message|escapejs }}` })"></template>
         {% endfor %}
     {% endif %}
+    <template x-for="t in toasts" :key="t.id">
+        <div x-show="true"
+             x-transition:enter="transition ease-out duration-300"
+             x-transition:enter-start="opacity-0 translate-y-2"
+             x-transition:enter-end="opacity-100 translate-y-0"
+             class="flex items-start gap-3 p-4 rounded-xl shadow-soft-lg border bg-white dark:bg-slate-800 dark:border-slate-700"
+             :class="{
+                 'border-emerald-200': t.kind === 'success',
+                 'border-rose-200': t.kind === 'error',
+                 'border-amber-200': t.kind === 'warning',
+                 'border-brand-200': t.kind === 'info',
+             }">
+            <div class="shrink-0 w-9 h-9 rounded-lg flex items-center justify-center"
+                 :class="{
+                     'bg-emerald-100 text-emerald-600': t.kind === 'success',
+                     'bg-rose-100 text-rose-600': t.kind === 'error',
+                     'bg-amber-100 text-amber-600': t.kind === 'warning',
+                     'bg-brand-100 text-brand-600': t.kind === 'info',
+                 }">
+                <template x-if="t.kind === 'success'"><svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></template>
+                <template x-if="t.kind === 'error'"><svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></template>
+                <template x-if="t.kind !== 'success' && t.kind !== 'error'"><svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></template>
+            </div>
+            <div class="flex-1 text-sm text-slate-700 dark:text-slate-200" x-text="t.text"></div>
+            <button @click="dismiss(t.id)" class="text-slate-400 hover:text-slate-600">
+                <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+            </button>
+        </div>
+    </template>
+</div>
 
-    <script src="{% static 'assets/js/bundle.js'%}"></script>
-    <script src="{% static 'assets/js/scripts.js'%}"></script>
-    <script src="{% static 'assets/js/example-toastr.js'%}"></script>
-    <script src="{% static 'assets/js/charts/gd-invest.js'%}"></script>
-    <script src="{% static 'assets/js/libs/fullcalendar.js'%}"></script>
-    <script src="{% static 'assets/js/apps/calendar.js'%}"></script>
+<script>
+    function acAuth() {
+        return {
+            dark: false,
+            init() {
+                const stored = localStorage.getItem('ac-dark');
+                if (stored !== null) this.dark = stored === '1';
+                else this.dark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+                this.$watch('dark', v => {
+                    localStorage.setItem('ac-dark', v ? '1' : '0');
+                    document.documentElement.classList.toggle('dark', v);
+                });
+                document.documentElement.classList.toggle('dark', this.dark);
+            },
+        };
+    }
+    function toastStack() {
+        return {
+            toasts: [],
+            push(t) {
+                const id = Date.now() + Math.random();
+                this.toasts.push({ id, kind: t.kind || 'info', text: t.text || '' });
+                setTimeout(() => this.dismiss(id), 5500);
+            },
+            dismiss(id) { this.toasts = this.toasts.filter(t => t.id !== id); },
+        };
+    }
+</script>
 </body>
-
 </html>

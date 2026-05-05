@@ -1,0 +1,35 @@
+{% extends 'layout/base.html' %}
+{% block head_title %}Inscrire un fidèle – Alliance Connect{% endblock %}
+{% block extra_head %}<style>
+    #inscrForm input, #inscrForm select, #inscrForm textarea {
+        width: 100%; height: 2.625rem; padding: 0 0.875rem;
+        border: 1px solid rgb(226, 232, 240); border-radius: 0.5rem;
+        background-color: rgb(248, 250, 252); font-size: 0.875rem; color: rgb(51, 65, 85);
+    }
+    .dark #inscrForm input, .dark #inscrForm select, .dark #inscrForm textarea {
+        background-color: rgba(30, 41, 59, .5); border-color: rgb(51, 65, 85); color: rgb(241, 245, 249);
+    }
+    #inscrForm textarea { height: auto; padding: .75rem .875rem; min-height: 90px; }
+    #inscrForm input:focus, #inscrForm select:focus, #inscrForm textarea:focus {
+        outline: none; border-color: rgb(129, 140, 248); box-shadow: 0 0 0 3px rgba(99, 102, 241, .2);
+    }
+</style>{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <h1 class="font-display text-2xl font-bold text-slate-900 dark:text-white mb-6">Inscrire un fidèle</h1>
+    <form method="post" id="inscrForm" class="bg-white dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-soft p-5 lg:p-6 space-y-4">
+        {% csrf_token %}
+        {% for field in form %}
+            <div>
+                <label class="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">{{ field.label }}{% if field.field.required %} <span class="text-rose-500">*</span>{% endif %}</label>
+                {{ field }}
+                {% for e in field.errors %}<p class="mt-1 text-xs text-rose-600">{{ e }}</p>{% endfor %}
+            </div>
+        {% endfor %}
+        <div class="flex items-center justify-end gap-2 pt-4 border-t border-slate-100 dark:border-slate-700/60">
+            <button type="submit" class="inline-flex items-center gap-2 h-10 px-5 rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold shadow-soft transition">Inscrire</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

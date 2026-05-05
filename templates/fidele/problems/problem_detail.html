@@ -1,484 +1,70 @@
 {% extends 'layout/base.html' %}
+{% load humanize %}
+{% block head_title %}Signalement #{{ problem.id }} – Alliance Connect{% endblock %}
 
 {% block content %}
-<div class="nk-content nk-content-fluid">
-    <div class="container-xl wide-xl">
-        <div class="nk-content-inner">
-            <div class="nk-content-body">
-                <!-- Header -->
-                <div class="nk-block-head nk-block-head-sm">
-                    <div class="nk-block-between">
-                        <div class="nk-block-head-content">
-                            <h3 class="nk-block-title page-title">Détails du Signalement</h3>
-                            <div class="nk-block-des">
-                                <p class="lead-text">Informations complètes du signalement #{{ problem.id }}</p>
-                            </div>
-                        </div>
-                        <div class="nk-block-head-content">
-                            <div class="toggle-wrap nk-block-tools-toggle">
-                                <a href="#" class="btn btn-icon btn-trigger toggle-expand" data-target="pageMenu">
-                                    <em class="icon ni ni-menu-alt-r"></em>
-                                </a>
-                                <div class="toggle-expand-content" data-content="pageMenu">
-                                    <ul class="nk-block-tools g-3">
-                                        <li>
-                                            <a href="{% url 'problemreport_update' problem.pk %}" class="btn btn-warning">
-                                                <em class="icon ni ni-edit"></em>
-                                                <span>Modifier</span>
-                                            </a>
-                                        </li>
-                                        <li>
-                                            <a href="{% url 'problemreport_list' %}" class="btn btn-outline-light">
-                                                <em class="icon ni ni-arrow-left"></em>
-                                                <span>Retour à la liste</span>
-                                            </a>
-                                        </li>
-                                        {% if perms.problems.can_assign_problem %}
-                                        <li class="dropdown">
-                                            <a href="#" class="dropdown-toggle btn btn-info" data-toggle="dropdown">
-                                                <em class="icon ni ni-setting"></em>
-                                                <span>Actions</span>
-                                            </a>
-                                            <div class="dropdown-menu dropdown-menu-right">
-                                                <ul class="link-list-opt no-bdr">
-                                                    <li><a href="{% url 'problemreport_assign' problem.pk %}"><em class="icon ni ni-user"></em><span>Assigner</span></a></li>
-                                                    <li><a href="{% url 'problemreport_change_status' problem.pk %}"><em class="icon ni ni-refresh"></em><span>Changer statut</span></a></li>
-                                                    <li class="divider"></li>
-                                                    <li><a href="#" onclick="generateReport({{ problem.pk }})"><em class="icon ni ni-file-text"></em><span>Générer rapport</span></a></li>
-                                                </ul>
-                                            </div>
-                                        </li>
-                                        {% endif %}
-                                    </ul>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+<div class="max-w-4xl mx-auto">
+    <header class="mb-6 flex flex-wrap items-end justify-between gap-3">
+        <nav class="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
+            <a href="{% url 'problemreport_list' %}" class="hover:text-brand-600 transition">Signalements</a>
+            <svg class="w-3 h-3 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+            <span class="text-slate-700 dark:text-slate-300 font-medium">#{{ problem.id }}</span>
+        </nav>
+        <div class="flex items-center gap-2">
+            <a href="{% url 'problemreport_update' problem.pk %}" class="inline-flex items-center gap-2 h-10 px-4 rounded-lg border border-slate-200 dark:border-slate-700 text-sm hover:bg-slate-100 dark:hover:bg-slate-800/50 transition">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5"/></svg>
+                <span>Modifier</span>
+            </a>
+            <a href="{% url 'treat' problem.pk %}" class="inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold shadow-soft transition">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2"/></svg>
+                <span>Traiter</span>
+            </a>
+        </div>
+    </header>
 
-                <!-- Informations principales -->
-                <div class="nk-block">
-                    <div class="row g-gs">
-                        <!-- Colonne principale -->
-                        <div class="col-lg-8">
-                            <!-- Carte d'information -->
-                            <div class="card card-bordered">
-                                <div class="card-inner">
-                                    <div class="row g-4">
-                                        <!-- Titre et Statut -->
-                                        <div class="col-12">
-                                            <div class="d-flex justify-content-between align-items-start">
-                                                <h4 class="title">{{ problem.title }}</h4>
-                                                <div class="badge-container">
-                                                    {% if problem.status == 'OPEN' %}
-                                                        <span class="badge bg-warning">{{ problem.get_status_display }}</span>
-                                                    {% elif problem.status == 'WIP' %}
-                                                        <span class="badge bg-info">{{ problem.get_status_display }}</span>
-                                                    {% elif problem.status == 'DONE' %}
-                                                        <span class="badge bg-success">{{ problem.get_status_display }}</span>
-                                                    {% elif problem.status == 'HOLD' %}
-                                                        <span class="badge bg-secondary">{{ problem.get_status_display }}</span>
-                                                    {% elif problem.status == 'CANC' %}
-                                                        <span class="badge bg-danger">{{ problem.get_status_display }}</span>
-                                                    {% endif %}
-                                                    
-                                                    {% if problem.is_overdue %}
-                                                        <span class="badge bg-danger ml-2">En retard</span>
-                                                    {% endif %}
-                                                    
-                                                    {% if problem.severity == 'LOW' %}
-                                                        <span class="badge bg-success">{{ problem.get_severity_display }}</span>
-                                                    {% elif problem.severity == 'MED' %}
-                                                        <span class="badge bg-info">{{ problem.get_severity_display }}</span>
-                                                    {% elif problem.severity == 'HIGH' %}
-                                                        <span class="badge bg-warning">{{ problem.get_severity_display }}</span>
-                                                    {% elif problem.severity == 'CRIT' %}
-                                                        <span class="badge bg-danger">{{ problem.get_severity_display }}</span>
-                                                    {% endif %}
-                                                </div>
-                                            </div>
-                                            <hr>
-                                        </div>
-
-                                        <!-- Description -->
-                                        <div class="col-12">
-                                            <h6 class="title">Description</h6>
-                                            <div class="card card-bordered bg-light">
-                                                <div class="card-inner">
-                                                    <p class="card-text">{{ problem.description|linebreaksbr }}</p>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <!-- Notes de résolution -->
-                                        {% if problem.resolution_notes %}
-                                        <div class="col-12">
-                                            <h6 class="title">Notes de Résolution</h6>
-                                            <div class="card card-bordered bg-light">
-                                                <div class="card-inner">
-                                                    <p class="card-text">{{ problem.resolution_notes|linebreaksbr }}</p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        {% endif %}
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Historique des modifications -->
-                            {% if history %}
-                            <div class="card card-bordered mt-4">
-                                <div class="card-inner">
-                                    <h6 class="title">Historique des Modifications</h6>
-                                    <div class="timeline">
-                                        {% for record in history %}
-                                        <div class="timeline-item">
-                                            <div class="timeline-time">
-                                                {{ record.history_date|date:"d/m/Y H:i" }}
-                                            </div>
-                                            <div class="timeline-dot"></div>
-                                            <div class="timeline-content">
-                                                <div class="timeline-head">
-                                                    <span class="badge bg-outline-primary">{{ record.get_status_display }}</span>
-                                                    <span class="text-soft">par {{ record.history_user.get_full_name|default:"Système" }}</span>
-                                                </div>
-                                                {% if record.history_change_reason %}
-                                                <p class="timeline-description">{{ record.history_change_reason }}</p>
-                                                {% endif %}
-                                            </div>
-                                        </div>
-                                        {% endfor %}
-                                    </div>
-                                </div>
-                            </div>
-                            {% endif %}
-                        </div>
-
-                        <!-- Colonne latérale -->
-                        <div class="col-lg-4">
-                            <!-- Métadonnées -->
-                            <div class="card card-bordered">
-                                <div class="card-inner">
-                                    <h6 class="title">Informations Générales</h6>
-                                    <ul class="list-group list-group-flush">
-                                        <li class="list-group-item">
-                                            <div class="d-flex justify-content-between">
-                                                <span class="text-soft">Catégorie:</span>
-                                                <span class="fw-medium">{{ problem.category.name|default:"Non spécifiée" }}</span>
-                                            </div>
-                                        </li>
-                                        <li class="list-group-item">
-                                            <div class="d-flex justify-content-between">
-                                                <span class="text-soft">Créé par:</span>
-                                                <span class="fw-medium">{{ problem.reporter.user.get_full_name }}</span>
-                                            </div>
-                                        </li>
-                                        <li class="list-group-item">
-                                            <div class="d-flex justify-content-between">
-                                                <span class="text-soft">Date création:</span>
-                                                <span class="fw-medium">{{ problem.created_at|date:"d/m/Y H:i" }}</span>
-                                            </div>
-                                        </li>
-                                        <li class="list-group-item">
-                                            <div class="d-flex justify-content-between">
-                                                <span class="text-soft">Dernière modification:</span>
-                                                <span class="fw-medium">{{ problem.updated_at|date:"d/m/Y H:i" }}</span>
-                                            </div>
-                                        </li>
-                                        {% if problem.due_date %}
-                                        <li class="list-group-item">
-                                            <div class="d-flex justify-content-between">
-                                                <span class="text-soft">Échéance:</span>
-                                                <span class="fw-medium {% if problem.is_overdue %}text-danger{% endif %}">
-                                                    {{ problem.due_date|date:"d/m/Y" }}
-                                                    {% if problem.is_overdue %}(Retard){% endif %}
-                                                </span>
-                                            </div>
-                                        </li>
-                                        {% endif %}
-                                        {% if problem.resolved_at %}
-                                        <li class="list-group-item">
-                                            <div class="d-flex justify-content-between">
-                                                <span class="text-soft">Résolu le:</span>
-                                                <span class="fw-medium text-success">{{ problem.resolved_at|date:"d/m/Y H:i" }}</span>
-                                            </div>
-                                        </li>
-                                        {% endif %}
-                                    </ul>
-                                </div>
-                            </div>
-
-                            <!-- Assignation -->
-                            <div class="card card-bordered mt-4">
-                                <div class="card-inner">
-                                    <h6 class="title">Assignation</h6>
-                                    {% if problem.assignee %}
-                                    <div class="user-card">
-                                        <div class="user-avatar bg-primary">
-                                            {% if problem.assignee.photo %}
-                                                <img src="{{ problem.assignee.photo.url }}" alt="{{ problem.assignee }}">
-                                            {% else %}
-                                                <span>{{ problem.assignee.user.get_initials }}</span>
-                                            {% endif %}
-                                        </div>
-                                        <div class="user-info">
-                                            <span class="tb-lead">{{ problem.assignee.user.get_full_name }}</span>
-                                            <span class="text-soft">{{ problem.assignee.fonction|default:"Membre" }}</span>
-                                        </div>
-                                    </div>
-                                    {% else %}
-                                    <div class="text-center py-3">
-                                        <em class="icon ni ni-user-cross text-soft" style="font-size: 2rem;"></em>
-                                        <p class="mt-2 text-soft">Non assigné</p>
-                                        {% if perms.problems.can_assign_problem %}
-                                        <a href="{% url 'problemreport_assign' problem.pk %}" class="btn btn-sm btn-primary mt-2">
-                                            Assigner
-                                        </a>
-                                        {% endif %}
-                                    </div>
-                                    {% endif %}
-                                </div>
-                            </div>
-
-                            <!-- Observateurs -->
-                            {% if watchers %}
-                            <div class="card card-bordered mt-4">
-                                <div class="card-inner">
-                                    <h6 class="title">Observateurs</h6>
-                                    <div class="user-list">
-                                        {% for watcher in watchers %}
-                                        <div class="user-item">
-                                            <div class="user-avatar sm bg-outline-primary">
-                                                {% if watcher.photo %}
-                                                    <img src="{{ watcher.photo.url }}" alt="{{ watcher }}">
-                                                {% else %}
-                                                    <span>{{ watcher.user.get_initials }}</span>
-                                                {% endif %}
-                                            </div>
-                                            <div class="user-info">
-                                                <span class="tb-lead">{{ watcher.user.get_full_name }}</span>
-                                            </div>
-                                        </div>
-                                        {% endfor %}
-                                    </div>
-                                </div>
-                            </div>
-                            {% endif %}
-
-                            <!-- Actions rapides -->
-                            {% if perms.problems.can_assign_problem %}
-                            <div class="card card-bordered mt-4">
-                                <div class="card-inner">
-                                    <h6 class="title">Actions Rapides</h6>
-                                    <div class="btn-group-vertical w-100">
-                                        <a href="{% url 'problemreport_change_status' problem.pk %}" class="btn btn-outline-primary">
-                                            <em class="icon ni ni-refresh"></em> Changer le statut
-                                        </a>
-                                        {% if problem.assignee %}
-                                        <a href="{% url 'problemreport_assign' problem.pk %}" class="btn btn-outline-info">
-                                            <em class="icon ni ni-user"></em> Réassigner
-                                        </a>
-                                        {% endif %}
-                                        <button onclick="sendReminder({{ problem.pk }})" class="btn btn-outline-warning">
-                                            <em class="icon ni ni-alarm"></em> Envoyer rappel
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
+    <article class="bg-white dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-soft overflow-hidden">
+        <div class="p-5 lg:p-6 border-b border-slate-200 dark:border-slate-700/60">
+            <div class="flex items-center gap-2 mb-3 flex-wrap">
+                {% if problem.severity == 'critical' %}
+                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300 text-xs font-bold uppercase"><span class="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse"></span>Critique</span>
+                {% elif problem.severity == 'high' %}
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300 text-xs font-bold uppercase">Élevée</span>
+                {% endif %}
+                {% if problem.status == 'resolved' %}
+                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 text-xs font-medium"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>Résolu</span>
+                {% elif problem.status == 'in_progress' %}
+                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-300 text-xs font-medium"><span class="w-1.5 h-1.5 rounded-full bg-brand-500 animate-pulse"></span>En cours</span>
+                {% else %}
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 dark:bg-slate-700 text-xs">Ouvert</span>
+                {% endif %}
+                <span class="text-xs text-slate-400">#{{ problem.id }} · {{ problem.created_at|date:"d M Y H:i" }}</span>
+            </div>
+            <h1 class="font-display text-2xl font-bold text-slate-900 dark:text-white">{{ problem.title }}</h1>
+            <div class="mt-2 text-xs text-slate-500 dark:text-slate-400 space-y-0.5">
+                <div>Concerné&nbsp;: <span class="font-medium text-slate-700 dark:text-slate-200">{{ problem.fidele.user.get_full_name|default:"—" }}</span></div>
+                <div>Catégorie&nbsp;: <span class="font-medium text-slate-700 dark:text-slate-200">{{ problem.category|default:"—" }}</span></div>
+                {% if problem.assigned_to %}<div>Assigné à&nbsp;: <span class="font-medium text-slate-700 dark:text-slate-200">{{ problem.assigned_to }}</span></div>{% endif %}
             </div>
         </div>
-    </div>
+
+        <div class="p-5 lg:p-6">
+            <div class="text-[10px] uppercase tracking-wider text-slate-400 font-semibold mb-2">Description</div>
+            <div class="prose prose-sm max-w-none text-slate-700 dark:text-slate-200 whitespace-pre-line">{{ problem.description|default:"—" }}</div>
+
+            {% if problem.notes %}
+                <div class="mt-6 p-4 rounded-xl bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-700/40">
+                    <div class="text-[10px] uppercase tracking-wider text-amber-700 font-semibold mb-1">Notes pastorales</div>
+                    <div class="text-sm text-amber-900 dark:text-amber-200 whitespace-pre-line">{{ problem.notes }}</div>
+                </div>
+            {% endif %}
+        </div>
+
+        {% if problem.resolution %}
+        <div class="px-5 lg:px-6 py-4 border-t border-slate-200 dark:border-slate-700/60 bg-emerald-50/60 dark:bg-emerald-900/10">
+            <div class="text-[10px] uppercase tracking-wider text-emerald-700 font-semibold mb-1">Résolution</div>
+            <p class="text-sm text-emerald-900 dark:text-emerald-200 whitespace-pre-line">{{ problem.resolution }}</p>
+        </div>
+        {% endif %}
+    </article>
 </div>
-
-<style>
-    .badge-container {
-        display: flex;
-        gap: 8px;
-        flex-wrap: wrap;
-    }
-
-    .user-card {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        padding: 12px;
-    }
-
-    .user-avatar {
-        width: 48px;
-        height: 48px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: 600;
-        color: white;
-    }
-
-    .user-avatar.sm {
-        width: 32px;
-        height: 32px;
-        font-size: 0.8rem;
-    }
-
-    .user-avatar img {
-        width: 100%;
-        height: 100%;
-        border-radius: 50%;
-        object-fit: cover;
-    }
-
-    .user-info {
-        flex: 1;
-    }
-
-    .tb-lead {
-        font-weight: 500;
-        display: block;
-    }
-
-    .user-list {
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-    }
-
-    .user-item {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        padding: 8px;
-        border-radius: 6px;
-        background-color: #f8f9fa;
-    }
-
-    .timeline {
-        position: relative;
-        padding-left: 30px;
-    }
-
-    .timeline-item {
-        position: relative;
-        padding-bottom: 20px;
-    }
-
-    .timeline-time {
-        font-size: 0.875rem;
-        color: #7987a1;
-        margin-bottom: 5px;
-    }
-
-    .timeline-dot {
-        position: absolute;
-        left: -30px;
-        top: 5px;
-        width: 12px;
-        height: 12px;
-        border-radius: 50%;
-        background-color: #6576ff;
-        border: 2px solid white;
-    }
-
-    .timeline-content {
-        background: white;
-        padding: 15px;
-        border-radius: 6px;
-        border: 1px solid #e5e9f2;
-    }
-
-    .timeline-head {
-        display: flex;
-        justify-content: between;
-        align-items: center;
-        margin-bottom: 8px;
-        gap: 8px;
-    }
-
-    .list-group-item {
-        border: none;
-        padding: 12px 0;
-    }
-
-    .btn-group-vertical .btn {
-        text-align: left;
-        justify-content: start;
-        margin-bottom: 8px;
-    }
-
-    .bg-outline-primary {
-        background-color: transparent;
-        border: 2px solid #6576ff;
-        color: #6576ff;
-    }
-</style>
-
-<script>
-    function generateReport(problemId) {
-        Swal.fire({
-            title: 'Générer un rapport',
-            text: 'Choisissez le format du rapport',
-            icon: 'info',
-            showCancelButton: true,
-            confirmButtonColor: '#6576ff',
-            cancelButtonColor: '#f5365c',
-            confirmButtonText: 'PDF',
-            cancelButtonText: 'Annuler',
-            showDenyButton: true,
-            denyButtonText: 'CSV',
-            denyButtonColor: '#47c5fb'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                window.open(`/problems/${problemId}/report/?type=pdf`, '_blank');
-            } else if (result.isDenied) {
-                window.open(`/problems/${problemId}/report/?type=csv`, '_blank');
-            }
-        });
-    }
-
-    function sendReminder(problemId) {
-        Swal.fire({
-            title: 'Envoyer un rappel',
-            text: 'Êtes-vous sûr de vouloir envoyer un rappel pour ce signalement ?',
-            icon: 'question',
-            showCancelButton: true,
-            confirmButtonColor: '#6576ff',
-            cancelButtonColor: '#f5365c',
-            confirmButtonText: 'Oui, envoyer',
-            cancelButtonText: 'Annuler'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                fetch(`/problems/${problemId}/reminder/`, {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRFToken': '{{ csrf_token }}',
-                        'Content-Type': 'application/json'
-                    }
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        Swal.fire('Succès', 'Rappel envoyé avec succès', 'success');
-                    } else {
-                        Swal.fire('Erreur', data.error || 'Erreur lors de l\'envoi du rappel', 'error');
-                    }
-                })
-                .catch(error => {
-                    Swal.fire('Erreur', 'Une erreur est survenue', 'error');
-                });
-            }
-        });
-    }
-
-    document.addEventListener('DOMContentLoaded', function() {
-        // Initialisation des tooltips
-        const tooltips = [].slice.call(document.querySelectorAll('[data-toggle="tooltip"]'));
-        tooltips.map(function(tooltip) {
-            return new bootstrap.Tooltip(tooltip);
-        });
-    });
-</script>
 {% endblock %}

@@ -1,0 +1,42 @@
+{# ====================================================================
+   Header de page premium réutilisable.
+   Vars :
+     - eyebrow (str)         : petit kicker au-dessus du titre
+     - title (str)           : titre H1
+     - subtitle (str)        : description courte
+     - breadcrumb (list)     : [{label, url}] (optionnel)
+     - actions (block)       : utilisez {% block page_actions %}…{% endblock %}
+   ==================================================================== #}
+<header class="mb-6 lg:mb-8">
+    {% if breadcrumb %}
+        <nav class="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 mb-3" aria-label="Fil d'Ariane">
+            {% for crumb in breadcrumb %}
+                {% if not forloop.last %}
+                    <a href="{{ crumb.url }}" class="hover:text-brand-600 transition">{{ crumb.label }}</a>
+                    <svg class="w-3 h-3 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                {% else %}
+                    <span class="text-slate-700 dark:text-slate-300 font-medium">{{ crumb.label }}</span>
+                {% endif %}
+            {% endfor %}
+        </nav>
+    {% endif %}
+
+    <div class="flex flex-wrap items-end justify-between gap-4">
+        <div class="min-w-0 max-w-2xl">
+            {% if eyebrow %}
+                <div class="text-xs font-semibold tracking-wider uppercase text-brand-600 dark:text-brand-300 mb-1.5">
+                    {{ eyebrow }}
+                </div>
+            {% endif %}
+            <h1 class="font-display text-2xl lg:text-3xl font-bold text-slate-900 dark:text-white">{{ title }}</h1>
+            {% if subtitle %}
+                <p class="text-sm text-slate-500 dark:text-slate-400 mt-1.5">{{ subtitle }}</p>
+            {% endif %}
+        </div>
+        {% if actions_html %}
+            <div class="flex items-center gap-2">
+                {{ actions_html|safe }}
+            </div>
+        {% endif %}
+    </div>
+</header>

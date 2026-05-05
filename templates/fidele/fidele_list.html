@@ -1,964 +1,301 @@
-<!-- fidele_list.html -->
 {% extends 'layout/base.html' %}
-
 {% load custom_filters %}
+{% block head_title %}Fidèles – Alliance Connect{% endblock %}
 
 {% block content %}
-<div class="nk-content nk-content-fluid">
-    <div class="container-xl wide-xl">
-        <div class="nk-content-inner">
-            <div class="nk-content-body">
-                <!-- Header amélioré avec filtre rapide -->
-                <div class="nk-block-head nk-block-head-sm">
-                    <div class="nk-block-between">
-                        <div class="nk-block-head-content">
-                            <h3 class="nk-block-title page-title">Liste des membres des Églises ABMCI</h3>
-                            <div class="nk-block-des">
-                                <p class="lead-text">
-                                    {% if eglise_selectionnee %}
-                                        L'église <span class="text-primary">{{ eglise_selectionnee.name }}</span> compte
+<div x-data="{ filtersOpen: false, selected: [] }">
+
+    {# ===== Header ===== #}
+    <header class="mb-6 lg:mb-8 flex flex-wrap items-end justify-between gap-4">
+        <div class="min-w-0 max-w-2xl">
+            <div class="text-xs font-semibold tracking-wider uppercase text-brand-600 dark:text-brand-300 mb-1.5">Fidèles</div>
+            <h1 class="font-display text-2xl lg:text-3xl font-bold text-slate-900 dark:text-white">
+                Membres des Églises ABMCI
+            </h1>
+            <p class="text-sm text-slate-500 dark:text-slate-400 mt-1.5">
+                {% if eglise_selectionnee %}
+                    L'église <span class="font-semibold text-brand-600">{{ eglise_selectionnee.name }}</span> compte
+                {% else %}
+                    Le réseau compte
+                {% endif %}
+                <span class="font-semibold text-slate-700 dark:text-slate-200">{{ nombre_fideles }}</span> fidèle(s).
+            </p>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+            <div class="relative" x-data="{ open: false }" @click.outside="open = false">
+                <button @click="open = !open"
+                        class="inline-flex items-center gap-2 h-10 px-4 rounded-lg border border-slate-200 dark:border-slate-700 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/50 transition">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                    <span>Exporter</span>
+                </button>
+                <div x-show="open" x-cloak x-transition.origin.top.right
+                     class="absolute right-0 top-full mt-1 w-44 bg-white dark:bg-slate-800 rounded-xl shadow-soft-lg border border-slate-200 dark:border-slate-700 overflow-hidden z-20">
+                    <button onclick="window.print()" class="w-full text-left px-4 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700/50">Imprimer</button>
+                    <button onclick="exportToCSV()" class="w-full text-left px-4 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700/50">CSV</button>
+                </div>
+            </div>
+            <a href="{% url 'fidele_create' %}"
+               class="inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold shadow-soft transition">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/></svg>
+                <span>Nouveau fidèle</span>
+            </a>
+        </div>
+    </header>
+
+    {# ===== Stat tiles ===== #}
+    {% if stats %}
+    <section class="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4 mb-6">
+        <button onclick="filterByStatus('actif')" class="text-left bg-gradient-to-br from-brand-600 to-brand-700 text-white rounded-2xl p-5 shadow-soft hover:shadow-soft-lg hover:-translate-y-0.5 transition">
+            <div class="flex items-start justify-between">
+                <div class="text-[11px] uppercase tracking-wider font-semibold opacity-80">Membres actifs</div>
+                <svg class="w-5 h-5 opacity-80" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            </div>
+            <div class="font-display text-3xl font-bold mt-2 tabular-nums">{{ stats.membres_actifs }}</div>
+            <div class="text-xs opacity-80 mt-0.5">+{{ stats.membres_actifs|percentage:nombre_fideles }}%</div>
+        </button>
+        <button onclick="filterByStatus('visiteur')" class="text-left bg-gradient-to-br from-amber-500 to-amber-600 text-white rounded-2xl p-5 shadow-soft hover:shadow-soft-lg hover:-translate-y-0.5 transition">
+            <div class="flex items-start justify-between">
+                <div class="text-[11px] uppercase tracking-wider font-semibold opacity-80">Nouveaux fidèles</div>
+                <svg class="w-5 h-5 opacity-80" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/></svg>
+            </div>
+            <div class="font-display text-3xl font-bold mt-2 tabular-nums">{{ stats.nouveaux }}</div>
+            <div class="text-xs opacity-80 mt-0.5">+{{ stats.nouveaux|percentage:nombre_fideles }}%</div>
+        </button>
+        <button class="text-left bg-gradient-to-br from-cyan-500 to-cyan-600 text-white rounded-2xl p-5 shadow-soft hover:shadow-soft-lg hover:-translate-y-0.5 transition">
+            <div class="flex items-start justify-between">
+                <div class="text-[11px] uppercase tracking-wider font-semibold opacity-80">Baptisés</div>
+                <svg class="w-5 h-5 opacity-80" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/></svg>
+            </div>
+            <div class="font-display text-3xl font-bold mt-2 tabular-nums">{{ stats.baptises }}</div>
+            <div class="text-xs opacity-80 mt-0.5">+{{ stats.baptises|percentage:nombre_fideles }}%</div>
+        </button>
+        <button onclick="filterByStatus('fiss')" class="text-left bg-gradient-to-br from-rose-500 to-rose-600 text-white rounded-2xl p-5 shadow-soft hover:shadow-soft-lg hover:-translate-y-0.5 transition">
+            <div class="flex items-start justify-between">
+                <div class="text-[11px] uppercase tracking-wider font-semibold opacity-80">FISS</div>
+                <svg class="w-5 h-5 opacity-80" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
+            </div>
+            <div class="font-display text-3xl font-bold mt-2 tabular-nums">{{ stats.fiss }}</div>
+            <div class="text-xs opacity-80 mt-0.5">{{ stats.fiss|percentage:nombre_fideles }}%</div>
+        </button>
+    </section>
+    {% endif %}
+
+    {# ===== Filtres ===== #}
+    <section class="mb-6 bg-white dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-soft">
+        <form method="get" action="{% url 'membres' %}" class="p-4 lg:p-5 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3" id="advancedFilterForm">
+            <div class="lg:col-span-2">
+                <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">Recherche</label>
+                <div class="relative">
+                    <svg class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                    <input type="text" name="q" placeholder="Nom, profession…" value="{{ request.GET.q }}"
+                           class="w-full h-10 pl-10 pr-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400">
+                </div>
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">Église</label>
+                <select name="eglise_id" class="w-full h-10 px-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400">
+                    <option value="">Toutes</option>
+                    {% for eglise in church %}<option value="{{ eglise.id }}" {% if eglise.id == eglise_id|add:0 %}selected{% endif %}>{{ eglise.name }}</option>{% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">Statut</label>
+                <select name="statut" class="w-full h-10 px-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400">
+                    <option value="">Tous</option>
+                    <option value="visiteur" {% if request.GET.statut == 'visiteur' %}selected{% endif %}>Visiteurs</option>
+                    <option value="actif"    {% if request.GET.statut == 'actif'    %}selected{% endif %}>Membres actifs</option>
+                    <option value="fiss"     {% if request.GET.statut == 'fiss'     %}selected{% endif %}>FISS</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">Département</label>
+                <select name="departement_id" class="w-full h-10 px-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400">
+                    <option value="">Tous</option>
+                    {% for dept in departments %}<option value="{{ dept.id }}" {% if dept.id == request.GET.departement_id|add:0 %}selected{% endif %}>{{ dept.name }}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="md:col-span-2 lg:col-span-5 flex flex-wrap items-center gap-2 pt-1">
+                <button type="submit" class="inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold transition">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                    <span>Filtrer</span>
+                </button>
+                {% if request.GET %}
+                    <a href="{% url 'membres' %}" class="inline-flex items-center gap-2 h-10 px-4 rounded-lg border border-slate-200 dark:border-slate-700 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/50 transition">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                        <span>Réinitialiser</span>
+                    </a>
+                {% endif %}
+            </div>
+        </form>
+    </section>
+
+    {# ===== Table ===== #}
+    <section class="bg-white dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-soft overflow-hidden">
+
+        <div class="px-4 py-3 border-b border-slate-200 dark:border-slate-700/60 flex flex-wrap items-center justify-between gap-2">
+            <label class="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300 cursor-pointer">
+                <input type="checkbox" id="selectAll" class="w-4 h-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500">
+                <span>Tout sélectionner</span>
+            </label>
+            <div class="text-xs text-slate-400" x-text="selected.length ? selected.length + ' sélectionné(s)' : ''"></div>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700/60" id="membersTable">
+                <thead class="bg-slate-50 dark:bg-slate-800/60">
+                    <tr>
+                        <th class="px-4 py-3 w-10"></th>
+                        <th class="px-4 py-3 text-left text-[10px] uppercase tracking-wider text-slate-500 font-semibold">Membre</th>
+                        <th class="px-4 py-3 text-left text-[10px] uppercase tracking-wider text-slate-500 font-semibold">Église</th>
+                        <th class="px-4 py-3 text-left text-[10px] uppercase tracking-wider text-slate-500 font-semibold">Contact</th>
+                        <th class="px-4 py-3 text-left text-[10px] uppercase tracking-wider text-slate-500 font-semibold">Âge</th>
+                        <th class="px-4 py-3 text-left text-[10px] uppercase tracking-wider text-slate-500 font-semibold">Statut</th>
+                        <th class="px-4 py-3 text-left text-[10px] uppercase tracking-wider text-slate-500 font-semibold">Département</th>
+                        <th class="px-4 py-3 text-right text-[10px] uppercase tracking-wider text-slate-500 font-semibold">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 dark:divide-slate-700/40 bg-white dark:bg-slate-800/20">
+                    {% for fidele in membres %}
+                    <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition">
+                        <td class="px-4 py-3">
+                            <input type="checkbox" class="member-checkbox w-4 h-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500" value="{{ fidele.id }}" @change="$event.target.checked ? selected.push({{ fidele.id }}) : (selected = selected.filter(i => i !== {{ fidele.id }}))">
+                        </td>
+                        <td class="px-4 py-3">
+                            <a href="{% url 'membre' fidele.slug %}" class="flex items-center gap-3 group">
+                                <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-brand-500 to-violet-500 text-white grid place-items-center font-semibold text-xs shrink-0 ring-2 ring-white dark:ring-slate-800 shadow-soft overflow-hidden">
+                                    {% if fidele.photo %}
+                                        <img src="{{ fidele.photo.url }}" alt="{{ fidele }}" class="w-full h-full object-cover">
                                     {% else %}
-                                        Le réseau compte
+                                        {{ fidele.user.get_initials|default:fidele.user.first_name|first|upper }}
                                     {% endif %}
-                                    <strong>{{ nombre_fideles }}</strong> fidèles
-                                </p>
-                            </div>
-                        </div>
-                        <div class="nk-block-head-content">
-                            <div class="toggle-wrap nk-block-tools-toggle">
-                                <a href="#" class="btn btn-icon btn-trigger toggle-expand" data-target="pageMenu">
-                                    <em class="icon ni ni-menu-alt-r"></em>
-                                </a>
-                                <div class="toggle-expand-content" data-content="pageMenu">
-                                    <ul class="nk-block-tools g-3">
-                                        <li>
-                                            <a href="{% url 'fidele_create' %}" class="btn btn-primary">
-                                                <em class="icon ni ni-plus"></em>
-                                                <span>Nouveau fidèle</span>
-                                            </a>
-                                        </li>
-                                        <li>
-                                            <div class="dropdown">
-                                                <a href="#" class="dropdown-toggle btn btn-outline-light" data-toggle="dropdown">
-                                                    <em class="icon ni ni-download-cloud"></em>
-                                                    <span>Exporter</span>
-                                                </a>
-                                                <div class="dropdown-menu dropdown-menu-right">
-                                                    <ul class="link-list-opt no-bdr">
-                                                        <li><a href="#" onclick="exportToPDF()"><em class="icon ni ni-file-pdf"></em><span>PDF</span></a></li>
-                                                        <li><a href="#" onclick="exportToExcel()"><em class="icon ni ni-file-excel"></em><span>Excel</span></a></li>
-                                                        <li><a href="#" onclick="exportToCSV()"><em class="icon ni ni-file-text"></em><span>CSV</span></a></li>
-                                                    </ul>
-                                                </div>
-                                            </div>
-                                        </li>
-                                        <li>
-                                            <button type="button" class="btn btn-outline-info" onclick="showStatsModal()">
-                                                <em class="icon ni ni-bar-chart-fill"></em>
-                                                <span>Statistiques</span>
-                                            </button>
-                                        </li>
-                                    </ul>
+                                </div>
+                                <div class="min-w-0">
+                                    <div class="text-sm font-medium text-slate-800 dark:text-slate-100 truncate group-hover:text-brand-700 transition">{{ fidele.user.get_full_name }}</div>
+                                    <div class="text-xs text-slate-500 dark:text-slate-400 truncate">{{ fidele.profession|default:"—" }}</div>
+                                </div>
+                            </a>
+                        </td>
+                        <td class="px-4 py-3">
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-brand-50 dark:bg-brand-900/30 text-brand-700 dark:text-brand-300 text-xs font-medium">{{ fidele.eglise|default:"—" }}</span>
+                        </td>
+                        <td class="px-4 py-3">
+                            <div class="text-sm text-slate-700 dark:text-slate-200">{{ fidele.phone|default:"—" }}</div>
+                            <div class="text-xs text-slate-400">{{ fidele.personal_mail|default:"—" }}</div>
+                        </td>
+                        <td class="px-4 py-3 text-sm text-slate-600 dark:text-slate-300 tabular-nums">{{ fidele.age|default:"—" }}</td>
+                        <td class="px-4 py-3">
+                            {% if fidele.statut == 'Visiteur' %}
+                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-medium">{{ fidele.statut }}</span>
+                            {% elif fidele.statut == 'Membre actif' %}
+                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 text-xs font-medium"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>{{ fidele.statut }}</span>
+                            {% elif fidele.statut == 'FISS' %}
+                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-300 text-xs font-medium">{{ fidele.statut }}</span>
+                            {% else %}
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-600 text-xs font-medium">{{ fidele.statut }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-4 py-3 text-sm text-slate-600 dark:text-slate-300">{{ fidele.departement|default:"—" }}</td>
+                        <td class="px-4 py-3 text-right">
+                            <div class="relative inline-block" x-data="{ open: false }" @click.outside="open = false">
+                                <button @click="open = !open" class="w-8 h-8 grid place-items-center rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700/50 transition">
+                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12h.01M12 12h.01M19 12h.01M6 12a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0z"/></svg>
+                                </button>
+                                <div x-show="open" x-cloak x-transition.origin.top.right
+                                     class="absolute right-0 top-full mt-1 w-44 bg-white dark:bg-slate-800 rounded-xl shadow-soft-lg border border-slate-200 dark:border-slate-700 overflow-hidden z-20">
+                                    <a href="{% url 'membre' fidele.slug %}" class="flex items-center gap-2 px-3 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700/50">
+                                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                                        Voir détails
+                                    </a>
+                                    <a href="{% url 'fidele_update' fidele.id %}" class="flex items-center gap-2 px-3 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700/50">
+                                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                                        Modifier
+                                    </a>
+                                    <a href="{% url 'fidele_transfer' fidele.id %}" class="flex items-center gap-2 px-3 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700/50">
+                                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
+                                        Transférer
+                                    </a>
+                                    <div class="border-t border-slate-100 dark:border-slate-700"></div>
+                                    <a href="{% url 'fidele_delete' fidele.id %}" class="flex items-center gap-2 px-3 py-2 text-sm text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20">
+                                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3"/></svg>
+                                        Supprimer
+                                    </a>
                                 </div>
                             </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Filtres avancés -->
-                <div class="nk-block mb-4">
-                    <div class="card card-bordered">
-                        <div class="card-inner">
-                            <form method="get" action="{% url 'membres' %}" class="row g-3" id="advancedFilterForm">
-                                <div class="col-md-3">
-                                    <select name="eglise_id" class="form-select" data-search="on">
-                                        <option value="">Toutes les églises</option>
-                                        {% for eglise in church %}
-                                            <option value="{{ eglise.id }}" {% if eglise.id == eglise_id|add:0 %}selected{% endif %}>
-                                                {{ eglise.name }}
-                                            </option>
-                                        {% endfor %}
-                                    </select>
-                                </div>
-                                <div class="col-md-2">
-                                    <select name="statut" class="form-select">
-                                        <option value="">Tous statuts</option>
-                                        <option value="visiteur" {% if request.GET.statut == 'visiteur' %}selected{% endif %}>Visiteurs</option>
-                                        <option value="actif" {% if request.GET.statut == 'actif' %}selected{% endif %}>Membres actifs</option>
-                                        <option value="fiss" {% if request.GET.statut == 'fiss' %}selected{% endif %}>FISS</option>
-                                    </select>
-                                </div>
-                                <div class="col-md-2">
-                                    <select name="departement_id" class="form-select">
-                                        <option value="">Tous départements</option>
-                                        {% for dept in departments %}
-                                            <option value="{{ dept.id }}" {% if dept.id == request.GET.departement_id|add:0 %}selected{% endif %}>
-                                                {{ dept.name }}
-                                            </option>
-                                        {% endfor %}
-                                    </select>
-                                </div>
-                                <div class="col-md-2">
-                                    <select name="type_membre_id" class="form-select">
-                                        <option value="">Tous types</option>
-                                        {% for type in type_membres %}
-                                            <option value="{{ type.id }}" {% if type.id == request.GET.type_membre_id|add:0 %}selected{% endif %}>
-                                                {{ type.name }}
-                                            </option>
-                                        {% endfor %}
-                                    </select>
-                                </div>
-                                <div class="col-md-3">
-                                    <div class="input-group">
-                                        <input type="text" class="form-control" name="q" placeholder="Rechercher..." value="{{ request.GET.q }}">
-                                        <button class="btn btn-primary" type="submit">
-                                            <em class="icon ni ni-search"></em>
-                                        </button>
-                                        {% if request.GET %}
-                                            <a href="{% url 'membres' %}" class="btn btn-outline-danger" title="Réinitialiser">
-                                                <em class="icon ni ni-reload"></em>
-                                            </a>
-                                        {% endif %}
-                                    </div>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Cartes de statistiques -->
-                <div class="nk-block mb-4">
-                    <div class="row g-gs">
-                        <div class="col-md-3">
-                            <div class="card card-stat bg-gradient-primary" onclick="filterByStatus('actif')" style="cursor: pointer;">
-                                <div class="card-body">
-                                    <div class="card-stat-head">
-                                        <h6 class="title">Membres actifs</h6>
-                                        <em class="icon ni ni-user-check"></em>
-                                    </div>
-                                    <div class="card-stat-body">
-                                        <h3 class="amount">{{ stats.membres_actifs }}</h3>
-                                        <span class="change up">+{{ stats.membres_actifs|percentage:nombre_fideles }}%</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="card card-stat bg-gradient-warning" onclick="filterByStatus('visiteur')" style="cursor: pointer;">
-                                <div class="card-body">
-                                    <div class="card-stat-head">
-                                        <h6 class="title">Nouveaux fidèles</h6>
-                                        <em class="icon ni ni-user-add"></em>
-                                    </div>
-                                    <div class="card-stat-body">
-                                        <h3 class="amount">{{ stats.nouveaux }}</h3>
-                                        <span class="change up">+{{ stats.nouveaux|percentage:nombre_fideles }}%</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="card card-stat bg-gradient-info" onclick="filterByBaptism(true)" style="cursor: pointer;">
-                                <div class="card-body">
-                                    <div class="card-stat-head">
-                                        <h6 class="title">Baptisés</h6>
-                                        <em class="icon ni ni-baptism"></em>
-                                    </div>
-                                    <div class="card-stat-body">
-                                        <h3 class="amount">{{ stats.baptises }}</h3>
-                                        <span class="change up">+{{ stats.baptises|percentage:nombre_fideles }}%</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="card card-stat bg-gradient-danger" onclick="filterByStatus('fiss')" style="cursor: pointer;">
-                                <div class="card-body">
-                                    <div class="card-stat-head">
-                                        <h6 class="title">FISS</h6>
-                                        <em class="icon ni ni-heart-fill"></em>
-                                    </div>
-                                    <div class="card-stat-body">
-                                        <h3 class="amount">{{ stats.fiss }}</h3>
-                                        <span class="change down">-{{ stats.fiss|percentage:nombre_fideles }}%</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Tableau des membres -->
-                <div class="nk-block">
-                    <div class="card card-bordered card-stretch">
-                        <div class="card-inner-group">
-                            <div class="card-inner position-relative">
-                                <div class="card-title-group">
-                                    <div class="card-tools">
-                                        <div class="form-inline flex-nowrap gx-3">
-                                            <div class="form-wrap">
-                                                <div class="custom-control custom-control-sm custom-checkbox">
-                                                    <input type="checkbox" class="custom-control-input" id="selectAll">
-                                                    <label class="custom-control-label" for="selectAll">Tout sélectionner</label>
-                                                </div>
-                                            </div>
-                                            <div class="btn-wrap">
-                                                <button class="btn btn-outline-light btn-sm" id="batchActionsBtn" disabled>
-                                                    <em class="icon ni ni-tool"></em>
-                                                    <span>Actions groupées</span>
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="card-tools">
-                                        <div class="dropdown">
-                                            <a href="#" class="btn btn-trigger btn-icon dropdown-toggle" data-toggle="dropdown">
-                                                <em class="icon ni ni-setting"></em>
-                                            </a>
-                                            <div class="dropdown-menu dropdown-menu-right">
-                                                <ul class="link-list-opt no-bdr">
-                                                    <li><a href="#" onclick="exportVisibleToExcel()"><span>Exporter visible</span></a></li>
-                                                    <li><a href="#" onclick="printTable()"><span>Imprimer la liste</span></a></li>
-                                                    <li class="divider"></li>
-                                                    <li><a href="#" data-toggle="modal" data-target="#columnsModal"><span>Colonnes visibles</span></a></li>
-                                                </ul>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="card-inner p-0">
-                                <div class="table-responsive">
-                                    <table class="table table-hover nk-tb-list" id="membersTable">
-                                        <thead>
-                                            <tr class="nk-tb-item nk-tb-head">
-                                                <th class="nk-tb-col" width="40px"><span class="sub-text">#</span></th>
-                                                <th class="nk-tb-col"><span class="sub-text">Membre</span></th>
-                                                <th class="nk-tb-col"><span class="sub-text">Église</span></th>
-                                                <th class="nk-tb-col"><span class="sub-text">Contact</span></th>
-                                                <th class="nk-tb-col"><span class="sub-text">Âge</span></th>
-                                                <th class="nk-tb-col"><span class="sub-text">Statut</span></th>
-                                                <th class="nk-tb-col"><span class="sub-text">Département</span></th>
-                                                <th class="nk-tb-col text-end"><span class="sub-text">Actions</span></th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {% for fidele in membres %}
-                                            <tr class="nk-tb-item" data-id="{{ fidele.id }}">
-                                                <td class="nk-tb-col">
-                                                    <div class="custom-control custom-control-sm custom-checkbox">
-                                                        <input type="checkbox" class="custom-control-input member-checkbox" id="cb{{ fidele.id }}">
-                                                        <label class="custom-control-label" for="cb{{ fidele.id }}"></label>
-                                                    </div>
-                                                </td>
-                                                <td class="nk-tb-col">
-                                                    <a href="{% url 'membre' fidele.slug %}" class="user-card">
-                                                        <div class="user-avatar bg-primary">
-                                                            {% if fidele.photo %}
-                                                                <img src="{{ fidele.photo.url }}" alt="{{ fidele }}">
-                                                            {% else %}
-                                                                <span>{{ fidele.user.get_initials }}</span>
-                                                            {% endif %}
-                                                        </div>
-                                                        <div class="user-info">
-                                                            <span class="tb-lead">{{ fidele.user.get_full_name }}</span>
-                                                            <span>{{ fidele.profession|default:"-" }}</span>
-                                                        </div>
-                                                    </a>
-                                                </td>
-                                                <td class="nk-tb-col">
-                                                    <span class="badge badge-dim bg-outline-primary">{{ fidele.eglise|default:"-" }}</span>
-                                                </td>
-                                                <td class="nk-tb-col">
-                                                    <div class="d-flex flex-column">
-                                                        <span>{{ fidele.phone|default:"-" }}</span>
-                                                        <small class="text-soft">{{ fidele.personal_mail|default:"-" }}</small>
-                                                    </div>
-                                                </td>
-                                                <td class="nk-tb-col">
-                                                    <span>{{ fidele.age|default:"-" }} ans</span>
-                                                </td>
-                                                <td class="nk-tb-col">
-                                                    {% if fidele.statut == 'Visiteur' %}
-                                                        <span class="badge badge-dim bg-gray">{{ fidele.statut }}</span>
-                                                    {% elif fidele.statut == 'Membre actif' %}
-                                                        <span class="badge badge-dim bg-primary">{{ fidele.statut }}</span>
-                                                    {% elif fidele.statut == 'FISS' %}
-                                                        <span class="badge badge-dim bg-pink">{{ fidele.statut }}</span>
-                                                    {% else %}
-                                                        <span class="badge badge-dim bg-secondary">{{ fidele.statut }}</span>
-                                                    {% endif %}
-                                                </td>
-                                                <td class="nk-tb-col">
-                                                    <span>{{ fidele.departement|default:"-" }}</span>
-                                                </td>
-                                                <td class="nk-tb-col nk-tb-col-tools text-end">
-                                                    <ul class="nk-tb-actions gx-1">
-                                                        <li>
-                                                            <div class="dropdown">
-                                                                <a href="#" class="dropdown-toggle btn btn-icon btn-trigger" data-toggle="dropdown">
-                                                                    <em class="icon ni ni-more-h"></em>
-                                                                </a>
-                                                                <div class="dropdown-menu dropdown-menu-end">
-                                                                    <ul class="link-list-opt no-bdr">
-                                                                        <li><a href="{% url 'membre' fidele.slug %}"><em class="icon ni ni-eye"></em><span>Voir détails</span></a></li>
-                                                                        <li><a href="{% url 'fidele_update' fidele.id %}"><em class="icon ni ni-edit"></em><span>Modifier</span></a></li>
-                                                                        <li><a href="#" onclick="sendMessage({{ fidele.id }})"><em class="icon ni ni-mail"></em><span>Envoyer message</span></a></li>
-                                                                        <li class="divider"></li>
-                                                                        <li><a href="#" class="text-danger" onclick="confirmDeactivate({{ fidele.id }})"><em class="icon ni ni-user-cross"></em><span>Désactiver</span></a></li>
-                                                                    </ul>
-                                                                </div>
-                                                            </div>
-                                                        </li>
-                                                    </ul>
-                                                </td>
-                                            </tr>
-                                            {% empty %}
-                                            <tr class="nk-tb-item">
-                                                <td class="nk-tb-col text-center" colspan="8">
-                                                    <div class="nk-block-content p-4">
-                                                        <em class="icon ni ni-info text-soft" style="font-size: 2rem;"></em>
-                                                        <h5 class="mt-3">Aucun membre trouvé</h5>
-                                                        <p class="text-soft">Aucun membre ne correspond à vos critères de recherche</p>
-                                                        <a href="{% url 'membres' %}" class="btn btn-outline-primary btn-sm">Réinitialiser les filtres</a>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                            {% endfor %}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-
-                            <!-- Pagination améliorée -->
-                            <div class="card-inner">
-                                <div class="nk-block-between-md g-3">
-                                    <div class="g">
-                                        <div class="pagination-goto d-flex justify-content-center justify-content-md-start gx-3">
-                                            <div>Afficher</div>
-                                            <div>
-                                                <select class="form-select form-select-sm" onchange="updatePerPage(this.value)">
-                                                    <option value="10" {% if paginate_by == 10 %}selected{% endif %}>10</option>
-                                                    <option value="25" {% if paginate_by == 25 %}selected{% endif %}>25</option>
-                                                    <option value="50" {% if paginate_by == 50 %}selected{% endif %}>50</option>
-                                                    <option value="100" {% if paginate_by == 100 %}selected{% endif %}>100</option>
-                                                </select>
-                                            </div>
-                                            <div>sur {{ membres.paginator.count }} membres</div>
-                                        </div>
-                                    </div>
-                                    <div class="g">
-                                        <ul class="pagination justify-content-center justify-content-md-start">
-                                            {% if membres.has_previous %}
-                                                <li class="page-item">
-                                                    <a class="page-link" href="?page=1{% for key,value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
-                                                        <em class="icon ni ni-chevrons-left"></em>
-                                                    </a>
-                                                </li>
-                                                <li class="page-item">
-                                                    <a class="page-link" href="?page={{ membres.previous_page_number }}{% for key,value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
-                                                        <em class="icon ni ni-chevron-left"></em>
-                                                    </a>
-                                                </li>
-                                            {% endif %}
-
-                                            {% for page_num in page_range %}
-                                                <li class="page-item {% if page_num == membres.number %}active{% endif %}">
-                                                    <a class="page-link" href="?page={{ page_num }}{% for key,value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
-                                                        {{ page_num }}
-                                                    </a>
-                                                </li>
-                                            {% endfor %}
-
-                                            {% if membres.has_next %}
-                                                <li class="page-item">
-                                                    <a class="page-link" href="?page={{ membres.next_page_number }}{% for key,value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
-                                                        <em class="icon ni ni-chevron-right"></em>
-                                                    </a>
-                                                </li>
-                                                <li class="page-item">
-                                                    <a class="page-link" href="?page={{ membres.paginator.num_pages }}{% for key,value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
-                                                        <em class="icon ni ni-chevrons-right"></em>
-                                                    </a>
-                                                </li>
-                                            {% endif %}
-                                        </ul>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="8" class="p-0">
+                        {% include 'layout/_empty_state.html' with title="Aucun membre trouvé" message="Aucun membre ne correspond à vos critères de recherche." cta_url='/fidele/membres/' cta_label="Réinitialiser" %}
+                    </td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
-    </div>
+
+        {# Pagination #}
+        {% if membres.has_other_pages %}
+        <div class="px-4 py-3 border-t border-slate-200 dark:border-slate-700/60 flex flex-wrap items-center justify-between gap-3">
+            <div class="text-xs text-slate-500 dark:text-slate-400">
+                Page <span class="font-semibold text-slate-700 dark:text-slate-200">{{ membres.number }}</span> / {{ membres.paginator.num_pages }}
+                — <span class="font-semibold text-slate-700 dark:text-slate-200">{{ membres.paginator.count }}</span> membres
+            </div>
+            <nav class="flex items-center gap-1">
+                {% if membres.has_previous %}
+                    <a href="?page=1{% for k,v in request.GET.items %}{% if k != 'page' %}&{{ k }}={{ v }}{% endif %}{% endfor %}" class="w-9 h-9 grid place-items-center rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800/50 transition">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"/></svg>
+                    </a>
+                    <a href="?page={{ membres.previous_page_number }}{% for k,v in request.GET.items %}{% if k != 'page' %}&{{ k }}={{ v }}{% endif %}{% endfor %}" class="w-9 h-9 grid place-items-center rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800/50 transition">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+                    </a>
+                {% endif %}
+                {% for page_num in page_range %}
+                    {% if page_num == membres.number %}
+                        <span class="w-9 h-9 grid place-items-center rounded-lg bg-brand-600 text-white text-sm font-semibold shadow-soft">{{ page_num }}</span>
+                    {% else %}
+                        <a href="?page={{ page_num }}{% for k,v in request.GET.items %}{% if k != 'page' %}&{{ k }}={{ v }}{% endif %}{% endfor %}" class="w-9 h-9 grid place-items-center rounded-lg border border-slate-200 dark:border-slate-700 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/50 transition">{{ page_num }}</a>
+                    {% endif %}
+                {% endfor %}
+                {% if membres.has_next %}
+                    <a href="?page={{ membres.next_page_number }}{% for k,v in request.GET.items %}{% if k != 'page' %}&{{ k }}={{ v }}{% endif %}{% endfor %}" class="w-9 h-9 grid place-items-center rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800/50 transition">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                    </a>
+                    <a href="?page={{ membres.paginator.num_pages }}{% for k,v in request.GET.items %}{% if k != 'page' %}&{{ k }}={{ v }}{% endif %}{% endfor %}" class="w-9 h-9 grid place-items-center rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800/50 transition">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 5l7 7-7 7M5 5l7 7-7 7"/></svg>
+                    </a>
+                {% endif %}
+            </nav>
+        </div>
+        {% endif %}
+    </section>
 </div>
 
-<!-- Modal des statistiques -->
-<div class="modal fade" id="statsModal" tabindex="-1" aria-labelledby="statsModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Statistiques détaillées</h5>
-                <button type="button" class="close" data-dismiss="modal">
-                    <em class="icon ni ni-cross"></em>
-                </button>
-            </div>
-            <div class="modal-body">
-                <ul class="nav nav-tabs" id="chartTabs" role="tablist">
-                    <li class="nav-item">
-                        <a class="nav-link active" id="gender-tab" data-toggle="tab" href="#gender" role="tab">Genre</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" id="age-tab" data-toggle="tab" href="#age" role="tab">Tranche d'âge</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" id="status-tab" data-toggle="tab" href="#status" role="tab">Statuts</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" id="baptism-tab" data-toggle="tab" href="#baptism" role="tab">Baptêmes</a>
-                    </li>
-                </ul>
-
-                <div class="tab-content mt-3">
-                    <div class="tab-pane fade show active" id="gender" role="tabpanel">
-                        <div class="row">
-                            <div class="col-md-6">
-                                <canvas id="genderChart" height="250"></canvas>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="card card-bordered">
-                                    <div class="card-inner">
-                                        <table class="table table-striped">
-                                            <thead>
-                                                <tr>
-                                                    <th>Genre</th>
-                                                    <th>Nombre</th>
-                                                    <th>Pourcentage</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                <tr>
-                                                    <td>Hommes</td>
-                                                    <td>{{ stats.hommes }}</td>
-                                                    <td>{{ stats.hommes|percentage:nombre_fideles }}%</td>
-                                                </tr>
-                                                <tr>
-                                                    <td>Femmes</td>
-                                                    <td>{{ stats.femmes }}</td>
-                                                    <td>{{ stats.femmes|percentage:nombre_fideles }}%</td>
-                                                </tr>
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="tab-pane fade" id="age" role="tabpanel">
-                        <div class="row">
-                            <div class="col-md-6">
-                                <canvas id="ageChart" height="250"></canvas>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="card card-bordered">
-                                    <div class="card-inner">
-                                        <table class="table table-striped">
-                                            <thead>
-                                                <tr>
-                                                    <th>Tranche d'âge</th>
-                                                    <th>Nombre</th>
-                                                    <th>Pourcentage</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {% for age in age_distribution %}
-                                                <tr>
-                                                    <td>{{ age.0 }}</td>
-                                                    <td>{{ age.1 }}</td>
-                                                    <td>{{ age.1|percentage:nombre_fideles }}%</td>
-                                                </tr>
-                                                {% endfor %}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="tab-pane fade" id="status" role="tabpanel">
-                        <div class="row">
-                            <div class="col-md-6">
-                                <canvas id="statusChart" height="250"></canvas>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="card card-bordered">
-                                    <div class="card-inner">
-                                        <table class="table table-striped">
-                                            <thead>
-                                                <tr>
-                                                    <th>Statut</th>
-                                                    <th>Nombre</th>
-                                                    <th>Pourcentage</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {% for status in status_distribution %}
-                                                <tr>
-                                                    <td>{{ status.0 }}</td>
-                                                    <td>{{ status.1 }}</td>
-                                                    <td>{{ status.1|percentage:nombre_fideles }}%</td>
-                                                </tr>
-                                                {% endfor %}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="tab-pane fade" id="baptism" role="tabpanel">
-                        <div class="row">
-                            <div class="col-md-6">
-                                <canvas id="baptismChart" height="250"></canvas>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="card card-bordered">
-                                    <div class="card-inner">
-                                        <table class="table table-striped">
-                                            <thead>
-                                                <tr>
-                                                    <th>Type</th>
-                                                    <th>Nombre</th>
-                                                    <th>Pourcentage</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                <tr>
-                                                    <td>Baptisés</td>
-                                                    <td>{{ stats.baptises }}</td>
-                                                    <td>{{ stats.baptises|percentage:nombre_fideles }}%</td>
-                                                </tr>
-                                                <tr>
-                                                    <td>Non baptisés</td>
-                                                    <td>{{ nombre_fideles|subtract:stats.baptises }}</td>
-                                                    <td>{{ nombre_fideles|subtract:stats.baptises|percentage:nombre_fideles }}%</td>
-                                                </tr>
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-outline-primary" onclick="exportAllChartsToCSV()">
-                    <em class="icon ni ni-download"></em> Export CSV
-                </button>
-                <button class="btn btn-secondary" data-dismiss="modal">Fermer</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Modal de sélection des colonnes -->
-<div class="modal fade" id="columnsModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-sm">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Colonnes visibles</h5>
-                <button type="button" class="close" data-dismiss="modal">
-                    <em class="icon ni ni-cross"></em>
-                </button>
-            </div>
-            <div class="modal-body">
-                <div class="custom-control custom-checkbox">
-                    <input type="checkbox" class="custom-control-input" id="colPhoto" checked>
-                    <label class="custom-control-label" for="colPhoto">Photo</label>
-                </div>
-                <div class="custom-control custom-checkbox">
-                    <input type="checkbox" class="custom-control-input" id="colEglise" checked>
-                    <label class="custom-control-label" for="colEglise">Église</label>
-                </div>
-                <div class="custom-control custom-checkbox">
-                    <input type="checkbox" class="custom-control-input" id="colContact" checked>
-                    <label class="custom-control-label" for="colContact">Contact</label>
-                </div>
-                <div class="custom-control custom-checkbox">
-                    <input type="checkbox" class="custom-control-input" id="colAge" checked>
-                    <label class="custom-control-label" for="colAge">Âge</label>
-                </div>
-                <div class="custom-control custom-checkbox">
-                    <input type="checkbox" class="custom-control-input" id="colStatus" checked>
-                    <label class="custom-control-label" for="colStatus">Statut</label>
-                </div>
-                <div class="custom-control custom-checkbox">
-                    <input type="checkbox" class="custom-control-input" id="colDept" checked>
-                    <label class="custom-control-label" for="colDept">Département</label>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-primary" onclick="applyColumnSettings()">Appliquer</button>
-                <button class="btn btn-secondary" data-dismiss="modal">Annuler</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<style>
-    /* Styles personnalisés */
-    .card-stat {
-        border: none;
-        border-radius: 10px;
-        color: white;
-        overflow: hidden;
-        transition: transform 0.3s, box-shadow 0.3s;
-    }
-
-    .card-stat:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 10px 20px rgba(0,0,0,0.1);
-    }
-
-    .card-stat .card-body {
-        padding: 20px;
-    }
-
-    .card-stat-head {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 15px;
-    }
-
-    .card-stat-head .icon {
-        font-size: 1.5rem;
-        opacity: 0.7;
-    }
-
-    .card-stat-body .amount {
-        font-size: 1.8rem;
-        font-weight: 600;
-        margin-bottom: 5px;
-    }
-
-    .card-stat-body .change {
-        font-size: 0.875rem;
-    }
-
-    .bg-gradient-primary {
-        background: linear-gradient(135deg, #6576ff 0%, #6a11cb 100%);
-    }
-
-    .bg-gradient-warning {
-        background: linear-gradient(135deg, #fbc434 0%, #f76b1c 100%);
-    }
-
-    .bg-gradient-info {
-        background: linear-gradient(135deg, #47c5fb 0%, #47b8f8 100%);
-    }
-
-    .bg-gradient-danger {
-        background: linear-gradient(135deg, #f5365c 0%, #f56036 100%);
-    }
-
-    .user-avatar {
-        width: 40px;
-        height: 40px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: 600;
-    }
-
-    .user-card {
-        display: flex;
-        align-items: center;
-    }
-
-    .user-info {
-        margin-left: 10px;
-    }
-
-    .user-info .tb-lead {
-        display: block;
-        font-weight: 500;
-    }
-
-    .badge-dim {
-        opacity: 0.9;
-    }
-
-    .table-responsive {
-        overflow-x: auto;
-    }
-
-    #membersTable th {
-        white-space: nowrap;
-    }
-
-    .nk-tb-item:hover {
-        background-color: rgba(101, 118, 255, 0.05);
-    }
-
-    .nav-tabs .nav-link.active {
-        font-weight: 500;
-        color: #6576ff;
-        border-bottom: 2px solid #6576ff;
-    }
-</style>
-
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
 <script>
-    // Initialisation des graphiques
-    document.addEventListener('DOMContentLoaded', function() {
-        // Graphique de répartition par genre
-        const genderCtx = document.getElementById('genderChart').getContext('2d');
-        const genderChart = new Chart(genderCtx, {
-            type: 'doughnut',
-            data: {
-                labels: ['Hommes', 'Femmes'],
-                datasets: [{
-                    data: [{{ stats.hommes }}, {{ stats.femmes }}],
-                    backgroundColor: ['#6576ff', '#f672a7'],
-                    borderWidth: 0
-                }]
-            },
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: {
-                        position: 'bottom'
-                    },
-                    datalabels: {
-                        formatter: (value, ctx) => {
-                            let sum = ctx.chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
-                            let percentage = (value * 100 / sum).toFixed(1) + "%";
-                            return percentage;
-                        },
-                        color: '#fff',
-                        font: {
-                            weight: 'bold'
-                        }
-                    }
-                }
-            },
-            plugins: [ChartDataLabels]
-        });
-
-        // Graphique de répartition par âge
-        const ageCtx = document.getElementById('ageChart').getContext('2d');
-        const ageChart = new Chart(ageCtx, {
-            type: 'bar',
-            data: {
-                labels: [{% for age in age_distribution %}'{{ age.0 }}',{% endfor %}],
-                datasets: [{
-                    label: 'Membres par tranche d\'âge',
-                    data: [{% for age in age_distribution %}{{ age.1 }},{% endfor %}],
-                    backgroundColor: ['#47c5fb', '#6576ff', '#8e6ffd', '#b56ffd', '#f672a7'],
-                    borderWidth: 0
-                }]
-            },
-            options: {
-                responsive: true,
-                scales: {
-                    y: {
-                        beginAtZero: true
-                    }
-                },
-                plugins: {
-                    legend: {
-                        display: false
-                    }
-                }
-            }
-        });
-
-        // Graphique de répartition par statut
-        const statusCtx = document.getElementById('statusChart').getContext('2d');
-        const statusChart = new Chart(statusCtx, {
-            type: 'pie',
-            data: {
-                labels: [{% for status in status_distribution %}'{{ status.0 }}',{% endfor %}],
-                datasets: [{
-                    data: [{% for status in status_distribution %}{{ status.1 }},{% endfor %}],
-                    backgroundColor: ['#7987a1', '#6576ff', '#f672a7', '#47c5fb'],
-                    borderWidth: 0
-                }]
-            },
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: {
-                        position: 'bottom'
-                    },
-                    datalabels: {
-                        formatter: (value, ctx) => {
-                            let sum = ctx.chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
-                            let percentage = (value * 100 / sum).toFixed(1) + "%";
-                            return percentage;
-                        },
-                        color: '#fff',
-                        font: {
-                            weight: 'bold'
-                        }
-                    }
-                }
-            },
-            plugins: [ChartDataLabels]
-        });
-
-        // Graphique de répartition des baptêmes
-        const baptismCtx = document.getElementById('baptismChart').getContext('2d');
-        const baptismChart = new Chart(baptismCtx, {
-            type: 'doughnut',
-            data: {
-                labels: ['Baptisés', 'Non baptisés'],
-                datasets: [{
-                    data: [{{ stats.baptises }}, {{ nombre_fideles|subtract:stats.baptises }}],
-                    backgroundColor: ['#6576ff', '#7987a1'],
-                    borderWidth: 0
-                }]
-            },
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: {
-                        position: 'bottom'
-                    },
-                    datalabels: {
-                        formatter: (value, ctx) => {
-                            let sum = ctx.chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
-                            let percentage = (value * 100 / sum).toFixed(1) + "%";
-                            return percentage;
-                        },
-                        color: '#fff',
-                        font: {
-                            weight: 'bold'
-                        }
-                    }
-                }
-            },
-            plugins: [ChartDataLabels]
-        });
-
-        // Gestion de la sélection multiple
-        const selectAll = document.getElementById('selectAll');
-        const checkboxes = document.querySelectorAll('.member-checkbox');
-        const batchActionsBtn = document.getElementById('batchActionsBtn');
-
-        selectAll.addEventListener('change', function() {
-            checkboxes.forEach(checkbox => {
-                checkbox.checked = selectAll.checked;
-            });
-            updateBatchActionsBtn();
-        });
-
-        checkboxes.forEach(checkbox => {
-            checkbox.addEventListener('change', function() {
-                updateBatchActionsBtn();
-                selectAll.checked = [...checkboxes].every(cb => cb.checked);
-            });
-        });
-
-        function updateBatchActionsBtn() {
-            const checkedCount = [...checkboxes].filter(cb => cb.checked).length;
-            batchActionsBtn.disabled = checkedCount === 0;
-            if (checkedCount > 0) {
-                batchActionsBtn.innerHTML = `<em class="icon ni ni-tool"></em><span>Actions (${checkedCount})</span>`;
-            } else {
-                batchActionsBtn.innerHTML = `<em class="icon ni ni-tool"></em><span>Actions groupées</span>`;
-            }
+function filterByStatus(status) {
+    const url = new URL(window.location);
+    url.searchParams.set('statut', status);
+    url.searchParams.delete('page');
+    window.location = url;
+}
+function exportToCSV() {
+    const rows = [['Nom','Église','Contact','Âge','Statut','Département']];
+    document.querySelectorAll('#membersTable tbody tr').forEach(tr => {
+        const tds = tr.querySelectorAll('td');
+        if (tds.length >= 7) {
+            rows.push([tds[1], tds[2], tds[3], tds[4], tds[5], tds[6]].map(td => td.innerText.trim().replace(/\s+/g,' ')));
         }
     });
-
-    // Fonctions utilitaires
-    function showStatsModal() {
-        $('#statsModal').modal('show');
-    }
-
-    function filterByStatus(status) {
-        const form = document.getElementById('advancedFilterForm');
-        form.querySelector('[name="statut"]').value = status;
-        form.submit();
-    }
-
-    function filterByBaptism(isBaptized) {
-        const form = document.getElementById('advancedFilterForm');
-        form.querySelector('[name="baptized"]').value = isBaptized;
-        form.submit();
-    }
-
-    function updatePerPage(value) {
-        const url = new URL(window.location.href);
-        url.searchParams.set('per_page', value);
-        window.location.href = url.toString();
-    }
-
-    function exportToPDF() {
-        // Implémentation de l'export PDF
-        alert('Export PDF en cours de développement');
-    }
-
-    function exportToExcel() {
-        // Implémentation de l'export Excel
-        alert('Export Excel en cours de développement');
-    }
-
-    function exportToCSV() {
-        // Implémentation de l'export CSV
-        alert('Export CSV en cours de développement');
-    }
-
-    function exportVisibleToExcel() {
-        // Implémentation de l'export des données visibles
-        alert('Export des données visibles en cours de développement');
-    }
-
-    function printTable() {
-        window.print();
-    }
-
-    function exportAllChartsToCSV() {
-        // Implémentation de l'export des graphiques
-        alert('Export des graphiques en CSV en cours de développement');
-    }
-
-    function applyColumnSettings() {
-        // Implémentation de la gestion des colonnes
-        alert('Gestion des colonnes en cours de développement');
-        $('#columnsModal').modal('hide');
-    }
-
-    function confirmDeactivate(id) {
-        Swal.fire({
-            title: 'Confirmer la désactivation',
-            text: "Êtes-vous sûr de vouloir désactiver ce membre ?",
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#6576ff',
-            cancelButtonColor: '#f5365c',
-            confirmButtonText: 'Oui, désactiver',
-            cancelButtonText: 'Annuler'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                // Implémentation de la désactivation
-                Swal.fire(
-                    'Désactivé!',
-                    'Le membre a été désactivé.',
-                    'success'
-                );
-            }
-        });
-    }
-
-    function sendMessage(id) {
-        // Implémentation de l'envoi de message
-        alert('Envoi de message au membre ID: ' + id);
-    }
+    const csv = rows.map(r => r.map(c => `"${c.replace(/"/g,'""')}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'membres.csv';
+    a.click();
+}
+document.getElementById('selectAll')?.addEventListener('change', function() {
+    document.querySelectorAll('.member-checkbox').forEach(cb => {
+        cb.checked = this.checked;
+        cb.dispatchEvent(new Event('change'));
+    });
+});
 </script>
 {% endblock %}

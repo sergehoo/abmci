@@ -1,344 +1,289 @@
 {% extends 'layout/base.html' %}
+{% load static %}
+{% block head_title %}Direction {{ directions.name }} – Alliance Connect{% endblock %}
 
 {% block content %}
-     <!-- content @s -->
-            <div class="nk-content nk-content-fluid">
-                <div class="container-xl wide-xl">
-                    <div class="nk-content-inner">
-                        <div class="nk-content-body">
-                            <div class="nk-block-head nk-block-head-sm">
-                                <div class="nk-block-between">
-                                    <div class="nk-block-head-content">
-                                        <h3 class="nk-block-title page-title">Direction {{ directions.name }}</h3>
-                                        <div class="nk-block-des text-soft">
-                                            <p> Cette direction compte au total {{ nombre_membres }} membres.</p>
-                                        </div>
-                                    </div><!-- .nk-block-head-content -->
-                                    <div class="nk-block-head-content">
-                                        <div class="toggle-wrap nk-block-tools-toggle">
-                                            <a href="#" class="btn btn-icon btn-trigger toggle-expand mr-n1" data-target="pageMenu"><em class="icon ni ni-menu-alt-r"></em></a>
-                                            <div class="toggle-expand-content" data-content="pageMenu">
-                                                <ul class="nk-block-tools g-3">
-                                                    <li><a href="#" class="btn btn-white btn-outline-light"><em class="icon ni ni-download-cloud"></em><span>Export</span></a></li>
-                                                    <li class="nk-block-tools-opt">
-                                                        <div class="drodown">
-                                                            <a href="#" class="dropdown-toggle btn btn-icon btn-primary" data-toggle="dropdown"><em class="icon ni ni-plus"></em></a>
-                                                            <div class="dropdown-menu dropdown-menu-right">
-                                                                <ul class="link-list-opt no-bdr">
-                                                                    <li><a href="#"><span>Nouveau fidèle</span></a></li>
-                                                                    <li><a href="#"><span>Creer un Group</span></a></li>
-                                                                </ul>
-                                                            </div>
-                                                        </div>
-                                                    </li>
-                                                </ul>
-                                            </div>
-                                        </div><!-- .toggle-wrap -->
-                                    </div><!-- .nk-block-head-content -->
-                                </div><!-- .nk-block-between -->
-                            </div><!-- .nk-block-head -->
-                            <div class="nk-block">
-                                <div class="card card-bordered card-stretch">
-                                    <div class="card-inner-group">
-                                        <div class="card-inner position-relative card-tools-toggle">
-                                            <div class="card-title-group">
-                                                <div class="card-tools">
-                                                    <div class="form-inline flex-nowrap gx-3">
-                                                        <div class="form-wrap w-150px">
-                                                            <select class="form-select form-select-sm" data-search="off" data-placeholder="Bulk Action">
-                                                                <option value="">Lister par Departements</option>
-                                                                <option value="email">Communication</option>
-                                                                <option value="group">Musique</option>
-                                                                <option value="suspend">Hotesse</option>
-                                                                <option value="delete">Protocole</option>
-                                                            </select>
-                                                        </div>
-                                                        <div class="btn-wrap">
-                                                            <span class="d-none d-md-block"><button class="btn btn-dim btn-outline-light disabled">Apply</button></span>
-                                                            <span class="d-md-none"><button class="btn btn-dim btn-outline-light btn-icon disabled"><em class="icon ni ni-arrow-right"></em></button></span>
-                                                        </div>
-                                                    </div><!-- .form-inline -->
-                                                </div><!-- .card-tools -->
-                                                <div class="card-tools mr-n1">
-                                                    <ul class="btn-toolbar gx-1">
-                                                        <li>
-                                                            <a href="#" class="btn btn-icon search-toggle toggle-search" data-target="search"><em class="icon ni ni-search"></em></a>
-                                                        </li><!-- li -->
-                                                        <li class="btn-toolbar-sep"></li><!-- li -->
-                                                        <li>
-                                                            <div class="toggle-wrap">
-                                                                <a href="#" class="btn btn-icon btn-trigger toggle" data-target="cardTools"><em class="icon ni ni-menu-right"></em></a>
-                                                                <div class="toggle-content" data-content="cardTools">
-                                                                    <ul class="btn-toolbar gx-1">
-                                                                        <li class="toggle-close">
-                                                                            <a href="#" class="btn btn-icon btn-trigger toggle" data-target="cardTools"><em class="icon ni ni-arrow-left"></em></a>
-                                                                        </li><!-- li -->
-                                                                        <li>
-                                                                            <div class="dropdown">
-                                                                                <a href="#" class="btn btn-trigger btn-icon dropdown-toggle" data-toggle="dropdown">
-                                                                                    <div class="dot dot-primary"></div>
-                                                                                    <em class="icon ni ni-filter-alt"></em>
-                                                                                </a>
-                                                                                <div class="filter-wg dropdown-menu dropdown-menu-xl dropdown-menu-right">
-                                                                                    <div class="dropdown-head">
-                                                                                        <span class="sub-title dropdown-title">Filtrer les Fidele</span>
-                                                                                        <div class="dropdown">
-                                                                                            <a href="#" class="btn btn-sm btn-icon">
-                                                                                                <em class="icon ni ni-more-h"></em>
-                                                                                            </a>
-                                                                                        </div>
-                                                                                    </div>
-                                                                                    <div class="dropdown-body dropdown-body-rg">
-                                                                                        <div class="row gx-6 gy-3">
-                                                                                            <div class="col-6">
-                                                                                                <div class="custom-control custom-control-sm custom-checkbox">
-                                                                                                    <input type="checkbox" class="custom-control-input" id="hasBalance">
-                                                                                                    <label class="custom-control-label" for="hasBalance"> Actif </label>
-                                                                                                </div>
-                                                                                            </div>
-                                                                                            <div class="col-6">
-                                                                                                <div class="custom-control custom-control-sm custom-checkbox">
-                                                                                                    <input type="checkbox" class="custom-control-input" id="hasKYC">
-                                                                                                    <label class="custom-control-label" for="hasKYC"> Sans Department </label>
-                                                                                                </div>
-                                                                                            </div>
-                                                                                            <div class="col-6">
-                                                                                                <div class="form-group">
-                                                                                                    <label class="overline-title overline-title-alt">Role</label>
-                                                                                                    <select class="form-select form-select-sm">
-                                                                                                        <option value="any">Pasteur</option>
-                                                                                                        <option value="investor">Fidèle</option>
-                                                                                                        <option value="seller">Responsable</option>
-                                                                                                        <option value="buyer">Femme</option>
-                                                                                                        <option value="buyer">Homme</option>
-                                                                                                    </select>
-                                                                                                </div>
-                                                                                            </div>
-                                                                                            <div class="col-6">
-                                                                                                <div class="form-group">
-                                                                                                    <label class="overline-title overline-title-alt">Statut</label>
-                                                                                                    <select class="form-select form-select-sm">
-                                                                                                        <option value="any">Any Status</option>
-                                                                                                        <option value="active">Actif</option>
-                                                                                                        <option value="pending">Sous discipline</option>
-                                                                                                        <option value="suspend">Blocker</option>
-                                                                                                        <option value="deleted">Supprimer</option>
-                                                                                                    </select>
-                                                                                                </div>
-                                                                                            </div>
-                                                                                            <div class="col-12">
-                                                                                                <div class="form-group">
-                                                                                                    <button type="button" class="btn btn-secondary">Filter</button>
-                                                                                                </div>
-                                                                                            </div>
-                                                                                        </div>
-                                                                                    </div>
-                                                                                    <div class="dropdown-foot between">
-                                                                                        <a class="clickable" href="#">Reinitialiser le Filter</a>
-                                                                                        <a href="#">Save Filter</a>
-                                                                                    </div>
-                                                                                </div><!-- .filter-wg -->
-                                                                            </div><!-- .dropdown -->
-                                                                        </li><!-- li -->
-                                                                        <li>
-                                                                            <div class="dropdown">
-                                                                                <a href="#" class="btn btn-trigger btn-icon dropdown-toggle" data-toggle="dropdown">
-                                                                                    <em class="icon ni ni-setting"></em>
-                                                                                </a>
-                                                                                <div class="dropdown-menu dropdown-menu-xs dropdown-menu-right">
-                                                                                    <ul class="link-check">
-                                                                                        <li><span>Show</span></li>
-                                                                                        <li class="active"><a href="#">10</a></li>
-                                                                                        <li><a href="#">20</a></li>
-                                                                                        <li><a href="#">50</a></li>
-                                                                                    </ul>
-                                                                                    <ul class="link-check">
-                                                                                        <li><span>Order</span></li>
-                                                                                        <li class="active"><a href="#">DESC</a></li>
-                                                                                        <li><a href="#">ASC</a></li>
-                                                                                    </ul>
-                                                                                </div>
-                                                                            </div><!-- .dropdown -->
-                                                                        </li><!-- li -->
-                                                                    </ul><!-- .btn-toolbar -->
-                                                                </div><!-- .toggle-content -->
-                                                            </div><!-- .toggle-wrap -->
-                                                        </li><!-- li -->
-                                                    </ul><!-- .btn-toolbar -->
-                                                </div><!-- .card-tools -->
-                                            </div><!-- .card-title-group -->
-                                            <div class="card-search search-wrap" data-search="search">
-                                                <div class="card-body">
-                                                    <div class="search-content">
-                                                        <a href="#" class="search-back btn btn-icon toggle-search" data-target="search"><em class="icon ni ni-arrow-left"></em></a>
-                                                        <input type="text" class="form-control border-transparent form-focus-none" placeholder="Search by user or email">
-                                                        <button class="search-submit btn btn-icon"><em class="icon ni ni-search"></em></button>
-                                                    </div>
-                                                </div>
-                                            </div><!-- .card-search -->
-                                        </div><!-- .card-inner -->
-                                       <div class="card-inner">
-                                            <table class="datatable-init table">
-                                                <thead class="bg-gray-300">
-                                                    <tr>
-                                                        <th>Nom et prenom </th>
-                                                        <th>Contact</th>
-                                                        <th>Age </th>
-                                                        <th>Fonction</th>
-                                                        <th>Type de membre</th>
-                                                        <th>Note Service</th>
+<div x-data="{ tab: 'membres' }">
 
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {% for membre in directions.members %}
-                                                    <tr>
-                                                        <td>{{ membre.user.first_name }} {{ membre.user.last_name }} {% if membre.est_nouveau == True %}<span class="badge badge-dot badge-info">Nouvel âme</span> {% endif %}</td>
-                                                        <td>{{ membre.phone }}</td>
-                                                        <td>{{ membre.age }}</td>
-                                                        <td>{{ membre.fonction }}</td>
-                                                        <td>{{ membre.type_membre }}</td>
-                                                        <td><span class="badge badge-warning">14</span></td>
-
-                                                    </tr>
-                                                        {% empty %}
-                                                        <tr style="text-align: center"  ><td style="text-align: center">Aucun participant enrégistré pour l'heure </td></tr>
- {% endfor %}
-
-                                                </tbody>
-                                            </table>
-                                        </div>
-
-                                    </div><!-- .card-inner-group -->
-                                </div><!-- .card -->
-                            </div><!-- .nk-block -->
-
-
-                        <div class="nk-block-head nk-block-head-sm">
-                                <div class="nk-block-between">
-                                    <div class="nk-block-head-content">
-                                        <h3 class="nk-block-title page-title">Programme de Permanence</h3>
-                                        <div class="nk-block-des text-soft">
-                                            <p> Cette direction compte au total {{ nombre_membres }} membres.</p>
-                                        </div>
-                                    </div><!-- .nk-block-head-content -->
-                                    <div class="nk-block-head-content">
-                                        <div class="toggle-wrap nk-block-tools-toggle">
-                                            <a href="#" class="btn btn-icon btn-trigger toggle-expand mr-n1" data-target="pageMenu"><em class="icon ni ni-menu-alt-r"></em></a>
-                                            <div class="toggle-expand-content" data-content="pageMenu">
-                                                <ul class="nk-block-tools g-3">
-                                                    <li class="nk-block-tools-opt">
-                                                        <div class="drodown">
-                                                            <a href="#" class="btn btn-icon btn-primary" data-toggle="modal" data-target="#permanence"><em class="icon ni ni-plus"></em></a>
-                                                        </div>
-                                                    </li>
-                                                </ul>
-                                            </div>
-                                        </div><!-- .toggle-wrap -->
-                                    </div><!-- .nk-block-head-content -->
-                                </div><!-- .nk-block-between -->
-                            </div>
-
-  <!-- Modal Trigger Code -->
-<!-- Modal Content Code -->
-<div class="modal fade" tabindex="-1" id="permanence">
-    <div class="modal-dialog" role="document">
-        <div class="modal-content">
-            <a href="#" class="close" data-dismiss="modal" aria-label="Close">
-                <em class="icon ni ni-cross"></em>
+    <header class="mb-6 lg:mb-8">
+        <nav class="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 mb-2">
+            <a href="{% url 'home' %}" class="hover:text-brand-600 transition">Tableau de bord</a>
+            <svg class="w-3 h-3 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+            <span class="text-slate-700 dark:text-slate-300 font-medium truncate">{{ directions.name }}</span>
+        </nav>
+        <div class="flex flex-wrap items-end justify-between gap-3">
+            <div>
+                <div class="text-xs font-semibold tracking-wider uppercase text-brand-600 dark:text-brand-300 mb-1.5">Direction</div>
+                <h1 class="font-display text-2xl lg:text-3xl font-bold text-slate-900 dark:text-white">{{ directions.name }}</h1>
+                {% if directions.description %}<p class="text-sm text-slate-500 dark:text-slate-400 mt-1.5 max-w-2xl">{{ directions.description }}</p>{% endif %}
+            </div>
+            <a href="{% url 'membres' %}?departement_id={{ directions.id }}" class="inline-flex items-center gap-2 h-10 px-4 rounded-lg border border-slate-200 dark:border-slate-700 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/50 transition">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                <span>Filtrer dans la liste</span>
             </a>
-            <div class="modal-header">
-                <h5 class="modal-title">Ajouter une Permanence  </h5>
-            </div>
-            <div class="modal-body">
-               <form action="{% url 'createpermanence' directions.pk %}" method="post" enctype="multipart/form-data">
-                   {% csrf_token %}
-                   {{ permanence_form.as_p }}
-                   <button type="submit" class="btn btn-outline-primary">Enregistrer</button>
-               </form>
-            </div>
-            <div class="modal-footer bg-light">
-                <span class="sub-text"> Programme de permanence </span>
-            </div>
+        </div>
+    </header>
+
+    <section class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-brand-600 via-brand-700 to-violet-700 p-6 lg:p-8 text-white shadow-soft-lg mb-6">
+        <div aria-hidden="true" class="absolute -top-20 -right-20 w-64 h-64 rounded-full bg-violet-400/30 blur-3xl"></div>
+        <div class="relative flex flex-wrap items-center gap-5">
+            {% if directions.responsable %}
+                <div class="w-20 h-20 rounded-2xl bg-white/15 backdrop-blur ring-2 ring-white/30 grid place-items-center text-white font-display text-2xl font-bold shrink-0 overflow-hidden">
+                    {% if directions.responsable.photo %}<img src="{{ directions.responsable.photo.url }}" alt="" class="w-full h-full object-cover">
+                    {% else %}{{ directions.responsable.user.first_name|first|upper }}{{ directions.responsable.user.last_name|first|upper }}{% endif %}
+                </div>
+                <div class="flex-1 min-w-0">
+                    <div class="text-xs uppercase tracking-wider opacity-90 font-semibold">Responsable</div>
+                    <h2 class="font-display text-xl font-bold">{{ directions.responsable }}</h2>
+                    {% if directions.responsable.phone %}<div class="text-sm text-white/85 mt-1">{{ directions.responsable.phone }}</div>{% endif %}
+                </div>
+            {% else %}
+                <div class="text-sm text-white/85">Aucun responsable assigné à cette direction.</div>
+            {% endif %}
+        </div>
+    </section>
+
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4 mb-6">
+        <div class="bg-white dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-soft p-4">
+            <div class="text-[11px] uppercase tracking-wider text-slate-400 font-semibold">Membres</div>
+            <div class="font-display text-2xl font-bold text-slate-900 dark:text-white tabular-nums mt-1">{{ nombre_membres }}</div>
+        </div>
+        <div class="bg-white dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-soft p-4">
+            <div class="text-[11px] uppercase tracking-wider text-brand-600 font-semibold">Réunions</div>
+            <div class="font-display text-2xl font-bold text-brand-600 dark:text-brand-300 tabular-nums mt-1">{{ reunions|length }}</div>
+        </div>
+        <div class="bg-white dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-soft p-4">
+            <div class="text-[11px] uppercase tracking-wider text-emerald-600 font-semibold">Taux de présence</div>
+            <div class="font-display text-2xl font-bold text-emerald-600 dark:text-emerald-300 tabular-nums mt-1">{{ stats_presence.taux_presence }} %</div>
+        </div>
+        <div class="bg-white dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-soft p-4">
+            <div class="text-[11px] uppercase tracking-wider text-amber-600 font-semibold">Services suivis</div>
+            <div class="font-display text-2xl font-bold text-amber-600 dark:text-amber-300 tabular-nums mt-1">{{ services|length }}</div>
         </div>
     </div>
-</div>
 
+    <nav class="bg-white dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-soft mb-6 px-2 sm:px-3 flex items-center gap-1 overflow-x-auto">
+        <button @click="tab='membres'"
+                :class="tab==='membres' ? 'bg-brand-600 text-white' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/60'"
+                class="flex items-center gap-2 px-4 py-3 rounded-lg text-sm font-medium transition whitespace-nowrap">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857"/></svg>
+            Membres ({{ nombre_membres }})
+        </button>
+        <button @click="tab='reunions'"
+                :class="tab==='reunions' ? 'bg-brand-600 text-white' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/60'"
+                class="flex items-center gap-2 px-4 py-3 rounded-lg text-sm font-medium transition whitespace-nowrap">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+            Réunions ({{ reunions|length }})
+        </button>
+        <button @click="tab='presences'"
+                :class="tab==='presences' ? 'bg-brand-600 text-white' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/60'"
+                class="flex items-center gap-2 px-4 py-3 rounded-lg text-sm font-medium transition whitespace-nowrap">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+            Présences services
+        </button>
+    </nav>
 
-                        <div class="nk-block">
-                                <div class="card card-bordered card-stretch">
+    {# === MEMBRES === #}
+    <section x-show="tab==='membres'" class="bg-white dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-soft overflow-hidden">
+        {% if fideles %}
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700/60">
+                    <thead class="bg-slate-50 dark:bg-slate-800/60">
+                        <tr>
+                            <th class="px-4 py-3 text-left text-[10px] uppercase tracking-wider text-slate-500 font-semibold">Membre</th>
+                            <th class="px-4 py-3 text-left text-[10px] uppercase tracking-wider text-slate-500 font-semibold">Église</th>
+                            <th class="px-4 py-3 text-left text-[10px] uppercase tracking-wider text-slate-500 font-semibold">Contact</th>
+                            <th class="px-4 py-3 text-left text-[10px] uppercase tracking-wider text-slate-500 font-semibold">Statut</th>
+                            <th class="px-4 py-3"></th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100 dark:divide-slate-700/40">
+                        {% for fidele in fideles %}
+                            <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition">
+                                <td class="px-4 py-3">
+                                    <a href="{% url 'membre' fidele.slug %}" class="flex items-center gap-3 group">
+                                        <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-brand-500 to-violet-500 text-white grid place-items-center font-semibold text-xs shrink-0 ring-2 ring-white dark:ring-slate-800 shadow-soft overflow-hidden">
+                                            {% if fidele.photo %}<img src="{{ fidele.photo.url }}" alt="" class="w-full h-full object-cover">
+                                            {% else %}{{ fidele.user.first_name|first|upper }}{{ fidele.user.last_name|first|upper }}{% endif %}
+                                        </div>
+                                        <div class="min-w-0">
+                                            <div class="text-sm font-medium text-slate-800 dark:text-slate-100 truncate group-hover:text-brand-700 transition">{{ fidele.user.get_full_name }}</div>
+                                            <div class="text-xs text-slate-500 dark:text-slate-400 truncate">{{ fidele.fonction|default:"—" }}</div>
+                                        </div>
+                                    </a>
+                                </td>
+                                <td class="px-4 py-3 text-sm text-slate-600 dark:text-slate-300">{{ fidele.eglise|default:"—" }}</td>
+                                <td class="px-4 py-3">
+                                    <div class="text-sm text-slate-700 dark:text-slate-200">{{ fidele.phone|default:"—" }}</div>
+                                </td>
+                                <td class="px-4 py-3">
+                                    {% if fidele.statut == 'Membre actif' %}
+                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 text-xs font-medium"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>{{ fidele.statut }}</span>
+                                    {% else %}
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs">{{ fidele.statut|default:"—" }}</span>
+                                    {% endif %}
+                                </td>
+                                <td class="px-4 py-3 text-right">
+                                    <a href="{% url 'membre' fidele.slug %}" class="inline-flex items-center gap-1 text-sm text-brand-600 hover:underline font-medium">
+                                        Voir <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                                    </a>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            {% include 'layout/_empty_state.html' with title="Aucun membre" message="Aucun fidèle n'est rattaché à cette direction." %}
+        {% endif %}
+    </section>
 
-                                    <div class="card-inner-group">
+    {# === RÉUNIONS === #}
+    <section x-show="tab==='reunions'" x-cloak class="space-y-5">
+        <div class="bg-white dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-soft overflow-hidden">
+            <div class="px-5 py-4 border-b border-slate-200 dark:border-slate-700/60 flex items-center justify-between">
+                <div>
+                    <h3 class="font-display font-semibold text-slate-900 dark:text-white">Programme des réunions</h3>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">Permanences et événements rattachés à la direction</p>
+                </div>
+                <span class="text-xs text-slate-400">{{ reunions|length }} programme(s)</span>
+            </div>
+            {% if reunions %}
+                <ul class="divide-y divide-slate-100 dark:divide-slate-700/40">
+                    {% for r in reunions %}
+                        <li class="flex items-start gap-4 px-5 py-4 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition">
+                            <div class="w-12 h-12 rounded-xl bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-300 grid place-items-center text-center shrink-0">
+                                {% if r.event and r.event.date_debut %}
+                                    <div>
+                                        <div class="text-[10px] uppercase tracking-wider font-bold">{{ r.event.date_debut|date:"M" }}</div>
+                                        <div class="font-display text-base font-bold leading-none">{{ r.event.date_debut|date:"d" }}</div>
+                                    </div>
+                                {% else %}
+                                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                                {% endif %}
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate">{{ r.titre|default:"Programme" }}</div>
+                                {% if r.event %}
+                                    <div class="text-xs text-slate-500 dark:text-slate-400 truncate">{{ r.event.titre|default:"" }}{% if r.event.lieu %} · {{ r.event.lieu }}{% endif %}</div>
+                                {% endif %}
+                                <div class="text-[11px] text-slate-400 mt-1">Créé par {{ r.auteur|default:"—" }} · {{ r.add_date|date:"d M Y" }}</div>
+                            </div>
+                            {% if r.event %}
+                                <a href="{% url 'event-detail' r.event.pk %}" class="text-sm text-brand-600 hover:underline font-medium shrink-0">Voir l'événement →</a>
+                            {% endif %}
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                {% include 'layout/_empty_state.html' with title="Aucun programme" message="Aucune réunion ou permanence n'a encore été créée pour cette direction." %}
+            {% endif %}
+        </div>
 
-                                        <div class="card-inner">
-
-<div id="accordion-2" class="accordion accordion-s3">
-    {% for ouvrier in permanence %}
-
-        <div class="accordion-item">
-            <a href="#" class="accordion-head bg-light" data-toggle="collapse"
-               data-target="#accordion-item-{{ forloop.counter }}">
-                <h6 class="title">
-                    {% if ouvrier.event.is_same_date %}
-                        {{ ouvrier.event.date_debut|date:"d F Y" }}
-                        <span class="badge">{{ ouvrier.event.date_debut|time:"G:i A" }}</span>-
-                        <span class="badge">{{ ouvrier.event.date_fin|time:"G:i A" }}</span>
-                    {% else %}
-                        {{ ouvrier.event.date_debut|date:"d F Y"  }}<span class="badge">{{ ouvrier.event.date_debut|time:"G:i A" }}</span> --  {{ ouvrier.event.date_fin|date:"d F Y"  }} <span class="badge">{{ ouvrier.event.date_fin|time:"G:i A" }}</span>
-                    {% endif %}
-                </h6>
-                <span class="accordion-icon"></span>
-            </a>
-            <div class="accordion-body collapse show" id="accordion-item-{{ forloop.counter }}"
-                 data-parent="#accordion-2">
-                <div class="accordion-inner">
-                    <table class="table">
-                        <thead>
+        {% if ouvriers_assigns %}
+            <div class="bg-white dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-soft overflow-hidden">
+                <div class="px-5 py-4 border-b border-slate-200 dark:border-slate-700/60">
+                    <h3 class="font-display font-semibold text-slate-900 dark:text-white">Ouvriers de permanence</h3>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">Membres assignés à un poste lors des réunions</p>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700/60">
+                        <thead class="bg-slate-50 dark:bg-slate-800/60">
                             <tr>
-                                <th>Nom et prénom</th>
-                                <th>Poste</th>
-                                <th>Position</th>
-                                <th>Culte</th>
-                                <th>Activités</th>
-                                <th>Date</th>
+                                <th class="px-4 py-3 text-left text-[10px] uppercase tracking-wider text-slate-500 font-semibold">Ouvrier</th>
+                                <th class="px-4 py-3 text-left text-[10px] uppercase tracking-wider text-slate-500 font-semibold">Poste</th>
+                                <th class="px-4 py-3 text-left text-[10px] uppercase tracking-wider text-slate-500 font-semibold">Programme</th>
+                                <th class="px-4 py-3 text-left text-[10px] uppercase tracking-wider text-slate-500 font-semibold">Date</th>
                             </tr>
                         </thead>
-                        <tbody>
-                            {% for ouvrier_permanence in ouvrier.ouvrierpermanence_set.all %}
-                                <tr>
-                                    <td>{{ ouvrier_permanence.ouvrier.user.first_name }} {{ ouvrier_permanence.ouvrier.user.last_name }}</td>
-                                    <td>{{ ouvrier_permanence.poste }}</td>
-                                    <td>{{ ouvrier_permanence.position }}</td>
-                                    <td>{{ ouvrier.event.titre }}</td>
-                                    <td>{{ ouvrier_permanence.activites }}</td>
-                                    <td>
-                                        {% if ouvrier_permanence.date == None  %}
-                                            {{ ouvrier.event.date_debut|date:"d F Y" }}
-                                        {% else %}
-                                        {{ ouvrier_permanence.date }}
-                                        {% endif %}
-
-                                    </td>
+                        <tbody class="divide-y divide-slate-100 dark:divide-slate-700/40">
+                            {% for o in ouvriers_assigns %}
+                                <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition">
+                                    <td class="px-4 py-3 text-sm font-medium text-slate-800 dark:text-slate-100">{{ o.ouvrier|default:"—" }}</td>
+                                    <td class="px-4 py-3 text-sm text-slate-600 dark:text-slate-300">{{ o.poste|default:"—" }}{% if o.position %} <span class="text-xs text-slate-400">— {{ o.position }}</span>{% endif %}</td>
+                                    <td class="px-4 py-3 text-sm text-slate-600 dark:text-slate-300 truncate max-w-[200px]">{{ o.programme.titre|default:"—" }}</td>
+                                    <td class="px-4 py-3 text-sm text-slate-600 dark:text-slate-300">{{ o.date|default:o.add_date|date:"d M Y" }}</td>
                                 </tr>
                             {% endfor %}
                         </tbody>
                     </table>
                 </div>
             </div>
-        </div>
-    {% endfor %}
-</div>
+        {% endif %}
 
-
-                                        </div>
-
-                                    </div><!-- .card-inner-group -->
-                                </div><!-- .card -->
-                            </div><!-- .nk-block -->
-
+        {% if permanence_form %}
+            <details class="group bg-white dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-soft p-5">
+                <summary class="cursor-pointer text-sm font-semibold text-brand-600 hover:text-brand-700 flex items-center gap-2">
+                    <svg class="w-4 h-4 group-open:rotate-90 transition" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                    Ajouter un ouvrier de permanence
+                </summary>
+                <form method="post" action="{% url 'createpermanence' directions.id %}" class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {% csrf_token %}
+                    {% for field in permanence_form %}
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">{{ field.label }}</label>
+                            {{ field }}
                         </div>
+                    {% endfor %}
+                    <div class="md:col-span-2 text-right">
+                        <button type="submit" class="inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold transition">
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                            <span>Ajouter</span>
+                        </button>
                     </div>
-                </div>
+                </form>
+            </details>
+        {% endif %}
+    </section>
+
+    {# === PRÉSENCES === #}
+    <section x-show="tab==='presences'" x-cloak class="space-y-5">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-3 lg:gap-4">
+            <div class="bg-white dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-soft p-4">
+                <div class="text-[11px] uppercase tracking-wider text-slate-400 font-semibold">Participations</div>
+                <div class="font-display text-2xl font-bold text-slate-900 dark:text-white tabular-nums mt-1">{{ stats_presence.total_participations }}</div>
             </div>
-            <!-- content @e -->
+            <div class="bg-white dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-soft p-4">
+                <div class="text-[11px] uppercase tracking-wider text-emerald-600 font-semibold">Présents</div>
+                <div class="font-display text-2xl font-bold text-emerald-600 dark:text-emerald-300 tabular-nums mt-1">{{ stats_presence.total_presents }}</div>
+            </div>
+            <div class="bg-white dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-soft p-4">
+                <div class="text-[11px] uppercase tracking-wider text-brand-600 font-semibold">Taux</div>
+                <div class="font-display text-2xl font-bold text-brand-600 dark:text-brand-300 tabular-nums mt-1">{{ stats_presence.taux_presence }} %</div>
+            </div>
+        </div>
+
+        <div class="bg-white dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-soft overflow-hidden">
+            <div class="px-5 py-4 border-b border-slate-200 dark:border-slate-700/60">
+                <h3 class="font-display font-semibold text-slate-900 dark:text-white">Services & présences</h3>
+                <p class="text-xs text-slate-500 dark:text-slate-400">Suivi des services auxquels les membres ont participé</p>
+            </div>
+            {% if services %}
+                <ul class="divide-y divide-slate-100 dark:divide-slate-700/40">
+                    {% for s in services %}
+                        <li class="flex items-start gap-4 px-5 py-4 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition">
+                            <div class="w-12 h-12 rounded-xl bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 grid place-items-center text-center shrink-0">
+                                <div>
+                                    <div class="text-[10px] uppercase tracking-wider font-bold">{{ s.date|date:"M" }}</div>
+                                    <div class="font-display text-base font-bold leading-none">{{ s.date|date:"d" }}</div>
+                                </div>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate">{{ s.nom }}</div>
+                                {% if s.responsable %}<div class="text-xs text-slate-500 dark:text-slate-400">Responsable : {{ s.responsable }}</div>{% endif %}
+                                {% if s.description %}<p class="text-xs text-slate-500 dark:text-slate-400 mt-1 line-clamp-2">{{ s.description }}</p>{% endif %}
+                            </div>
+                            <div class="text-right shrink-0">
+                                <div class="text-xs text-slate-400">Présents</div>
+                                <div class="font-display text-lg font-bold text-emerald-600 dark:text-emerald-300 tabular-nums">{{ s.nb_presents }}<span class="text-xs text-slate-400 font-normal">/{{ s.nb_participants }}</span></div>
+                            </div>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                {% include 'layout/_empty_state.html' with title="Aucun service" message="Aucun service de la direction n'est encore enregistré." %}
+            {% endif %}
+        </div>
+    </section>
+</div>
 {% endblock %}

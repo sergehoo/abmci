@@ -1,395 +1,203 @@
 {% extends 'layout/base.html' %}
 {% load static %}
-{% load crispy_forms_tags %}
-{% block content %}
-<!-- content @s -->
-<div class="nk-content nk-content-fluid">
-    <div class="container-xl wide-xl">
-        <div class="nk-content-inner">
-            <div class="nk-content-body">
-                <div class="nk-block-head nk-block-head-sm">
-                    <div class="nk-block-between">
-                        <div class="nk-block-head-content">
-                            <h3 class="nk-block-title page-title">Créer un nouvel événement</h3>
-                            <div class="nk-block-des text-soft">
-                                <p>Remplissez le formulaire pour planifier un nouvel événement</p>
-                            </div>
-                        </div>
-                        <div class="nk-block-head-content">
-                            <a href="{% url 'event-list' %}" class="btn btn-outline-light">
-                                <em class="icon ni ni-arrow-left"></em> Retour à la liste
-                            </a>
-                        </div>
-                    </div>
-                </div>
+{% block head_title %}Nouvel événement – Alliance Connect{% endblock %}
 
-                <div class="nk-block">
-                    <div class="card card-bordered">
-                        <div class="card-inner">
-                            <form method="post" enctype="multipart/form-data" class="form" id="eventForm">
-                                {% csrf_token %}
-                                
-                                <div class="row g-3">
-                                    <!-- Titre et Type -->
-                                    <div class="col-md-8">
-                                        <div class="form-group">
-                                            <label for="{{ form.titre.id_for_label }}" class="form-label">{{ form.titre.label }} *</label>
-                                            {{ form.titre }}
-                                            {% if form.titre.errors %}
-                                                <div class="invalid-feedback d-block">
-                                                    {{ form.titre.errors }}
-                                                </div>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <div class="form-group">
-                                            <label for="{{ form.type.id_for_label }}" class="form-label">{{ form.type.label }}</label>
-                                            {{ form.type }}
-                                            {% if form.type.errors %}
-                                                <div class="invalid-feedback d-block">
-                                                    {{ form.type.errors }}
-                                                </div>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                    
-                                    <!-- Dates de début et fin -->
-                                    <div class="col-md-6">
-                                        <div class="form-group">
-                                            <label for="{{ form.date_debut.id_for_label }}" class="form-label">Date et heure de début *</label>
-                                            {{ form.date_debut }}
-                                            {% if form.date_debut.errors %}
-                                                <div class="invalid-feedback d-block">
-                                                    {{ form.date_debut.errors }}
-                                                </div>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="col-md-6">
-                                        <div class="form-group">
-                                            <label for="{{ form.date_fin.id_for_label }}" class="form-label">Date et heure de fin *</label>
-                                            {{ form.date_fin }}
-                                            {% if form.date_fin.errors %}
-                                                <div class="invalid-feedback d-block">
-                                                    {{ form.date_fin.errors }}
-                                                </div>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                    
-                                    <!-- Lieu -->
-                                    <div class="col-12">
-                                        <div class="form-group">
-                                            <label for="{{ form.lieu.id_for_label }}" class="form-label">{{ form.lieu.label }} *</label>
-                                            {{ form.lieu }}
-                                            {% if form.lieu.errors %}
-                                                <div class="invalid-feedback d-block">
-                                                    {{ form.lieu.errors }}
-                                                </div>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                    
-                                    <!-- Description -->
-                                    <div class="col-12">
-                                        <div class="form-group">
-                                            <label for="{{ form.description.id_for_label }}" class="form-label">{{ form.description.label }}</label>
-                                            {{ form.description }}
-                                            {% if form.description.errors %}
-                                                <div class="invalid-feedback d-block">
-                                                    {{ form.description.errors }}
-                                                </div>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                    
-                                    <!-- Bannière -->
-                                    <div class="col-12">
-                                        <div class="form-group">
-                                            <label for="{{ form.banner.id_for_label }}" class="form-label">{{ form.banner.label }}</label>
-                                            <div class="form-control-wrap">
-                                                <div class="form-file">
-                                                    {{ form.banner }}
-                                                    <label class="form-file-label" for="{{ form.banner.id_for_label }}">Choisir une image</label>
-                                                </div>
-                                            </div>
-                                            <small class="form-text text-muted">Format recommandé: 1420x560 pixels. Taille max: 5MB</small>
-                                            <div id="bannerPreview" class="mt-2" style="display: none;">
-                                                <img id="previewImage" class="img-thumbnail" style="max-height: 200px;">
-                                            </div>
-                                            {% if form.banner.errors %}
-                                                <div class="invalid-feedback d-block">
-                                                    {{ form.banner.errors }}
-                                                </div>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                    
-                                    <!-- Section Récurrence -->
-                                    <div class="col-12">
-                                        <hr>
-                                        <h5 class="title">Paramètres de récurrence</h5>
-                                        <p class="text-soft">Définissez si cet événement se répète dans le temps</p>
-                                    </div>
-                                    
-                                    <div class="col-md-6">
-                                        <div class="form-check form-switch">
-                                            {{ form.is_recurrent }}
-                                            <label class="form-check-label" for="{{ form.is_recurrent.id_for_label }}">Événement récurrent</label>
-                                        </div>
-                                        <small class="form-text text-muted">Cocher si cet événement se répète périodiquement</small>
-                                    </div>
-                                    
-                                    <div class="col-md-6 recurrence-options" style="display: none;">
-                                        <div class="form-group">
-                                            <label for="{{ form.recurrence_rule.id_for_label }}" class="form-label">Règle de récurrence *</label>
-                                            {{ form.recurrence_rule }}
-                                            <small class="form-text text-muted">Ex: WEEKLY:MO,WE,FR pour les lundis, mercredis, vendredis</small>
-                                            {% if form.recurrence_rule.errors %}
-                                                <div class="invalid-feedback d-block">
-                                                    {{ form.recurrence_rule.errors }}
-                                                </div>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="col-md-6 recurrence-options" style="display: none;">
-                                        <div class="form-group">
-                                            <label for="{{ form.end_recurrence.id_for_label }}" class="form-label">Fin de la récurrence</label>
-                                            {{ form.end_recurrence }}
-                                            <small class="form-text text-muted">Laisser vide pour une récurrence sans fin définie (1 an par défaut)</small>
-                                            {% if form.end_recurrence.errors %}
-                                                <div class="invalid-feedback d-block">
-                                                    {{ form.end_recurrence.errors }}
-                                                </div>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="col-12 recurrence-options" style="display: none;">
-                                        <div class="alert alert-info">
-                                            <div class="alert-icon">
-                                                <em class="icon ni ni-info"></em>
-                                            </div>
-                                            <div class="alert-text">
-                                                <h6>Instructions pour la récurrence</h6>
-                                                <p>Utilisez le format suivant pour définir la récurrence:</p>
-                                                <ul class="list list-sm">
-                                                    <li><strong>Quotidien:</strong> DAILY</li>
-                                                    <li><strong>Hebdomadaire:</strong> WEEKLY:JOURS (ex: WEEKLY:MO,WE,FR pour les lundis, mercredis, vendredis)</li>
-                                                    <li><strong>Mensuel:</strong> MONTHLY</li>
-                                                    <li><strong>Annuel:</strong> YEARLY</li>
-                                                </ul>
-                                                <p class="mb-0">Codes des jours: MO (Lundi), TU (Mardi), WE (Mercredi), TH (Jeudi), FR (Vendredi), SA (Samedi), SU (Dimanche)</p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="col-12">
-                                        <hr>
-                                        <div class="form-group">
-                                            <button type="submit" class="btn btn-lg btn-primary">Créer l'événement</button>
-                                            <a href="{% url 'event-list' %}" class="btn btn-lg btn-outline-light">Annuler</a>
-                                        </div>
-                                    </div>
-                                </div>
-                            </form>
+{% block extra_head %}
+<style>
+    /* Force tous les inputs Django/crispy à styliser proprement */
+    #eventForm input[type="text"],
+    #eventForm input[type="email"],
+    #eventForm input[type="number"],
+    #eventForm input[type="url"],
+    #eventForm input[type="tel"],
+    #eventForm input[type="date"],
+    #eventForm input[type="datetime-local"],
+    #eventForm input[type="time"],
+    #eventForm select,
+    #eventForm textarea {
+        width: 100%;
+        height: 2.625rem;
+        padding: 0 0.875rem;
+        border: 1px solid rgb(226, 232, 240);
+        border-radius: 0.5rem;
+        background-color: rgb(248, 250, 252);
+        font-size: 0.875rem;
+        color: rgb(51, 65, 85);
+        transition: border-color .15s, box-shadow .15s;
+    }
+    .dark #eventForm input[type="text"],
+    .dark #eventForm input[type="email"],
+    .dark #eventForm input[type="number"],
+    .dark #eventForm input[type="date"],
+    .dark #eventForm input[type="datetime-local"],
+    .dark #eventForm input[type="time"],
+    .dark #eventForm select,
+    .dark #eventForm textarea {
+        background-color: rgba(30, 41, 59, .5);
+        border-color: rgb(51, 65, 85);
+        color: rgb(241, 245, 249);
+    }
+    #eventForm textarea { height: auto; padding: 0.75rem 0.875rem; min-height: 100px; }
+    #eventForm input:focus, #eventForm select:focus, #eventForm textarea:focus {
+        outline: none;
+        border-color: rgb(129, 140, 248);
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, .2);
+    }
+    #eventForm input[type="checkbox"] { width: auto; height: auto; }
+    #eventForm input[type="file"] { padding: 0.5rem; height: auto; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div>
+    {# ===== Header ===== #}
+    <header class="mb-6 lg:mb-8">
+        <nav class="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 mb-2">
+            <a href="{% url 'event-list' %}" class="hover:text-brand-600 transition">Événements</a>
+            <svg class="w-3 h-3 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+            <span class="text-slate-700 dark:text-slate-300 font-medium">Nouveau</span>
+        </nav>
+        <div class="flex flex-wrap items-end justify-between gap-4">
+            <div>
+                <h1 class="font-display text-2xl lg:text-3xl font-bold text-slate-900 dark:text-white">Créer un nouvel événement</h1>
+                <p class="text-sm text-slate-500 dark:text-slate-400 mt-1.5">Remplissez le formulaire pour planifier un nouvel événement.</p>
+            </div>
+            <a href="{% url 'event-list' %}" class="inline-flex items-center gap-2 h-10 px-4 rounded-lg border border-slate-200 dark:border-slate-700 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/50 transition">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+                <span>Retour</span>
+            </a>
+        </div>
+    </header>
+
+    <form method="post" enctype="multipart/form-data" id="eventForm" class="space-y-6">
+        {% csrf_token %}
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+
+            {# Colonne principale #}
+            <div class="lg:col-span-2 space-y-5">
+
+                <section class="bg-white dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-soft p-5 lg:p-6">
+                    <h2 class="font-display font-semibold text-slate-900 dark:text-white mb-1">Informations générales</h2>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 mb-5">Titre, type et description.</p>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="md:col-span-2">
+                            <label for="{{ form.titre.id_for_label }}" class="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">{{ form.titre.label }} <span class="text-rose-500">*</span></label>
+                            {{ form.titre }}
+                            {% for e in form.titre.errors %}<p class="mt-1 text-xs text-rose-600">{{ e }}</p>{% endfor %}
                         </div>
+                        <div>
+                            <label for="{{ form.type.id_for_label }}" class="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">{{ form.type.label }}</label>
+                            {{ form.type }}
+                            {% for e in form.type.errors %}<p class="mt-1 text-xs text-rose-600">{{ e }}</p>{% endfor %}
+                        </div>
+
+                        {% if form.description %}
+                        <div class="md:col-span-3">
+                            <label for="{{ form.description.id_for_label }}" class="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">{{ form.description.label }}</label>
+                            {{ form.description }}
+                            {% for e in form.description.errors %}<p class="mt-1 text-xs text-rose-600">{{ e }}</p>{% endfor %}
+                        </div>
+                        {% endif %}
                     </div>
+                </section>
+
+                <section class="bg-white dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-soft p-5 lg:p-6">
+                    <h2 class="font-display font-semibold text-slate-900 dark:text-white mb-1">Date & lieu</h2>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 mb-5">Quand et où aura lieu cet événement ?</p>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="{{ form.date_debut.id_for_label }}" class="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">Date & heure de début <span class="text-rose-500">*</span></label>
+                            {{ form.date_debut }}
+                            {% for e in form.date_debut.errors %}<p class="mt-1 text-xs text-rose-600">{{ e }}</p>{% endfor %}
+                        </div>
+                        <div>
+                            <label for="{{ form.date_fin.id_for_label }}" class="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">Date & heure de fin <span class="text-rose-500">*</span></label>
+                            {{ form.date_fin }}
+                            {% for e in form.date_fin.errors %}<p class="mt-1 text-xs text-rose-600">{{ e }}</p>{% endfor %}
+                        </div>
+
+                        {% if form.lieu %}
+                        <div class="md:col-span-2">
+                            <label for="{{ form.lieu.id_for_label }}" class="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">{{ form.lieu.label|default:"Lieu" }}</label>
+                            {{ form.lieu }}
+                            {% for e in form.lieu.errors %}<p class="mt-1 text-xs text-rose-600">{{ e }}</p>{% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                </section>
+
+                {# Champs additionnels (autres champs du form non encore gérés) #}
+                {% for field in form %}
+                    {% if field.name not in 'titre,type,description,date_debut,date_fin,lieu,banner,nombre_invite,eglise' %}
+                    <section class="bg-white dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-soft p-5">
+                        <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">
+                            {{ field.label }}{% if field.field.required %} <span class="text-rose-500">*</span>{% endif %}
+                        </label>
+                        {{ field }}
+                        {% if field.help_text %}<p class="mt-1 text-xs text-slate-400">{{ field.help_text|safe }}</p>{% endif %}
+                        {% for e in field.errors %}<p class="mt-1 text-xs text-rose-600">{{ e }}</p>{% endfor %}
+                    </section>
+                    {% endif %}
+                {% endfor %}
+            </div>
+
+            {# Sidebar (image, options) #}
+            <aside class="space-y-5">
+                {% if form.banner %}
+                <section class="bg-white dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-soft p-5">
+                    <h2 class="font-display font-semibold text-slate-900 dark:text-white mb-1">Bannière</h2>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 mb-4">Image affichée en couverture.</p>
+                    {{ form.banner }}
+                    {% for e in form.banner.errors %}<p class="mt-1 text-xs text-rose-600">{{ e }}</p>{% endfor %}
+                </section>
+                {% endif %}
+
+                {% if form.eglise or form.nombre_invite %}
+                <section class="bg-white dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-soft p-5 space-y-4">
+                    <h2 class="font-display font-semibold text-slate-900 dark:text-white">Détails complémentaires</h2>
+                    {% if form.eglise %}
+                    <div>
+                        <label for="{{ form.eglise.id_for_label }}" class="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">{{ form.eglise.label }}</label>
+                        {{ form.eglise }}
+                        {% for e in form.eglise.errors %}<p class="mt-1 text-xs text-rose-600">{{ e }}</p>{% endfor %}
+                    </div>
+                    {% endif %}
+                    {% if form.nombre_invite %}
+                    <div>
+                        <label for="{{ form.nombre_invite.id_for_label }}" class="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">Nombre d'invités</label>
+                        {{ form.nombre_invite }}
+                        {% for e in form.nombre_invite.errors %}<p class="mt-1 text-xs text-rose-600">{{ e }}</p>{% endfor %}
+                    </div>
+                    {% endif %}
+                </section>
+                {% endif %}
+
+                <div class="bg-gradient-to-br from-brand-600 to-violet-600 text-white rounded-2xl p-5 shadow-soft">
+                    <h3 class="font-display font-semibold mb-1">Astuce</h3>
+                    <p class="text-xs text-white/85 leading-relaxed">Un QR code sera généré automatiquement après création — utile pour le pointage des participants.</p>
+                </div>
+            </aside>
+        </div>
+
+        {# ===== Sticky footer actions ===== #}
+        <div class="sticky bottom-0 bg-gradient-to-t from-slate-50 dark:from-slate-900 from-50% pt-4">
+            <div class="bg-white dark:bg-slate-800/80 backdrop-blur rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-soft-lg p-4 flex flex-wrap items-center justify-between gap-3">
+                <p class="text-xs text-slate-500 dark:text-slate-400">Les champs marqués <span class="text-rose-500">*</span> sont obligatoires.</p>
+                <div class="flex items-center gap-2">
+                    <a href="{% url 'event-list' %}" class="inline-flex items-center h-10 px-4 rounded-lg border border-slate-200 dark:border-slate-700 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/50 transition">
+                        Annuler
+                    </a>
+                    <button type="submit"
+                            class="inline-flex items-center gap-2 h-10 px-5 rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold shadow-soft transition">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                        <span>Créer l'événement</span>
+                    </button>
                 </div>
             </div>
         </div>
-    </div>
+    </form>
 </div>
-<!-- content @e -->
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Gestion de l'affichage des options de récurrence
-    const isRecurrentCheckbox = document.getElementById('{{ form.is_recurrent.id_for_label }}');
-    const recurrenceOptions = document.querySelectorAll('.recurrence-options');
-    
-    function toggleRecurrenceOptions() {
-        if (isRecurrentCheckbox.checked) {
-            recurrenceOptions.forEach(el => el.style.display = 'block');
-            // Rendre le champ recurrence_rule requis
-            document.getElementById('{{ form.recurrence_rule.id_for_label }}').setAttribute('required', 'required');
-        } else {
-            recurrenceOptions.forEach(el => el.style.display = 'none');
-            // Retirer l'attribut requis
-            document.getElementById('{{ form.recurrence_rule.id_for_label }}').removeAttribute('required');
-        }
-    }
-    
-    // Initial state
-    toggleRecurrenceOptions();
-    
-    // On change event
-    isRecurrentCheckbox.addEventListener('change', toggleRecurrenceOptions);
-    
-    // Validation des dates
-    const dateDebutInput = document.getElementById('{{ form.date_debut.id_for_label }}');
-    const dateFinInput = document.getElementById('{{ form.date_fin.id_for_label }}');
-    
-    function validateDates() {
-        if (dateDebutInput.value && dateFinInput.value) {
-            const debut = new Date(dateDebutInput.value);
-            const fin = new Date(dateFinInput.value);
-            
-            if (fin <= debut) {
-                dateFinInput.setCustomValidity('La date de fin doit être postérieure à la date de début');
-            } else {
-                dateFinInput.setCustomValidity('');
-            }
-        }
-    }
-    
-    dateDebutInput.addEventListener('change', validateDates);
-    dateFinInput.addEventListener('change', validateDates);
-    
-    // Prévisualisation de la bannière
-    const bannerInput = document.getElementById('{{ form.banner.id_for_label }}');
-    const bannerPreview = document.getElementById('bannerPreview');
-    const previewImage = document.getElementById('previewImage');
-    
-    bannerInput.addEventListener('change', function(e) {
-        const file = e.target.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                previewImage.src = e.target.result;
-                bannerPreview.style.display = 'block';
-            }
-            reader.readAsDataURL(file);
-            
-            // Mettre à jour le label avec le nom du fichier
-            const fileName = file.name;
-            const label = bannerInput.nextElementSibling;
-            label.textContent = fileName;
-        }
-    });
-    
-    // Ajouter des placeholders et aides
-    document.getElementById('{{ form.recurrence_rule.id_for_label }}').placeholder = 'Ex: WEEKLY:MO,WE,FR';
-    
-    // Validation du formulaire
-    const form = document.getElementById('eventForm');
-    form.addEventListener('submit', function(e) {
-        let isValid = true;
-        
-        // Validation de base des champs requis
-        const requiredFields = form.querySelectorAll('[required]');
-        requiredFields.forEach(field => {
-            if (!field.value.trim()) {
-                isValid = false;
-                field.classList.add('is-invalid');
-            } else {
-                field.classList.remove('is-invalid');
-            }
-        });
-        
-        if (!isValid) {
-            e.preventDefault();
-            // Afficher un message d'erreur général
-            alert('Veuillez remplir tous les champs obligatoires.');
-        }
-    });
-});
-</script>
-
-<style>
-.form-group {
-    margin-bottom: 1.5rem;
-}
-
-.form-label {
-    font-weight: 500;
-    margin-bottom: 0.5rem;
-    color: #526484;
-}
-
-.form-control, .form-select {
-    border: 1px solid #dbdfea;
-    border-radius: 4px;
-    padding: 0.75rem 1rem;
-    transition: all 0.3s ease;
-}
-
-.form-control:focus, .form-select:focus {
-    border-color: #6576ff;
-    box-shadow: 0 0 0 3px rgba(101, 118, 255, 0.1);
-}
-
-.form-check-input {
-    width: 2.5rem;
-    height: 1.25rem;
-}
-
-.form-check-input:checked {
-    background-color: #6576ff;
-    border-color: #6576ff;
-}
-
-.form-file-input {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    border: 0;
-}
-
-.form-file-label {
-    display: inline-block;
-    padding: 0.75rem 1rem;
-    background-color: #f5f6fa;
-    border: 1px dashed #dbdfea;
-    border-radius: 4px;
-    cursor: pointer;
-    width: 100%;
-    text-align: center;
-    transition: all 0.3s ease;
-}
-
-.form-file-label:hover {
-    background-color: #e5e9f2;
-    border-color: #6576ff;
-}
-
-.invalid-feedback {
-    display: block;
-    color: #f56b6b;
-    font-size: 0.875rem;
-    margin-top: 0.25rem;
-}
-
-.is-invalid {
-    border-color: #f56b6b !important;
-}
-
-.alert-info {
-    background-color: #e1f0ff;
-    border-color: #b8dcff;
-    color: #2c5282;
-}
-
-.title {
-    border-bottom: 1px solid #e5e9f2;
-    padding-bottom: 10px;
-    margin-bottom: 20px;
-    color: #364a63;
-}
-
-.recurrence-options {
-    transition: all 0.3s ease;
-}
-
-.img-thumbnail {
-    max-width: 100%;
-    height: auto;
-}
-</style>
 {% endblock %}

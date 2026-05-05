@@ -1,88 +1,57 @@
-{#{% extends "base.html" %}#}
-{#{% load static %}#}
+{% extends 'layout/account_base.html' %}
+{% load i18n %}
+{% block head_title %}{% trans "Vérifiez votre email" %} – Alliance Connect{% endblock %}
+
 {% block content %}
-<div class="container">
-  <div class="row justify-content-center">
-    <div class="col-md-8 col-lg-6">
-      <div class="card shadow-lg border-0 my-5">
-        <div class="card-header bg-gradient-primary text-white text-center py-4">
-          <h2 class="mb-0">
-            <i class="fas fa-envelope-open-text mr-2"></i>
-            Vérification d'e-mail requise
-          </h2>
+<div>
+    <div class="mb-8 text-center">
+        <div class="w-16 h-16 mx-auto rounded-2xl bg-brand-100 dark:bg-brand-900/30 grid place-items-center mb-4 ring-4 ring-brand-50 dark:ring-brand-900/10">
+            <svg class="w-8 h-8 text-brand-600 dark:text-brand-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
         </div>
-        
-        <div class="card-body px-5 py-4">
-          <div class="text-center mb-4">
-            <img src="{% static 'images/email-sent.svg' %}" alt="Email envoyé" class="img-fluid" style="max-height: 150px;">
-          </div>
-
-          <div class="alert alert-primary" role="alert">
-            <h4 class="alert-heading">Presque terminé !</h4>
-            <p>
-              Nous avons envoyé un e-mail de confirmation à <strong class="text-primary">{{ email }}</strong>.
-            </p>
-            <hr>
-            <p class="mb-0">
-              Cliquez sur le lien dans l'e-mail pour activer votre compte.
-            </p>
-          </div>
-
-          <div class="mt-4">
-            <h5 class="text-center mb-3">Vous ne trouvez pas l'e-mail ?</h5>
-            <ul class="list-group list-group-flush mb-4">
-              <li class="list-group-item d-flex align-items-center">
-                <i class="fas fa-search mr-3 text-secondary"></i>
-                Vérifiez votre dossier <strong>spam</strong> ou <strong>courriers indésirables</strong>
-              </li>
-              <li class="list-group-item d-flex align-items-center">
-                <i class="fas fa-clock mr-3 text-secondary"></i>
-                Attendez quelques minutes (les délais d'envoi peuvent varier)
-              </li>
-              <li class="list-group-item d-flex align-items-center">
-                <i class="fas fa-redo mr-3 text-secondary"></i>
-                <a href="{% url 'account_email' %}" class="text-primary">Renvoyer l'e-mail de confirmation</a>
-              </li>
-            </ul>
-          </div>
-
-          <div class="d-flex justify-content-between mt-5">
-            <a href="{% url 'account_login' %}" class="btn btn-outline-primary">
-              <i class="fas fa-arrow-left mr-2"></i> Retour à la connexion
-            </a>
-            <a href="{% url 'core:home' %}" class="btn btn-light">
-              <i class="fas fa-home mr-2"></i> Page d'accueil
-            </a>
-          </div>
-        </div>
-
-        <div class="card-footer text-muted text-center py-3">
-          <small>
-            Problème persistant ? <a href="mailto:support@abmci.org" class="text-primary">Contactez notre support</a>
-          </small>
-        </div>
-      </div>
+        <h1 class="font-display text-2xl font-bold text-slate-900 dark:text-white">Vérifiez votre boîte mail</h1>
+        <p class="text-sm text-slate-500 dark:text-slate-400 mt-2 max-w-sm mx-auto">
+            Nous avons envoyé un lien de confirmation
+            {% if email %}à <span class="font-semibold text-slate-700 dark:text-slate-200">{{ email }}</span>{% endif %}.
+            Cliquez dessus pour activer votre compte.
+        </p>
     </div>
-  </div>
-</div>
 
-<style>
-  .bg-gradient-primary {
-    background: linear-gradient(135deg, #5D2C8B 0%, #3A1B5B 100%);
-  }
-  
-  .card {
-    border-radius: 12px;
-    overflow: hidden;
-  }
-  
-  .list-group-item {
-    border-left: 0;
-    border-right: 0;
-  }
-  
-  .list-group-item:first-child {
-    border-top: 0;
-  }
-</style>
+    <div class="bg-white dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/60 rounded-xl p-5 space-y-3 shadow-soft">
+        <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-200">Vous ne trouvez pas l'email&nbsp;?</h3>
+        <ul class="space-y-2.5 text-sm text-slate-600 dark:text-slate-300">
+            <li class="flex items-start gap-2.5">
+                <svg class="w-4 h-4 mt-0.5 shrink-0 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                <span>Vérifiez votre dossier <strong class="text-slate-700 dark:text-slate-200">spam</strong> ou courriers indésirables.</span>
+            </li>
+            <li class="flex items-start gap-2.5">
+                <svg class="w-4 h-4 mt-0.5 shrink-0 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                <span>Patientez quelques minutes — les délais d'envoi peuvent varier.</span>
+            </li>
+            <li class="flex items-start gap-2.5">
+                <svg class="w-4 h-4 mt-0.5 shrink-0 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                <a href="{% url 'account_email' %}" class="text-brand-600 hover:underline font-medium">Renvoyer l'email de confirmation</a>
+            </li>
+        </ul>
+    </div>
+
+    <div class="flex items-center justify-between mt-6 gap-3">
+        <a href="{% url 'account_login' %}"
+           class="flex-1 h-11 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200
+                  font-medium text-sm hover:bg-slate-50 dark:hover:bg-slate-800/50 flex items-center justify-center gap-2 transition">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+            <span>Connexion</span>
+        </a>
+        <a href="{% url 'home' %}"
+           class="flex-1 h-11 rounded-lg bg-brand-600 hover:bg-brand-700 text-white font-semibold text-sm
+                  flex items-center justify-center gap-2 transition shadow-sm">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+            <span>Accueil</span>
+        </a>
+    </div>
+
+    <p class="mt-6 text-center text-xs text-slate-400 dark:text-slate-500">
+        Problème persistant&nbsp;?
+        <a href="mailto:support@abmci.org" class="text-brand-600 hover:underline">Contactez le support</a>
+    </p>
+</div>
 {% endblock %}

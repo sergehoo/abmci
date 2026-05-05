@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from datetime import timedelta
+from datetime import timedelta, date
 from io import BytesIO
 
 from allauth.account.forms import LoginForm
@@ -61,44 +61,292 @@ class SaftyChildren(TemplateView):
 
 
 class HomePageView(LoginRequiredMixin, TemplateView):
+    """
+    Dashboard analytique d'Alliance Connect.
+    - Filtres de période (semaine/mois/trimestre/semestre/année/personnalisé)
+    - Statistiques sur sacrements, démographie, engagement
+    - Séries temporelles (12 derniers mois) pour les charts
+    - Insights automatiques (analyse intelligente des données)
+    """
     login_url = 'login/'
     form_class = LoginForm
     template_name = "home/index.html"
 
-    # def dispatch(self, request, *args, **kwargs):
-    #     # Check if the user is authenticated. If not, redirect to the login page.
-    #     if not request.user.is_authenticated:
-    #         return redirect('login')
-    #
-    #     # Call the parent class's dispatch method for normal view processing.
-    #     return super().dispatch(request, *args, **kwargs)
     def get_context_data(self, **kwargs):
+        from fidele.dashboard_stats import build_dashboard_context
+
         context = super().get_context_data(**kwargs)
 
-        # Récupérer le nombre total de membres
-        context['nombre_membres'] = Fidele.objects.all().count()
-        context['direction'] = Department.objects.all().count()
+        user_fidele = getattr(self.request.user, 'fidele', None)
+        eglise = getattr(user_fidele, 'eglise', None) if user_fidele else None
+
+        context.update(build_dashboard_context(self.request, eglise=eglise))
+
+        # Compat ascendante : laisse les anciens noms de variables disponibles
+        kpis = context['kpis_main']
+        context.setdefault('nombre_membres',    kpis['membres_actifs']['value'])
+        context.setdefault('nombre_evenements', 0)
+        context.setdefault('total_dons',        kpis['dons']['value'])
+        context.setdefault('membres',           context['membres_recents'])
+        context.setdefault('activity_recent',   context['activity'])
+        context.setdefault('chart_labels',     context['charts']['labels'])
+        context.setdefault('chart_cumulative', context['charts']['membres_cum'])
+        context.setdefault('chart_monthly',    context['charts']['baptemes'])  # legacy fallback
+        return context
+
+
+class _LegacyHomePageView_DEPRECATED(LoginRequiredMixin, TemplateView):
+    """Conservé temporairement pour référence — ne plus utiliser."""
+    template_name = "home/index.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        from event.models import Evenement  # import local pour éviter les cycles
+
+        # ============================================================
+        # Périmètre — uniquement l'église du fidèle connecté si possible
+        # ============================================================
+        user_fidele = getattr(self.request.user, 'fidele', None)
+        eglise = getattr(user_fidele, 'eglise', None) if user_fidele else None
+
+        fideles_qs = Fidele.objects.all()
+        events_qs  = Evenement.objects.all()
+        donations_qs = Donation.objects.filter(status='success')
+        if eglise is not None:
+            fideles_qs   = fideles_qs.filter(eglise=eglise)
+            events_qs    = events_qs.filter(eglise=eglise)
+
+        now   = timezone.now()
+        today = now.date()
+        first_of_month = today.replace(day=1)
+        # Mois précédent
+        last_month_end   = first_of_month - timedelta(days=1)
+        last_month_start = last_month_end.replace(day=1)
+
+        def _delta_pct(now_count: int, prev_count: int) -> str:
+            """Variation en % vs précédent ; '+12 %' / '-3 %' / '—' si pas comparable."""
+            if not prev_count:
+                return f"+{now_count}" if now_count else ""
+            diff = now_count - prev_count
+            pct = round(diff / prev_count * 100)
+            sign = '+' if pct >= 0 else ''
+            return f"{sign}{pct} %"
+
+        # ============================================================
+        # KPI 1 — Visiteurs (membre = 0)
+        # ============================================================
+        visiteurs_total      = fideles_qs.filter(membre=0).count()
+        visiteurs_this_month = fideles_qs.filter(membre=0, created_at__gte=first_of_month).count()
+        visiteurs_last_month = fideles_qs.filter(
+            membre=0, created_at__gte=last_month_start, created_at__lt=first_of_month
+        ).count()
+
+        # ============================================================
+        # KPI 2 — Membres actifs (membre = 1)
+        # ============================================================
+        membres_actifs_total      = fideles_qs.filter(membre=1).count()
+        membres_actifs_this_month = fideles_qs.filter(membre=1, created_at__gte=first_of_month).count()
+        membres_actifs_last_month = fideles_qs.filter(
+            membre=1, created_at__gte=last_month_start, created_at__lt=first_of_month
+        ).count()
+
+        # ============================================================
+        # KPI 3 — Événements (à venir + en cours)
+        # ============================================================
+        events_total     = events_qs.count()
+        events_upcoming  = events_qs.filter(date_fin__gte=now).count()
+        events_last_30   = events_qs.filter(date_debut__gte=now - timedelta(days=30)).count()
+        events_prev_30   = events_qs.filter(
+            date_debut__gte=now - timedelta(days=60),
+            date_debut__lt=now - timedelta(days=30),
+        ).count()
+
+        # ============================================================
+        # KPI 4 — Dons (mois en cours, statut success)
+        # ============================================================
+        dons_this_month = donations_qs.filter(created_at__gte=first_of_month).aggregate(
+            total=Sum('amount')
+        )['total'] or 0
+        dons_last_month = donations_qs.filter(
+            created_at__gte=last_month_start, created_at__lt=first_of_month
+        ).aggregate(total=Sum('amount'))['total'] or 0
+
+        context['kpis'] = {
+            'visiteurs': {
+                'value': visiteurs_total,
+                'delta': _delta_pct(visiteurs_this_month, visiteurs_last_month),
+            },
+            'membres_actifs': {
+                'value': membres_actifs_total,
+                'delta': _delta_pct(membres_actifs_this_month, membres_actifs_last_month),
+            },
+            'evenements': {
+                'value': events_total,
+                'upcoming': events_upcoming,
+                'delta': _delta_pct(events_last_30, events_prev_30),
+            },
+            'dons_mois': {
+                'value': f"{int(dons_this_month):,}".replace(',', ' '),
+                'delta': _delta_pct(int(dons_this_month), int(dons_last_month)),
+            },
+        }
+
+        # ============================================================
+        # Chart : croissance cumulée des fidèles sur 12 mois
+        # ============================================================
+        labels   = []
+        cumulative = []
+        monthly  = []
+        # Démarre 12 mois en arrière (incluant le mois courant)
+        cursor = first_of_month
+        # On remonte de 11 mois pour obtenir 12 points
+        from calendar import monthrange
+        months = []
+        for i in range(11, -1, -1):
+            # Calcul du premier jour du mois "courant - i"
+            year  = first_of_month.year
+            month = first_of_month.month - i
+            while month <= 0:
+                month += 12
+                year  -= 1
+            months.append((year, month))
+
+        labels_fr = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin',
+                     'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc']
+        for (y, m) in months:
+            month_start = date(y, m, 1)
+            # premier jour du mois suivant
+            if m == 12:
+                next_start = date(y + 1, 1, 1)
+            else:
+                next_start = date(y, m + 1, 1)
+
+            cum = fideles_qs.filter(created_at__lt=next_start).count()
+            mon = fideles_qs.filter(
+                created_at__gte=month_start,
+                created_at__lt=next_start,
+            ).count()
+            labels.append(labels_fr[m - 1])
+            cumulative.append(cum)
+            monthly.append(mon)
+
+        context['chart_labels']     = labels
+        context['chart_cumulative'] = cumulative
+        context['chart_monthly']    = monthly
+
+        # ============================================================
+        # Liste des 6 fidèles les plus récents
+        # ============================================================
+        context['membres'] = (
+            fideles_qs.select_related('user').order_by('-created_at')[:6]
+        )
+
+        # ============================================================
+        # Activité récente (max 6 items, mélange membres / events / dons)
+        # ============================================================
+        activity = []
+        for f in fideles_qs.order_by('-created_at')[:3]:
+            activity.append({
+                'kind': 'fidele',
+                'tone': 'emerald',
+                'icon': 'user-plus',
+                'title': f"Nouveau fidèle : {f}",
+                'when':  f.created_at,
+            })
+        for e in events_qs.order_by('-date_debut')[:3]:
+            activity.append({
+                'kind': 'event',
+                'tone': 'brand',
+                'icon': 'calendar-check',
+                'title': f"Événement : {e.titre}" if hasattr(e, 'titre') else "Événement",
+                'when':  e.date_debut,
+            })
+        for d in donations_qs.order_by('-created_at')[:3]:
+            activity.append({
+                'kind': 'donation',
+                'tone': 'amber',
+                'icon': 'hand-coins',
+                'title': f"Don de {d.amount:,} {d.currency}".replace(',', ' '),
+                'when':  d.created_at,
+            })
+        # Tri global décroissant + 6 premiers
+        activity.sort(key=lambda x: x['when'], reverse=True)
+        context['activity_recent'] = activity[:6]
+
+        # ============================================================
+        # Compat ascendante avec l'ancien template (au cas où)
+        # ============================================================
+        context['nombre_membres']    = membres_actifs_total or fideles_qs.count()
+        context['nombre_evenements'] = events_total
+        context['total_dons']        = context['kpis']['dons_mois']['value']
+        context['direction']         = Department.objects.count()
 
         return context
 
 
 class DirectionDetailView(LoginRequiredMixin, DetailView):
+    """
+    Vue détail d'une direction avec tabs : Membres / Réunions / Présences services.
+    """
     model = Department
     template_name = "home/direction_view.html"
     context_object_name = 'directions'
 
     def get_context_data(self, **kwargs):
+        from fidele.models import Service, ParticipationService, OuvrierPermanence
+        from django.db.models import Count, Q
         context = super().get_context_data(**kwargs)
         direction = get_object_or_404(Department, pk=self.kwargs['pk'])
+        members_qs = Fidele.objects.filter(departement=direction).select_related('user')
 
-        # Récupérer le nombre total de membres
-        context['nombre_membres'] = Fidele.objects.filter(departement=direction).count()
-        context['permanence'] = Permanence.objects.filter(direction=direction)
-        # context['permanence_form'] = PermanenceForm(self.request.GET)
+        # ===== Membres
+        context['nombre_membres'] = members_qs.count()
+        context['fideles']        = members_qs.order_by('user__last_name')
 
+        # ===== Réunions / programme (Permanence + OuvrierPermanence)
+        permanences = (Permanence.objects.filter(direction=direction)
+                                          .select_related('event', 'auteur')
+                                          .order_by('-add_date'))
+        context['permanence']       = permanences          # compat ascendante
+        context['reunions']         = permanences
+        context['ouvriers_assigns'] = (OuvrierPermanence.objects
+                                       .filter(programme__direction=direction)
+                                       .select_related('ouvrier', 'ouvrier__user', 'poste', 'programme', 'programme__event')
+                                       .order_by('-date'))
+
+        # Programme à venir (reposant sur l'event lié si présent)
+        upcoming = []
+        for p in permanences:
+            if p.event and getattr(p.event, 'date_debut', None):
+                if p.event.date_debut >= timezone.now():
+                    upcoming.append(p)
+        context['programme_a_venir'] = upcoming[:10]
+
+        # ===== Présences aux services
+        services = (Service.objects.filter(participants__in=members_qs)
+                                    .annotate(
+                                        nb_participants=Count('participations',
+                                            filter=Q(participations__fidele__in=members_qs), distinct=True),
+                                        nb_presents=Count('participations',
+                                            filter=Q(participations__fidele__in=members_qs,
+                                                     participations__presence=True), distinct=True),
+                                    )
+                                    .distinct()
+                                    .order_by('-date'))
+        context['services'] = services
+
+        # Stats globales présences
+        nb_part_total = ParticipationService.objects.filter(fidele__in=members_qs).count()
+        nb_present_total = ParticipationService.objects.filter(fidele__in=members_qs, presence=True).count()
+        context['stats_presence'] = {
+            'total_participations': nb_part_total,
+            'total_presents':       nb_present_total,
+            'taux_presence':        round(nb_present_total / nb_part_total * 100) if nb_part_total else 0,
+        }
+
+        # ===== Form pour ajouter un ouvrier à la permanence
         context['permanence_form'] = PermanenceForm(self.request.GET, initial={'direction': direction})
-        # Filtrer le queryset des ouvriers en fonction du département sélectionné
-        context['permanence_form'].fields['ouvrier'].queryset = Fidele.objects.filter(departement=direction)
+        context['permanence_form'].fields['ouvrier'].queryset = members_qs
 
         return context
 
@@ -473,7 +721,9 @@ class VieDeLEgliseListView(LoginRequiredMixin, ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["fidele_detail"] = Fidele.objects.get(pk=self.kwargs["pk"])
+        f = Fidele.objects.get(pk=self.kwargs["pk"])
+        context["fidele_detail"] = f
+        context["fidele"] = f  # alias pour les nouveaux templates
         return context
 
     def get_queryset(self):
@@ -489,7 +739,9 @@ class EngagementListView(LoginRequiredMixin, ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["fidele_detail"] = Fidele.objects.get(pk=self.kwargs["pk"])
+        f = Fidele.objects.get(pk=self.kwargs["pk"])
+        context["fidele_detail"] = f
+        context["fidele"] = f  # alias pour les nouveaux templates
         return context
 
 
@@ -499,7 +751,9 @@ class StatutSocialListView(LoginRequiredMixin, ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["fidele_detail"] = Fidele.objects.get(pk=self.kwargs["pk"])
+        f = Fidele.objects.get(pk=self.kwargs["pk"])
+        context["fidele_detail"] = f
+        context["fidele"] = f  # alias pour les nouveaux templates
         fidele_instance = get_object_or_404(Fidele, pk=self.kwargs["pk"])
         context["frere"] = fidele_instance.frere.all()
         context["soeur"] = fidele_instance.soeur.all()
@@ -525,7 +779,9 @@ class MessagerieListView(LoginRequiredMixin, ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["fidele_detail"] = Fidele.objects.get(pk=self.kwargs["pk"])
+        f = Fidele.objects.get(pk=self.kwargs["pk"])
+        context["fidele_detail"] = f
+        context["fidele"] = f  # alias pour les nouveaux templates
         return context
 
 

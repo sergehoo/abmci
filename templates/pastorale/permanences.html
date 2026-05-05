@@ -1,0 +1,138 @@
+{% extends 'layout/base.html' %}
+{% load static %}
+{% block head_title %}Permanences hebdomadaires – Alliance Connect{% endblock %}
+
+{% block content %}
+<div x-data="acPermanences()">
+
+    {# ===== Header ===== #}
+    <header class="mb-6 lg:mb-8">
+        <nav class="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 mb-2">
+            <a href="{% url 'pastorale_index' %}" class="hover:text-brand-600 transition">Pastorale</a>
+            <svg class="w-3 h-3 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+            <span class="text-slate-700 dark:text-slate-300 font-medium">Permanences</span>
+        </nav>
+        <div class="flex flex-wrap items-end justify-between gap-4">
+            <div>
+                <h1 class="font-display text-2xl lg:text-3xl font-bold text-slate-900 dark:text-white">Permanences hebdomadaires</h1>
+                <p class="text-sm text-slate-500 dark:text-slate-400 mt-1.5">Planning des créneaux d'accueil et d'écoute pastorale.</p>
+            </div>
+            <div class="flex items-center gap-2">
+                <div class="inline-flex items-center rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden">
+                    <button @click="prevWeek()" class="w-10 h-10 grid place-items-center text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/50 transition">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+                    </button>
+                    <div class="px-4 text-sm font-semibold text-slate-700 dark:text-slate-200" x-text="weekLabel"></div>
+                    <button @click="nextWeek()" class="w-10 h-10 grid place-items-center text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/50 transition">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                    </button>
+                </div>
+                <button class="inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold shadow-soft transition">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+                    <span>Ajouter</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    {# ===== Légende ===== #}
+    <div class="flex flex-wrap items-center gap-4 mb-4 text-xs text-slate-500 dark:text-slate-400">
+        <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-brand-500"></span>Pasteur principal</div>
+        <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-violet-500"></span>Pasteur associé</div>
+        <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-emerald-500"></span>Diacre</div>
+        <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-amber-500"></span>Anciens</div>
+    </div>
+
+    {# ===== Grille semainier ===== #}
+    <div class="bg-white dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-soft overflow-hidden">
+        <div class="overflow-x-auto">
+            <div class="min-w-[900px] grid grid-cols-[80px_repeat(7,1fr)]">
+                {# Header jours #}
+                <div class="bg-slate-50 dark:bg-slate-800/60 border-b border-r border-slate-200 dark:border-slate-700/60 p-3"></div>
+                <template x-for="(d, i) in days" :key="i">
+                    <div class="bg-slate-50 dark:bg-slate-800/60 border-b border-r border-slate-200 dark:border-slate-700/60 p-3 text-center">
+                        <div class="text-[10px] uppercase tracking-wider text-slate-400 font-semibold" x-text="d.label"></div>
+                        <div class="font-display text-lg font-bold text-slate-700 dark:text-slate-200 mt-0.5" x-text="d.date"></div>
+                    </div>
+                </template>
+
+                {# Lignes horaires #}
+                <template x-for="hour in hours" :key="hour">
+                    <template x-for="(d, i) in [null, ...days]" :key="hour + '-' + i">
+                        <div :class="i === 0 ? 'bg-slate-50/40 dark:bg-slate-800/30 text-right pr-2 py-3 text-[11px] text-slate-400 font-medium border-r border-slate-200 dark:border-slate-700/60' : 'border-r border-b border-slate-100 dark:border-slate-700/40 min-h-[60px] relative p-1 hover:bg-slate-50/60 dark:hover:bg-slate-800/30 transition'">
+                            <span x-show="i === 0" x-text="hour + ':00'"></span>
+                            <template x-if="i !== 0">
+                                <template x-for="slot in slotsAt(d?.id, hour)" :key="slot.id">
+                                    <div :class="slot.color"
+                                         class="absolute inset-x-1 top-1 rounded-md p-2 text-white text-[11px] cursor-pointer hover:brightness-110 transition shadow-soft">
+                                        <div class="font-semibold truncate" x-text="slot.title"></div>
+                                        <div class="opacity-90 truncate" x-text="slot.heure"></div>
+                                    </div>
+                                </template>
+                            </template>
+                        </div>
+                    </template>
+                </template>
+            </div>
+        </div>
+
+        <div class="px-5 py-3 border-t border-slate-200 dark:border-slate-700/60 bg-slate-50/60 dark:bg-slate-800/30 flex items-center justify-between">
+            <div class="text-xs text-slate-500 dark:text-slate-400">
+                <span class="font-semibold text-slate-700 dark:text-slate-200" x-text="totalSlots"></span> permanences cette semaine
+            </div>
+            <a href="{% url 'pastorale_rdv_create' %}" class="text-sm text-brand-600 hover:underline font-medium">Réserver un créneau →</a>
+        </div>
+    </div>
+</div>
+
+<script>
+function acPermanences() {
+    const colors = {
+        principal: 'bg-brand-500',
+        associe:   'bg-violet-500',
+        diacre:    'bg-emerald-500',
+        ancien:    'bg-amber-500',
+    };
+    return {
+        weekLabel: '',
+        currentMonday: null,
+        days: [],
+        hours: [9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
+        // sample slots — à remplacer par des données serveur
+        slots: [
+            { id: 1, dayId: 'tue', startHour: 17, endHour: 19, title: 'Pst Étienne KOFFI',  heure: '17:00 – 19:00', type: 'principal' },
+            { id: 2, dayId: 'thu', startHour: 18, endHour: 20, title: 'Pst Marie KONAN',    heure: '18:00 – 20:00', type: 'associe' },
+            { id: 3, dayId: 'sat', startHour: 9,  endHour: 12, title: 'Diacre Paul BAMBA',  heure: '09:00 – 12:00', type: 'diacre' },
+            { id: 4, dayId: 'wed', startHour: 16, endHour: 18, title: 'Anc. Sylvie YAO',    heure: '16:00 – 18:00', type: 'ancien' },
+            { id: 5, dayId: 'fri', startHour: 19, endHour: 20, title: 'Pst Étienne KOFFI',  heure: '19:00 – 20:00', type: 'principal' },
+        ],
+        get totalSlots() { return this.slots.length; },
+        init() {
+            const now = new Date();
+            const day = now.getDay() || 7;
+            const monday = new Date(now); monday.setDate(now.getDate() - day + 1);
+            this.setWeek(monday);
+        },
+        setWeek(monday) {
+            this.currentMonday = monday;
+            const labels = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+            const ids    = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+            this.days = ids.map((id, i) => {
+                const d = new Date(monday); d.setDate(monday.getDate() + i);
+                return { id, label: labels[i], date: d.getDate() };
+            });
+            const end = new Date(monday); end.setDate(monday.getDate() + 6);
+            const fmt = (d) => d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+            this.weekLabel = `${fmt(monday)} – ${fmt(end)}`;
+        },
+        prevWeek() { const m = new Date(this.currentMonday); m.setDate(m.getDate() - 7); this.setWeek(m); },
+        nextWeek() { const m = new Date(this.currentMonday); m.setDate(m.getDate() + 7); this.setWeek(m); },
+        slotsAt(dayId, hour) {
+            return this.slots
+                .filter(s => s.dayId === dayId && s.startHour === hour)
+                .map(s => ({ ...s, color: colors[s.type] || 'bg-slate-500' }));
+        },
+    };
+}
+</script>
+{% endblock %}

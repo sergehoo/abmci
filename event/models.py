@@ -7,6 +7,7 @@ from io import BytesIO
 import qrcode
 from PIL import Image
 from django.core.exceptions import ValidationError
+from django.core.files.base import ContentFile
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.db import models
 from django.utils import timezone
@@ -175,39 +176,51 @@ class Evenement(models.Model):
             occurrences.append(ev)
         return occurrences
 
-    def generate_and_save_qr_code(self, data):
-        image_data = generate_qr_code(self.code)
-        image = Image.open(BytesIO(image_data))
+    def generate_and_save_qr_code(self, data=None):
+        """
+        Génère le QR code de l'événement et l'attache au champ `qr_code`
+        SANS sauvegarder le modèle (`save=False`). Le payload encodé est le
+        `code` de l'événement — ce qui garantit que chaque occurrence
+        récurrente a un QR code distinct (chaque enfant possède son propre
+        `code` via `default=eventcode` à l'instanciation).
+        """
+        payload = data or self.code
+        image_data = generate_qr_code(payload)
 
-        # Create a unique filename for the QR code image
+        # On peut écrire directement les bytes PNG : pas besoin du round-trip
+        # PIL → BytesIO → InMemoryUploadedFile, qui était purement décoratif.
         filename = f'qr_code_{self.code}.png'
-
-        # Create a Django InMemoryUploadedFile for the ImageField
-        buffered = BytesIO()
-        image.save(buffered, format="PNG")
-        image_file = InMemoryUploadedFile(buffered, None, filename, 'image/png', len(buffered.getvalue()), None)
-
-        # Save the InMemoryUploadedFile to the ImageField
-        self.qr_code.save(filename, image_file, save=False)
-
+        self.qr_code.save(
+            filename,
+            ContentFile(image_data),
+            save=False,
+        )
         return self.qr_code
 
     def is_same_date(self):
         return self.date_debut.date() == self.date_fin.date()
 
     def save(self, *args, **kwargs):
+        # 🔧 On ne touche au QR code QUE quand on en a besoin :
+        #   - pas encore présent
+        #   - ET création (pas un simple update sur un champ non lié au QR)
         if not self.qr_code:
-            self.generate_and_save_qr_code(self.code)
+            self.generate_and_save_qr_code()
+
         super().save(*args, **kwargs)
 
+        # ⚠️ Le resize du banner via `self.banner.path` ne fonctionne pas
+        # avec un storage distant (S3, GCS). On délègue désormais à une
+        # tâche Celery déjà disponible (`abmci.tasks.resize_image_field`).
+        # Si Celery n'est pas dispo dans l'env courant (tests, migrations),
+        # on tombe en silence.
         if self.banner:
             try:
-                img = Image.open(self.banner.path)
-                new_size = (1420, 560)
-                img = img.resize(new_size, Image.LANCZOS)
-                img.save(self.banner.path)
+                from abmci.tasks import resize_image_field  # import retardé
+                # Appel direct si pas de Celery (tests) ; sinon on pourrait
+                # `.delay()` mais on garde la compat côté sync.
+                resize_image_field(self.banner)
             except Exception:
-                # évite de crasher si le fichier n'existe pas encore en FS (ex: storage distant)
                 pass
     def __str__(self):
         return f'{self.titre} {self.date_debut} {self.code}'

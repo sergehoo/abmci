@@ -1,134 +1,64 @@
 {% extends 'layout/base.html' %}
+{% load static %}
+{% block head_title %}Dossier — Alliance Connect{% endblock %}
 
 {% block content %}
-<div class="nk-content nk-content-fluid">
-  <div class="container-xl wide-xl">
-    <div class="nk-content-inner">
-      <div class="nk-content-body">
-
-        <div class="nk-block-head nk-block-head-sm">
-          <div class="nk-block-between">
-            <div class="nk-block-head-content">
-              <h3 class="nk-block-title page-title">Détails du mariage</h3>
-              <div class="nk-block-des text-soft">
-                <p>Acte n° {{ mariage.numero_acte|default:"—" }}</p>
-              </div>
-            </div>
-            <div class="nk-block-head-content">
-              <div class="d-flex gap-2">
-                <a href="{% url 'mariage-update' mariage.pk %}" class="btn btn-outline-primary">
-                  <em class="icon ni ni-edit"></em> Modifier
-                </a>
-                <a href="{% url 'mariage-delete' mariage.pk %}" class="btn btn-outline-danger">
-                  <em class="icon ni ni-trash"></em> Supprimer
-                </a>
-                <a href="{% url 'mariage-list' %}" class="btn btn-primary">
-                  <em class="icon ni ni-arrow-left"></em> Retour
-                </a>
-              </div>
-            </div>
-          </div>
+<div>
+    <header class="mb-6 flex flex-wrap items-end justify-between gap-3">
+        <nav class="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
+            <a href="{% url 'mariage-list' %}" class="hover:text-brand-600 transition">{% if 'mariage' == 'fiancailles' %}Fiançailles{% else %}Mariages{% endif %}</a>
+            <svg class="w-3 h-3 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+            <span class="text-slate-700 dark:text-slate-300 font-medium">Dossier</span>
+        </nav>
+        <div class="flex items-center gap-2">
+            <a href="{% url 'mariage-update' object.pk %}" class="inline-flex items-center gap-2 h-10 px-4 rounded-lg border border-slate-200 dark:border-slate-700 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/50 transition">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                <span>Modifier</span>
+            </a>
+            <a href="{% url 'mariage-delete' object.pk %}" class="inline-flex items-center gap-2 h-10 px-4 rounded-lg border border-rose-200 dark:border-rose-700/40 text-sm text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7"/></svg>
+                <span>Supprimer</span>
+            </a>
         </div>
+    </header>
 
-        <div class="row g-gs">
-          <div class="col-lg-8">
-            <div class="card card-bordered">
-              <div class="card-inner">
-                <div class="row g-3">
-                  <div class="col-md-6">
-                    <div class="small text-soft mb-1">Date</div>
-                    <div class="fw-bold">{{ mariage.date_mariage|date:"d/m/Y" }}</div>
-                  </div>
-                  <div class="col-md-6">
-                    <div class="small text-soft mb-1">Lieu</div>
-                    <div class="fw-bold">{{ mariage.lieu_mariage }}</div>
-                  </div>
-                  <div class="col-md-6">
-                    <div class="small text-soft mb-1">Officiant</div>
-                    <div class="fw-bold">{{ mariage.officiant.get_full_name|default:mariage.officiant.username|default:"—" }}</div>
-                  </div>
-                  <div class="col-md-6">
-                    <div class="small text-soft mb-1">Numéro acte</div>
-                    <div class="fw-bold">{{ mariage.numero_acte|default:"—" }}</div>
-                  </div>
+    <section class="relative overflow-hidden rounded-2xl bg-gradient-to-br from- to- p-6 lg:p-8 text-white shadow-soft-lg mb-6">
+        <div aria-hidden="true" class="absolute -top-20 -right-20 w-64 h-64 rounded-full bg-white/15 blur-3xl"></div>
+        <div class="relative">
+            <div class="text-xs font-semibold tracking-wider uppercase opacity-90 mb-2">{% if 'mariage' == 'fiancailles' %}Dossier de fiançailles{% else %}Dossier de mariage{% endif %}</div>
+            <h1 class="font-display text-2xl lg:text-3xl font-bold leading-tight">
+                {{ object.homme.user.get_full_name }} <span class="opacity-75">{% if 'mariage' == 'fiancailles' %}&hearts;{% else %}&amp;{% endif %}</span> {{ object.femme.user.get_full_name }}
+            </h1>
+            {% if object.statut %}<div class="mt-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/20 backdrop-blur text-xs font-semibold">{{ object.statut }}</div>{% endif %}
+        </div>
+    </section>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <div class="bg-white dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-soft p-5 lg:p-6">
+            <h2 class="font-display font-semibold text-slate-900 dark:text-white mb-4">Le couple</h2>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <div class="text-[10px] uppercase tracking-wider text-slate-400 font-semibold mb-1">Lui</div>
+                    <div class="text-sm font-semibold text-slate-800 dark:text-slate-100">{{ object.homme.user.get_full_name|default:"—" }}</div>
+                    <div class="text-xs text-slate-500 mt-0.5">{{ object.homme.phone|default:"" }}</div>
                 </div>
-
-                <hr class="my-4">
-
-                <h6 class="mb-2">Couple</h6>
-                <div class="d-flex flex-wrap gap-2">
-                  {% for f in mariage.couple.all %}
-                  <span class="badge badge-dim bg-outline-primary">{{ f.user.get_full_name }}</span>
-                  {% endfor %}
+                <div>
+                    <div class="text-[10px] uppercase tracking-wider text-slate-400 font-semibold mb-1">Elle</div>
+                    <div class="text-sm font-semibold text-slate-800 dark:text-slate-100">{{ object.femme.user.get_full_name|default:"—" }}</div>
+                    <div class="text-xs text-slate-500 mt-0.5">{{ object.femme.phone|default:"" }}</div>
                 </div>
-
-                <hr class="my-4">
-
-                <h6 class="mb-2">Témoins</h6>
-                {% if mariage.temoins.all %}
-                  <div class="d-flex flex-wrap gap-2">
-                    {% for t in mariage.temoins.all %}
-                      <span class="badge badge-dim bg-outline-secondary">{{ t.user.get_full_name }}</span>
-                    {% endfor %}
-                  </div>
-                {% else %}
-                  <div class="text-soft">Aucun témoin renseigné.</div>
-                {% endif %}
-
-                <hr class="my-4">
-
-                <h6 class="mb-2">Documents</h6>
-                <div class="d-flex flex-wrap gap-2">
-                  {% if mariage.contrat_matrimonial %}
-                    <a class="btn btn-sm btn-outline-primary" href="{{ mariage.contrat_matrimonial.url }}" target="_blank">
-                      <em class="icon ni ni-file-docs"></em> Contrat
-                    </a>
-                  {% endif %}
-                  {% if mariage.photos %}
-                    <a class="btn btn-sm btn-outline-secondary" href="{{ mariage.photos.url }}" target="_blank">
-                      <em class="icon ni ni-img"></em> Photos
-                    </a>
-                  {% endif %}
-                  {% if not mariage.contrat_matrimonial and not mariage.photos %}
-                    <div class="text-soft">Aucun document joint.</div>
-                  {% endif %}
-                </div>
-
-                {% if mariage.notes %}
-                <hr class="my-4">
-                <h6 class="mb-2">Notes</h6>
-                <p class="text-soft">{{ mariage.notes }}</p>
-                {% endif %}
-              </div>
             </div>
-          </div>
-
-          <div class="col-lg-4">
-            <div class="card card-bordered h-100">
-              <div class="card-inner">
-                <h6 class="mb-2">Récapitulatif</h6>
-                <ul class="list-unstyled gy-2">
-                  <li class="d-flex justify-content-between">
-                    <span class="text-soft">Participants</span>
-                    <span class="fw-bold">{{ mariage.couple.count }} + {{ mariage.temoins.count }}</span>
-                  </li>
-                  <li class="d-flex justify-content-between">
-                    <span class="text-soft">Fichiers</span>
-                    <span class="fw-bold">
-                      {% with c=mariage.contrat_matrimonial|yesno:"1,0,0" p=mariage.photos|yesno:"1,0,0" %}
-                        {{ c|add:p }}
-                      {% endwith %}
-                    </span>
-                  </li>
-                </ul>
-              </div>
-            </div>
-          </div>
-
-        </div> <!-- row -->
-
-      </div>
+        </div>
+        <div class="bg-white dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-soft p-5 lg:p-6">
+            <h2 class="font-display font-semibold text-slate-900 dark:text-white mb-4">Détails</h2>
+            <dl class="grid grid-cols-1 gap-3 text-sm">
+                {% if object.date_debut %}<div><dt class="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">Date de début</dt><dd class="text-slate-700 dark:text-slate-200">{{ object.date_debut|date:"d M Y" }}</dd></div>{% endif %}
+                {% if object.date_fin %}<div><dt class="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">Date de fin</dt><dd class="text-slate-700 dark:text-slate-200">{{ object.date_fin|date:"d M Y" }}</dd></div>{% endif %}
+                {% if object.date_celebration %}<div><dt class="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">Date de célébration</dt><dd class="text-slate-700 dark:text-slate-200">{{ object.date_celebration|date:"d M Y" }}</dd></div>{% endif %}
+                {% if object.lieu %}<div><dt class="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">Lieu</dt><dd class="text-slate-700 dark:text-slate-200">{{ object.lieu }}</dd></div>{% endif %}
+                {% if object.notes %}<div><dt class="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">Notes</dt><dd class="text-slate-700 dark:text-slate-200 whitespace-pre-line">{{ object.notes }}</dd></div>{% endif %}
+            </dl>
+        </div>
     </div>
-  </div>
 </div>
 {% endblock %}

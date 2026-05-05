@@ -1,0 +1,54 @@
+{% extends 'layout/base.html' %}
+{% block head_title %}Mes formations – Alliance Connect{% endblock %}
+
+{% block content %}
+<div>
+    <header class="mb-6 lg:mb-8">
+        <nav class="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 mb-2">
+            <a href="{% url 'formations_index' %}" class="hover:text-brand-600 transition">Formations</a>
+            <svg class="w-3 h-3 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+            <span class="text-slate-700 dark:text-slate-300 font-medium">Mes inscriptions</span>
+        </nav>
+        <h1 class="font-display text-2xl lg:text-3xl font-bold text-slate-900 dark:text-white">Mes formations</h1>
+        <p class="text-sm text-slate-500 dark:text-slate-400 mt-1.5">Suivi personnel de vos parcours de formation.</p>
+    </header>
+
+    {% if inscriptions %}
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-5">
+            {% for i in inscriptions %}
+                {% with g=i.session.formation.gradient %}
+                <a href="{% url 'formation_session_detail' i.session.pk %}"
+                   class="group bg-white dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-soft hover:shadow-soft-lg hover:-translate-y-0.5 transition-all duration-300 overflow-hidden">
+                    <div class="aspect-[16/8] bg-gradient-to-br from-{{ g.from }} via-{{ g.via }} to-{{ g.to }} grid place-items-center text-white">
+                        <svg class="w-12 h-12 opacity-90" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 14l9-5-9-5-9 5 9 5z"/></svg>
+                    </div>
+                    <div class="p-5">
+                        <div class="text-[10px] uppercase tracking-wider text-{{ g.accent }}-600 font-semibold">{{ i.session.formation.nom }}</div>
+                        <h3 class="font-display font-semibold text-slate-900 dark:text-white truncate group-hover:text-{{ g.accent }}-700 transition">{{ i.session.nom }}</h3>
+                        <div class="text-xs text-slate-500 dark:text-slate-400 mt-1.5">
+                            {{ i.session.date_debut|date:"d M Y" }}{% if i.session.date_fin %} → {{ i.session.date_fin|date:"d M Y" }}{% endif %}
+                        </div>
+                        <div class="mt-4 pt-4 border-t border-slate-100 dark:border-slate-700/60 flex items-center justify-between text-xs">
+                            <span class="font-medium">Présence : <strong class="text-slate-700 dark:text-slate-200 tabular-nums">{{ i.taux_presence }} %</strong></span>
+                            {% if i.statut == 'actif' %}
+                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 font-medium"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>Actif</span>
+                            {% elif i.statut == 'diplome' %}
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-full bg-{{ g.accent }}-100 dark:bg-{{ g.accent }}-900/30 text-{{ g.accent }}-700 dark:text-{{ g.accent }}-300 font-medium">Diplômé</span>
+                            {% elif i.statut == 'abandonne' %}
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 font-medium">Abandonné</span>
+                            {% else %}
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-full bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-300 font-medium">Non validé</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </a>
+                {% endwith %}
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="bg-white dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-soft">
+            {% include 'layout/_empty_state.html' with title="Aucune inscription" message="Vous n'êtes inscrit·e à aucune session pour le moment." cta_url='/formations/' cta_label="Voir le catalogue" %}
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

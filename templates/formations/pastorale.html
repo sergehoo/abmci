@@ -1,0 +1,175 @@
+{% extends 'layout/base.html' %}
+{% load static %}
+{% block head_title %}Formation pastorale – Alliance Connect{% endblock %}
+
+{% block content %}
+<div>
+    {# Breadcrumb #}
+    <nav class="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 mb-2">
+        <a href="{% url 'formations_index' %}" class="hover:text-brand-600 transition">Formations</a>
+        <svg class="w-3 h-3 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+        <span class="text-slate-700 dark:text-slate-300 font-medium">Formation pastorale</span>
+    </nav>
+
+    {# Hero #}
+    <section class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-brand-600 via-brand-700 to-violet-700 p-6 lg:p-10 text-white shadow-soft-lg mb-6">
+        <div aria-hidden="true" class="absolute -top-24 -right-24 w-72 h-72 rounded-full bg-white/10 blur-3xl"></div>
+        <div aria-hidden="true" class="absolute -bottom-24 -left-12 w-64 h-64 rounded-full bg-white/10 blur-3xl"></div>
+
+        <div class="relative grid grid-cols-1 lg:grid-cols-[1fr_auto] items-end gap-6">
+            <div class="min-w-0 max-w-3xl">
+                <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/15 backdrop-blur text-[11px] font-semibold uppercase tracking-wider mb-4">
+                    <span>12 modules</span>
+                </div>
+                <h1 class="font-display text-2xl lg:text-3xl xl:text-4xl font-bold leading-tight">Formation pastorale</h1>
+                <p class="text-white/85 mt-3 text-sm lg:text-base">Parcours d'initiation à l'accompagnement spirituel pour les serviteurs et candidats au ministère.</p>
+            </div>
+            <svg class="w-24 h-24 text-white/85 hidden lg:block" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25"/></svg>
+        </div>
+    </section>
+
+    {# Stats #}
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4 mb-6">
+        <div class="bg-white dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-soft p-4">
+            <div class="text-[11px] uppercase tracking-wider text-slate-400 font-semibold">Durée</div>
+            <div class="font-display text-xl font-bold text-slate-900 dark:text-white mt-1">6 mois</div>
+        </div>
+        <div class="bg-white dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-soft p-4">
+            <div class="text-[11px] uppercase tracking-wider text-slate-400 font-semibold">Sessions</div>
+            <div class="font-display text-xl font-bold text-slate-900 dark:text-white mt-1">12 modules · 3 h chacun</div>
+        </div>
+        <div class="bg-white dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-soft p-4">
+            <div class="text-[11px] uppercase tracking-wider text-slate-400 font-semibold">Format</div>
+            <div class="font-display text-xl font-bold text-slate-900 dark:text-white mt-1">Présentiel + lectures dirigées</div>
+        </div>
+        <div class="bg-white dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-soft p-4">
+            <div class="text-[11px] uppercase tracking-wider text-brand-600 font-semibold">Prochaine session</div>
+            <div class="font-display text-xl font-bold text-brand-600 dark:text-brand-300 mt-1">Septembre 2026</div>
+        </div>
+    </div>
+
+    {# Programme + Sidebar #}
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        <div class="lg:col-span-2 bg-white dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-soft p-5 lg:p-6">
+            <h2 class="font-display font-semibold text-slate-900 dark:text-white mb-1">Programme détaillé</h2>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mb-5">Modules et thématiques abordés tout au long du parcours.</p>
+            <ol class="space-y-3">
+                <li class="flex items-start gap-3 p-3 rounded-xl border border-slate-200/70 dark:border-slate-700/60 hover:border-brand-300 hover:shadow-soft transition">
+                    <div class="w-8 h-8 rounded-lg bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-300 grid place-items-center font-display font-bold text-xs shrink-0 tabular-nums">01</div>
+                    <div class="flex-1 min-w-0">
+                        <div class="text-sm font-semibold text-slate-800 dark:text-slate-100">Identité et appel pastoral</div>
+                        <div class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Comprendre l'appel, le tempérament et la posture pastorale.</div>
+                    </div>
+                </li>
+                <li class="flex items-start gap-3 p-3 rounded-xl border border-slate-200/70 dark:border-slate-700/60 hover:border-brand-300 hover:shadow-soft transition">
+                    <div class="w-8 h-8 rounded-lg bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-300 grid place-items-center font-display font-bold text-xs shrink-0 tabular-nums">02</div>
+                    <div class="flex-1 min-w-0">
+                        <div class="text-sm font-semibold text-slate-800 dark:text-slate-100">Théologie biblique</div>
+                        <div class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Survol de l'Ancien et du Nouveau Testament.</div>
+                    </div>
+                </li>
+                <li class="flex items-start gap-3 p-3 rounded-xl border border-slate-200/70 dark:border-slate-700/60 hover:border-brand-300 hover:shadow-soft transition">
+                    <div class="w-8 h-8 rounded-lg bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-300 grid place-items-center font-display font-bold text-xs shrink-0 tabular-nums">03</div>
+                    <div class="flex-1 min-w-0">
+                        <div class="text-sm font-semibold text-slate-800 dark:text-slate-100">Herméneutique</div>
+                        <div class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Méthodes d'interprétation et préparation de message.</div>
+                    </div>
+                </li>
+                <li class="flex items-start gap-3 p-3 rounded-xl border border-slate-200/70 dark:border-slate-700/60 hover:border-brand-300 hover:shadow-soft transition">
+                    <div class="w-8 h-8 rounded-lg bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-300 grid place-items-center font-display font-bold text-xs shrink-0 tabular-nums">04</div>
+                    <div class="flex-1 min-w-0">
+                        <div class="text-sm font-semibold text-slate-800 dark:text-slate-100">Accompagnement spirituel</div>
+                        <div class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Écoute, discernement, prière d'intercession.</div>
+                    </div>
+                </li>
+                <li class="flex items-start gap-3 p-3 rounded-xl border border-slate-200/70 dark:border-slate-700/60 hover:border-brand-300 hover:shadow-soft transition">
+                    <div class="w-8 h-8 rounded-lg bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-300 grid place-items-center font-display font-bold text-xs shrink-0 tabular-nums">05</div>
+                    <div class="flex-1 min-w-0">
+                        <div class="text-sm font-semibold text-slate-800 dark:text-slate-100">Pastorale familiale</div>
+                        <div class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Couples, parents, jeunes, deuil.</div>
+                    </div>
+                </li>
+                <li class="flex items-start gap-3 p-3 rounded-xl border border-slate-200/70 dark:border-slate-700/60 hover:border-brand-300 hover:shadow-soft transition">
+                    <div class="w-8 h-8 rounded-lg bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-300 grid place-items-center font-display font-bold text-xs shrink-0 tabular-nums">06</div>
+                    <div class="flex-1 min-w-0">
+                        <div class="text-sm font-semibold text-slate-800 dark:text-slate-100">Pastorale en contexte</div>
+                        <div class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Évangélisation, mission, multiculturel.</div>
+                    </div>
+                </li>
+                <li class="flex items-start gap-3 p-3 rounded-xl border border-slate-200/70 dark:border-slate-700/60 hover:border-brand-300 hover:shadow-soft transition">
+                    <div class="w-8 h-8 rounded-lg bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-300 grid place-items-center font-display font-bold text-xs shrink-0 tabular-nums">07</div>
+                    <div class="flex-1 min-w-0">
+                        <div class="text-sm font-semibold text-slate-800 dark:text-slate-100">Éthique pastorale</div>
+                        <div class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Confidentialité, intégrité, redevabilité.</div>
+                    </div>
+                </li>
+                <li class="flex items-start gap-3 p-3 rounded-xl border border-slate-200/70 dark:border-slate-700/60 hover:border-brand-300 hover:shadow-soft transition">
+                    <div class="w-8 h-8 rounded-lg bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-300 grid place-items-center font-display font-bold text-xs shrink-0 tabular-nums">08</div>
+                    <div class="flex-1 min-w-0">
+                        <div class="text-sm font-semibold text-slate-800 dark:text-slate-100">Liturgie et sacrements</div>
+                        <div class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Baptême, cène, mariage, ordination.</div>
+                    </div>
+                </li>
+                <li class="flex items-start gap-3 p-3 rounded-xl border border-slate-200/70 dark:border-slate-700/60 hover:border-brand-300 hover:shadow-soft transition">
+                    <div class="w-8 h-8 rounded-lg bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-300 grid place-items-center font-display font-bold text-xs shrink-0 tabular-nums">09</div>
+                    <div class="flex-1 min-w-0">
+                        <div class="text-sm font-semibold text-slate-800 dark:text-slate-100">Leadership d'équipe</div>
+                        <div class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Mobiliser, déléguer, former.</div>
+                    </div>
+                </li>
+                <li class="flex items-start gap-3 p-3 rounded-xl border border-slate-200/70 dark:border-slate-700/60 hover:border-brand-300 hover:shadow-soft transition">
+                    <div class="w-8 h-8 rounded-lg bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-300 grid place-items-center font-display font-bold text-xs shrink-0 tabular-nums">10</div>
+                    <div class="flex-1 min-w-0">
+                        <div class="text-sm font-semibold text-slate-800 dark:text-slate-100">Gestion de conflit</div>
+                        <div class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Médiation, restauration, discipline ecclésiale.</div>
+                    </div>
+                </li>
+                <li class="flex items-start gap-3 p-3 rounded-xl border border-slate-200/70 dark:border-slate-700/60 hover:border-brand-300 hover:shadow-soft transition">
+                    <div class="w-8 h-8 rounded-lg bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-300 grid place-items-center font-display font-bold text-xs shrink-0 tabular-nums">11</div>
+                    <div class="flex-1 min-w-0">
+                        <div class="text-sm font-semibold text-slate-800 dark:text-slate-100">Soin de soi</div>
+                        <div class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Vie spirituelle, sabbat, rythme durable.</div>
+                    </div>
+                </li>
+                <li class="flex items-start gap-3 p-3 rounded-xl border border-slate-200/70 dark:border-slate-700/60 hover:border-brand-300 hover:shadow-soft transition">
+                    <div class="w-8 h-8 rounded-lg bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-300 grid place-items-center font-display font-bold text-xs shrink-0 tabular-nums">12</div>
+                    <div class="flex-1 min-w-0">
+                        <div class="text-sm font-semibold text-slate-800 dark:text-slate-100">Stage encadré</div>
+                        <div class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Pratique sous supervision d'un mentor.</div>
+                    </div>
+                </li>
+            </ol>
+        </div>
+
+        <aside class="space-y-5">
+            <div class="bg-white dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-soft p-5">
+                <h3 class="font-display font-semibold text-slate-900 dark:text-white mb-3">Formateur·rice principal</h3>
+                <div class="flex items-center gap-3">
+                    <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-brand-600 to-violet-700 text-white grid place-items-center font-display font-bold shrink-0">
+                        PÉ
+                    </div>
+                    <div class="min-w-0">
+                        <div class="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate">Pst Étienne KOFFI</div>
+                        <div class="text-xs text-slate-500 dark:text-slate-400">Responsable du parcours</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="rounded-2xl bg-gradient-to-br from-brand-600 to-violet-700 p-5 text-white shadow-soft">
+                <h3 class="font-display font-semibold mb-1">S'inscrire à la prochaine session</h3>
+                <p class="text-xs text-white/85 mb-4">Démarrage prévu en <strong>Septembre 2026</strong>. Places limitées.</p>
+                <a href="{% url 'pastorale_rdv_create' %}" class="inline-flex items-center justify-center gap-2 w-full h-10 rounded-lg bg-white text-brand-700 hover:bg-white/90 text-sm font-semibold shadow-sm transition">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    <span>Manifester son intérêt</span>
+                </a>
+            </div>
+
+            <div class="bg-white dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-soft p-5">
+                <h3 class="font-display font-semibold text-slate-900 dark:text-white mb-3">Besoin d'aide ?</h3>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mb-3">Contactez le secrétariat de la formation pour toute question.</p>
+                <a href="mailto:formations@abmci.org" class="text-sm text-brand-600 hover:underline font-medium">formations@abmci.org →</a>
+            </div>
+        </aside>
+    </div>
+</div>
+{% endblock %}

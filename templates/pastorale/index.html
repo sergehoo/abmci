@@ -1,0 +1,208 @@
+{% extends 'layout/base.html' %}
+{% load static %}
+{% block head_title %}Pastorale – Alliance Connect{% endblock %}
+
+{% block content %}
+<div>
+    {# ===== Hero ===== #}
+    <section class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-brand-700 via-brand-600 to-violet-700 p-6 lg:p-8 text-white shadow-soft-lg mb-6">
+        <div aria-hidden="true" class="absolute -top-24 -right-24 w-72 h-72 rounded-full bg-violet-400/30 blur-3xl"></div>
+        <div aria-hidden="true" class="absolute -bottom-24 -left-12 w-64 h-64 rounded-full bg-brand-300/20 blur-3xl"></div>
+
+        <div class="relative flex flex-wrap items-center justify-between gap-6">
+            <div class="min-w-0 max-w-2xl">
+                <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/15 backdrop-blur text-[11px] font-semibold uppercase tracking-wider text-white/90 mb-4">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-300 animate-pulse"></span>
+                    <span>Accompagnement pastoral</span>
+                </div>
+                <h1 class="font-display text-2xl lg:text-3xl xl:text-4xl font-bold leading-tight">
+                    Pastorale
+                </h1>
+                <p class="text-white/80 mt-2 text-sm lg:text-base max-w-xl">
+                    Permanences hebdomadaires, prises de rendez-vous, visites à domicile —
+                    un suivi pastoral de proximité pour chaque fidèle.
+                </p>
+            </div>
+            <div class="flex items-center gap-2">
+                <a href="{% url 'pastorale_rdv_create' %}"
+                   class="inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-white text-brand-700 hover:bg-brand-50 text-sm font-semibold shadow-sm transition">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+                    <span>Nouveau RDV</span>
+                </a>
+                <a href="{% url 'pastorale_permanences' %}"
+                   class="inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-white/15 hover:bg-white/25 backdrop-blur border border-white/20 text-sm font-medium transition">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                    <span>Permanences</span>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    {# ===== KPIs ===== #}
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-5 mb-6">
+        {% include 'home/_stat_card.html' with title="RDV cette semaine"  value=stats.rdv_semaine|default:"12" delta="+3" icon="calendar-check" tone="brand"   %}
+        {% include 'home/_stat_card.html' with title="Permanences"        value=stats.permanences|default:"5"  delta=""    icon="clock"          tone="violet"  %}
+        {% include 'home/_stat_card.html' with title="Visites à domicile" value=stats.visites|default:"8"      delta="+2"  icon="home"           tone="emerald" %}
+        {% include 'home/_stat_card.html' with title="Demandes en attente" value=stats.attente|default:"3"     delta=""    icon="hourglass"      tone="amber"   %}
+    </div>
+
+    {# ===== 3 sections quick access ===== #}
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-5 mb-6">
+
+        {# RDV à venir #}
+        <div class="lg:col-span-2 bg-white dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-soft p-5 lg:p-6">
+            <div class="flex items-center justify-between mb-5">
+                <div>
+                    <h2 class="font-display font-semibold text-slate-900 dark:text-white">Prochains rendez-vous</h2>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">Les 5 prochains entretiens pastoraux</p>
+                </div>
+                <a href="{% url 'pastorale_rdv' %}" class="inline-flex items-center gap-1 text-sm text-brand-600 hover:underline font-medium">
+                    Tout voir <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+                </a>
+            </div>
+
+            <ul class="divide-y divide-slate-100 dark:divide-slate-700/40">
+                {# Sample data — à remplacer par {% for r in rdv_list %} #}
+                {% for rdv in rdv_list %}
+                    <li class="py-3 flex items-center gap-4">
+                        <div class="w-12 h-12 rounded-xl bg-brand-50 dark:bg-brand-900/30 grid place-items-center text-center shrink-0">
+                            <div>
+                                <div class="text-[10px] uppercase tracking-wider text-brand-700 dark:text-brand-300 font-bold">{{ rdv.date|date:"M" }}</div>
+                                <div class="font-display text-base font-bold text-brand-700 dark:text-brand-200 leading-none">{{ rdv.date|date:"d" }}</div>
+                            </div>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate">{{ rdv.fidele|default:"Fidèle" }}</div>
+                            <div class="text-xs text-slate-500 dark:text-slate-400 truncate">{{ rdv.motif|default:"Entretien" }} · {{ rdv.heure|default:"—" }}</div>
+                        </div>
+                        <span class="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 text-xs font-medium">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>{{ rdv.statut|default:"Confirmé" }}
+                        </span>
+                    </li>
+                {% empty %}
+                    {# Placeholder : 3 RDV démo #}
+                    <li class="py-3 flex items-center gap-4">
+                        <div class="w-12 h-12 rounded-xl bg-brand-50 dark:bg-brand-900/30 grid place-items-center text-center shrink-0">
+                            <div>
+                                <div class="text-[10px] uppercase tracking-wider text-brand-700 dark:text-brand-300 font-bold">Mai</div>
+                                <div class="font-display text-base font-bold text-brand-700 dark:text-brand-200 leading-none">06</div>
+                            </div>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate">Jean-Marie KOUADIO</div>
+                            <div class="text-xs text-slate-500 dark:text-slate-400 truncate">Entretien préparation au baptême · 16:00</div>
+                        </div>
+                        <span class="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 text-xs font-medium"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>Confirmé</span>
+                    </li>
+                    <li class="py-3 flex items-center gap-4">
+                        <div class="w-12 h-12 rounded-xl bg-amber-50 dark:bg-amber-900/30 grid place-items-center text-center shrink-0">
+                            <div>
+                                <div class="text-[10px] uppercase tracking-wider text-amber-700 dark:text-amber-300 font-bold">Mai</div>
+                                <div class="font-display text-base font-bold text-amber-700 dark:text-amber-200 leading-none">07</div>
+                            </div>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate">Aïssatou DIALLO</div>
+                            <div class="text-xs text-slate-500 dark:text-slate-400 truncate">Conseils familiaux · 10:30</div>
+                        </div>
+                        <span class="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 text-xs font-medium">À confirmer</span>
+                    </li>
+                    <li class="py-3 flex items-center gap-4">
+                        <div class="w-12 h-12 rounded-xl bg-brand-50 dark:bg-brand-900/30 grid place-items-center text-center shrink-0">
+                            <div>
+                                <div class="text-[10px] uppercase tracking-wider text-brand-700 dark:text-brand-300 font-bold">Mai</div>
+                                <div class="font-display text-base font-bold text-brand-700 dark:text-brand-200 leading-none">09</div>
+                            </div>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate">Couple LOUGUE</div>
+                            <div class="text-xs text-slate-500 dark:text-slate-400 truncate">Préparation au mariage (séance 3) · 17:00</div>
+                        </div>
+                        <span class="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 text-xs font-medium"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>Confirmé</span>
+                    </li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        {# Permanences cette semaine #}
+        <div class="bg-white dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-soft p-5 lg:p-6">
+            <div class="flex items-center justify-between mb-5">
+                <div>
+                    <h2 class="font-display font-semibold text-slate-900 dark:text-white">Permanences</h2>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">Cette semaine</p>
+                </div>
+                <a href="{% url 'pastorale_permanences' %}" class="text-sm text-brand-600 hover:underline font-medium">Agenda</a>
+            </div>
+            <ul class="space-y-3">
+                {% for p in permanences_list %}
+                    <li class="flex items-start gap-3">
+                        <div class="w-2 h-12 rounded-full bg-brand-500 shrink-0"></div>
+                        <div class="flex-1 min-w-0">
+                            <div class="text-sm font-medium text-slate-800 dark:text-slate-100">{{ p.jour }} — {{ p.heure }}</div>
+                            <div class="text-xs text-slate-500 dark:text-slate-400">{{ p.responsable }}</div>
+                        </div>
+                    </li>
+                {% empty %}
+                    <li class="flex items-start gap-3">
+                        <div class="w-2 h-12 rounded-full bg-brand-500 shrink-0"></div>
+                        <div class="flex-1 min-w-0">
+                            <div class="text-sm font-medium text-slate-800 dark:text-slate-100">Mardi — 17:00 / 19:00</div>
+                            <div class="text-xs text-slate-500 dark:text-slate-400">Pasteur Étienne KOFFI</div>
+                        </div>
+                    </li>
+                    <li class="flex items-start gap-3">
+                        <div class="w-2 h-12 rounded-full bg-violet-500 shrink-0"></div>
+                        <div class="flex-1 min-w-0">
+                            <div class="text-sm font-medium text-slate-800 dark:text-slate-100">Jeudi — 18:00 / 20:00</div>
+                            <div class="text-xs text-slate-500 dark:text-slate-400">Pasteur Marie KONAN</div>
+                        </div>
+                    </li>
+                    <li class="flex items-start gap-3">
+                        <div class="w-2 h-12 rounded-full bg-emerald-500 shrink-0"></div>
+                        <div class="flex-1 min-w-0">
+                            <div class="text-sm font-medium text-slate-800 dark:text-slate-100">Samedi — 09:00 / 12:00</div>
+                            <div class="text-xs text-slate-500 dark:text-slate-400">Diacre Paul BAMBA</div>
+                        </div>
+                    </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+
+    {# ===== Quick actions ===== #}
+    <section>
+        <h2 class="font-display font-semibold text-slate-900 dark:text-white mb-1">Outils pastoraux</h2>
+        <p class="text-xs text-slate-500 dark:text-slate-400 mb-4">Accès direct aux fonctionnalités d'accompagnement.</p>
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
+            <a href="{% url 'pastorale_permanences' %}" class="group flex flex-col gap-2 p-5 rounded-xl bg-white dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/60 hover:border-brand-400 dark:hover:border-brand-500 shadow-soft hover:shadow-soft-lg transition">
+                <div class="w-10 h-10 rounded-lg bg-brand-100 text-brand-600 dark:bg-brand-900/30 dark:text-brand-300 grid place-items-center group-hover:scale-110 transition">
+                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                </div>
+                <div class="text-sm font-semibold text-slate-800 dark:text-slate-100">Permanences</div>
+                <div class="text-xs text-slate-500 dark:text-slate-400">Agenda hebdomadaire des pasteurs.</div>
+            </a>
+            <a href="{% url 'pastorale_rdv' %}" class="group flex flex-col gap-2 p-5 rounded-xl bg-white dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/60 hover:border-violet-400 dark:hover:border-violet-500 shadow-soft hover:shadow-soft-lg transition">
+                <div class="w-10 h-10 rounded-lg bg-violet-100 text-violet-600 dark:bg-violet-900/30 dark:text-violet-300 grid place-items-center group-hover:scale-110 transition">
+                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+                </div>
+                <div class="text-sm font-semibold text-slate-800 dark:text-slate-100">Rendez-vous</div>
+                <div class="text-xs text-slate-500 dark:text-slate-400">Entretiens, conseils, accompagnement.</div>
+            </a>
+            <a href="{% url 'pastorale_visites' %}" class="group flex flex-col gap-2 p-5 rounded-xl bg-white dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/60 hover:border-emerald-400 dark:hover:border-emerald-500 shadow-soft hover:shadow-soft-lg transition">
+                <div class="w-10 h-10 rounded-lg bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-300 grid place-items-center group-hover:scale-110 transition">
+                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+                </div>
+                <div class="text-sm font-semibold text-slate-800 dark:text-slate-100">Visites à domicile</div>
+                <div class="text-xs text-slate-500 dark:text-slate-400">Suivi pastoral de proximité.</div>
+            </a>
+            <a href="{% url 'pastorale_rdv_create' %}" class="group flex flex-col gap-2 p-5 rounded-xl bg-white dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/60 hover:border-amber-400 dark:hover:border-amber-500 shadow-soft hover:shadow-soft-lg transition">
+                <div class="w-10 h-10 rounded-lg bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-300 grid place-items-center group-hover:scale-110 transition">
+                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+                </div>
+                <div class="text-sm font-semibold text-slate-800 dark:text-slate-100">Planifier un RDV</div>
+                <div class="text-xs text-slate-500 dark:text-slate-400">Réserver un créneau.</div>
+            </a>
+        </div>
+    </section>
+</div>
+{% endblock %}

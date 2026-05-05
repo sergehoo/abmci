@@ -1,0 +1,76 @@
+{% extends 'layout/base.html' %}
+{% block head_title %}Transférer un fidèle – Alliance Connect{% endblock %}
+
+{% block extra_head %}
+<style>
+    #transferForm select,
+    #transferForm input[type="text"],
+    #transferForm textarea {
+        width: 100%; height: 2.625rem; padding: 0 0.875rem;
+        border: 1px solid rgb(226, 232, 240); border-radius: 0.5rem;
+        background-color: rgb(248, 250, 252); font-size: 0.875rem; color: rgb(51, 65, 85);
+    }
+    .dark #transferForm select, .dark #transferForm input, .dark #transferForm textarea {
+        background-color: rgba(30, 41, 59, .5); border-color: rgb(51, 65, 85); color: rgb(241, 245, 249);
+    }
+    #transferForm textarea { height: auto; padding: 0.75rem 0.875rem; min-height: 90px; }
+    #transferForm input:focus, #transferForm select:focus, #transferForm textarea:focus {
+        outline: none; border-color: rgb(129, 140, 248);
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, .2);
+    }
+    #transferForm label { font-weight: 500; font-size: 0.875rem; margin-bottom: 0.375rem; display: block; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <header class="mb-6">
+        <nav class="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 mb-2">
+            <a href="{% url 'membres' %}" class="hover:text-brand-600 transition">Membres</a>
+            <svg class="w-3 h-3 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+            <span class="text-slate-700 dark:text-slate-300 font-medium">Transférer</span>
+        </nav>
+        <h1 class="font-display text-2xl lg:text-3xl font-bold text-slate-900 dark:text-white">Transférer un fidèle</h1>
+        <p class="text-sm text-slate-500 dark:text-slate-400 mt-1.5">Changez l'église ou le département de rattachement.</p>
+    </header>
+
+    {% if object %}
+        <div class="mb-5 flex items-center gap-3 p-4 rounded-2xl bg-white dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/60 shadow-soft">
+            <div class="w-12 h-12 rounded-lg bg-gradient-to-br from-brand-500 to-violet-500 text-white grid place-items-center font-semibold text-sm shrink-0 overflow-hidden">
+                {% if object.photo %}<img src="{{ object.photo.url }}" alt="" class="w-full h-full object-cover">
+                {% else %}{{ object.user.first_name|first|upper }}{{ object.user.last_name|first|upper }}{% endif %}
+            </div>
+            <div class="min-w-0">
+                <div class="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate">{{ object.user.get_full_name }}</div>
+                <div class="text-xs text-slate-500 dark:text-slate-400">Église actuelle&nbsp;: <span class="font-medium text-slate-700 dark:text-slate-200">{{ object.eglise|default:"—" }}</span></div>
+            </div>
+        </div>
+    {% endif %}
+
+    <form method="post" id="transferForm" class="bg-white dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-soft p-5 lg:p-6 space-y-4">
+        {% csrf_token %}
+        {% if form.non_field_errors %}
+            <div class="p-3 rounded-lg bg-rose-50 text-rose-700 text-sm border border-rose-200">
+                {% for err in form.non_field_errors %}{{ err }}<br>{% endfor %}
+            </div>
+        {% endif %}
+
+        {% for field in form %}
+            <div>
+                <label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} <span class="text-rose-500">*</span>{% endif %}</label>
+                {{ field }}
+                {% if field.help_text %}<p class="mt-1 text-xs text-slate-400">{{ field.help_text|safe }}</p>{% endif %}
+                {% for e in field.errors %}<p class="mt-1 text-xs text-rose-600">{{ e }}</p>{% endfor %}
+            </div>
+        {% endfor %}
+
+        <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-700/60">
+            <a href="{% url 'membres' %}" class="inline-flex items-center h-10 px-4 rounded-lg border border-slate-200 dark:border-slate-700 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/50 transition">Annuler</a>
+            <button type="submit" class="inline-flex items-center gap-2 h-10 px-5 rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold shadow-soft transition">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
+                <span>Confirmer le transfert</span>
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

@@ -1,426 +1,77 @@
 {% extends 'layout/base.html' %}
 {% load humanize %}
-
-{% block title %}Détails du Don - {{ donation.reference }}{% endblock %}
+{% block head_title %}Détail du don – Alliance Connect{% endblock %}
 
 {% block content %}
-<div class="nk-content nk-content-fluid">
-    <div class="container-xl wide-xl">
-        <div class="nk-content-inner">
-            <div class="nk-content-body">
-                <!-- Header avec navigation -->
-                <div class="nk-block-head nk-block-head-sm">
-                    <div class="nk-block-between">
-                        <div class="nk-block-head-content">
-                            <h3 class="nk-block-title page-title">Détails du Don</h3>
-                            <div class="nk-block-des">
-                                <p class="lead-text">Référence: {{ donation.reference }}</p>
-                            </div>
-                        </div>
-                        <div class="nk-block-head-content">
-                            <ul class="nk-block-tools g-3">
-                                <li>
-                                    <a href="{% url 'donation-list' %}" class="btn btn-outline-light">
-                                        <em class="icon ni ni-arrow-left"></em>
-                                        <span>Retour à la liste</span>
-                                    </a>
-                                </li>
-                                {% if donation.status == 'pending' and donation.authorization_url %}
-                                <li>
-                                    <a href="{{ donation.authorization_url }}" class="btn btn-primary" target="_blank" rel="noopener">
-                                        <em class="icon ni ni-external"></em>
-                                        <span>Compléter le paiement</span>
-                                    </a>
-                                </li>
-                                {% endif %}
-                            </ul>
-                        </div>
-                    </div>
-                </div>
+<div class="max-w-3xl mx-auto">
+    <header class="mb-6 flex flex-wrap items-end justify-between gap-3">
+        <nav class="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
+            <a href="{% url 'donation-list' %}" class="hover:text-brand-600 transition">Dons</a>
+            <svg class="w-3 h-3 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+            <span class="text-slate-700 dark:text-slate-300 font-medium">{{ donation.reference|default:donation.pk }}</span>
+        </nav>
+        <a href="{% url 'donation-list' %}" class="inline-flex items-center gap-2 h-10 px-4 rounded-lg border border-slate-200 dark:border-slate-700 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/50 transition">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+            <span>Retour</span>
+        </a>
+    </header>
 
-                <!-- Contenu principal -->
-                <div class="nk-block">
-                    <div class="row g-gs">
-                        <!-- Carte d'information principale -->
-                        <div class="col-md-8">
-                            <div class="card card-bordered">
-                                <div class="card-inner">
-                                    <div class="card-head">
-                                        <h5 class="card-title">Informations du don</h5>
-                                    </div>
-                                    <div class="row g-3">
-                                        <div class="col-md-6">
-                                            <div class="form-group">
-                                                <label class="form-label">Statut</label>
-                                                <div class="form-control-wrap">
-                                                    {% if donation.status == 'success' %}
-                                                    <span class="badge badge-dim bg-success">Réussi</span>
-                                                    {% elif donation.status == 'pending' %}
-                                                    <span class="badge badge-dim bg-warning">En attente</span>
-                                                    {% elif donation.status == 'failed' %}
-                                                    <span class="badge badge-dim bg-danger">Échoué</span>
-                                                    {% elif donation.status == 'abandoned' %}
-                                                    <span class="badge badge-dim bg-secondary">Abandonné</span>
-                                                    {% else %}
-                                                    <span class="badge badge-dim bg-gray">{{ donation.status }}</span>
-                                                    {% endif %}
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <div class="form-group">
-                                                <label class="form-label">Montant</label>
-                                                <div class="form-control-wrap">
-                                                    <span class="text-primary font-weight-bold">{{ donation.amount|intcomma }} {{ donation.currency }}</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <div class="form-group">
-                                                <label class="form-label">Catégorie</label>
-                                                <div class="form-control-wrap">
-                                                    <span class="badge badge-dim bg-outline-primary">{{ donation.category.name|default:"Général" }}</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <div class="form-group">
-                                                <label class="form-label">Récurrence</label>
-                                                <div class="form-control-wrap">
-                                                    <span>{{ donation.get_recurrence_display }}</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <div class="form-group">
-                                                <label class="form-label">Méthode de paiement</label>
-                                                <div class="form-control-wrap">
-                                                    <span>{{ donation.get_payment_method_display }}</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <div class="form-group">
-                                                <label class="form-label">Créé le</label>
-                                                <div class="form-control-wrap">
-                                                    <span>{{ donation.created_at|date:"d/m/Y H:i" }}</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        {% if donation.paid_at %}
-                                        <div class="col-md-6">
-                                            <div class="form-group">
-                                                <label class="form-label">Payé le</label>
-                                                <div class="form-control-wrap">
-                                                    <span>{{ donation.paid_at|date:"d/m/Y H:i" }}</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        {% endif %}
-                                        {% if donation.user %}
-                                        <div class="col-md-6">
-                                            <div class="form-group">
-                                                <label class="form-label">Donateur</label>
-                                                <div class="form-control-wrap">
-                                                    <div class="user-card">
-                                                        <div class="user-avatar bg-primary">
-                                                            {% if donation.user.profile.photo %}
-                                                                <img src="{{ donation.user.profile.photo.url }}" alt="{{ donation.user.get_full_name }}">
-                                                            {% else %}
-                                                                <span>{{ donation.user.get_initials }}</span>
-                                                            {% endif %}
-                                                        </div>
-                                                        <div class="user-info">
-                                                            <span class="tb-lead">{{ donation.user.get_full_name }}</span>
-                                                            <span>{{ donation.user.email }}</span>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        {% endif %}
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Informations de transaction -->
-                            <div class="card card-bordered mt-4">
-                                <div class="card-inner">
-                                    <div class="card-head">
-                                        <h5 class="card-title">Détails de la transaction</h5>
-                                    </div>
-                                    <div class="row g-3">
-                                        <div class="col-md-6">
-                                            <div class="form-group">
-                                                <label class="form-label">Référence</label>
-                                                <div class="form-control-wrap">
-                                                    <span class="font-mono">{{ donation.reference }}</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <div class="form-group">
-                                                <label class="form-label">ID Transaction</label>
-                                                <div class="form-control-wrap">
-                                                    <span class="font-mono">{{ donation.transaction_id|default:"-" }}</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        {% if donation.payment_gateway %}
-                                        <div class="col-md-6">
-                                            <div class="form-group">
-                                                <label class="form-label">Passerelle de paiement</label>
-                                                <div class="form-control-wrap">
-                                                    <span>{{ donation.payment_gateway }}</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        {% endif %}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Carte latérale avec actions -->
-                        <div class="col-md-4">
-                            <div class="card card-bordered">
-                                <div class="card-inner">
-                                    <div class="card-head">
-                                        <h5 class="card-title">Actions</h5>
-                                    </div>
-                                    <div class="d-flex flex-column gap-2">
-                                        {% if donation.status == 'pending' and donation.authorization_url %}
-                                        <a href="{{ donation.authorization_url }}" class="btn btn-primary" target="_blank" rel="noopener">
-                                            <em class="icon ni ni-external"></em>
-                                            <span>Compléter le paiement</span>
-                                        </a>
-                                        {% endif %}
-                                        
-                                        <a href="{% url 'donation-list' %}" class="btn btn-outline-light">
-                                            <em class="icon ni ni-arrow-left"></em>
-                                            <span>Retour à la liste</span>
-                                        </a>
-                                        
-                                        {% if donation.status == 'success' %}
-                                        <button class="btn btn-outline-primary" onclick="downloadReceipt()">
-                                            <em class="icon ni ni-download"></em>
-                                            <span>Télécharger le reçu</span>
-                                        </button>
-                                        {% endif %}
-                                        
-                                        <button class="btn btn-outline-secondary" onclick="shareDonation()">
-                                            <em class="icon ni ni-share"></em>
-                                            <span>Partager</span>
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Statut de paiement -->
-                            <div class="card card-bordered mt-4">
-                                <div class="card-inner">
-                                    <div class="card-head">
-                                        <h5 class="card-title">Statut de paiement</h5>
-                                    </div>
-                                    <div class="timeline">
-                                        <div class="timeline-item {% if donation.created_at %}active{% endif %}">
-                                            <div class="timeline-time">{{ donation.created_at|date:"H:i" }}</div>
-                                            <div class="timeline-dot"></div>
-                                            <div class="timeline-content">
-                                                <p>Don créé</p>
-                                                <span class="text-soft">{{ donation.created_at|date:"d/m/Y" }}</span>
-                                            </div>
-                                        </div>
-                                        {% if donation.paid_at %}
-                                        <div class="timeline-item {% if donation.paid_at %}active{% endif %}">
-                                            <div class="timeline-time">{{ donation.paid_at|date:"H:i" }}</div>
-                                            <div class="timeline-dot bg-success"></div>
-                                            <div class="timeline-content">
-                                                <p>Paiement confirmé</p>
-                                                <span class="text-soft">{{ donation.paid_at|date:"d/m/Y" }}</span>
-                                            </div>
-                                        </div>
-                                        {% elif donation.status == 'pending' %}
-                                        <div class="timeline-item">
-                                            <div class="timeline-dot bg-warning"></div>
-                                            <div class="timeline-content">
-                                                <p>En attente de paiement</p>
-                                                <span class="text-soft">En cours</span>
-                                            </div>
-                                        </div>
-                                        {% endif %}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Informations supplémentaires -->
-                    {% if donation.meta %}
-                    <div class="card card-bordered mt-4">
-                        <div class="card-inner">
-                            <div class="card-head">
-                                <h5 class="card-title">Informations supplémentaires</h5>
-                            </div>
-                            <div class="bg-light rounded p-3">
-                                <pre class="mb-0" style="max-height: 300px; overflow: auto;"><code>{{ donation.meta|pprint }}</code></pre>
-                            </div>
-                        </div>
-                    </div>
+    <div class="bg-white dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-soft overflow-hidden">
+        <div class="relative bg-gradient-to-br from-emerald-500 to-emerald-700 p-6 text-white">
+            <div aria-hidden="true" class="absolute -top-12 -right-12 w-48 h-48 rounded-full bg-white/10 blur-2xl"></div>
+            <div class="relative">
+                <div class="text-xs uppercase tracking-wider opacity-80 font-semibold">Montant</div>
+                <div class="font-display text-4xl font-bold tabular-nums mt-1">{{ donation.amount|default:0|intcomma }} <span class="text-lg opacity-80">{{ donation.currency|default:"FCFA" }}</span></div>
+                <div class="mt-3 flex items-center gap-2 text-sm">
+                    {% if donation.status == 'success' %}
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/20 backdrop-blur text-xs font-semibold"><span class="w-1.5 h-1.5 rounded-full bg-emerald-300"></span>Succès</span>
+                    {% elif donation.status == 'pending' %}
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-400/90 text-amber-900 text-xs font-semibold">En attente</span>
+                    {% elif donation.status == 'failed' %}
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-400/90 text-rose-900 text-xs font-semibold">Échec</span>
                     {% endif %}
-
-                    <!-- Historique des événements -->
-                    {% if donation.events.exists %}
-                    <div class="card card-bordered mt-4">
-                        <div class="card-inner">
-                            <div class="card-head">
-                                <h5 class="card-title">Historique des événements</h5>
-                            </div>
-                            <div class="table-responsive">
-                                <table class="table table-hover">
-                                    <thead>
-                                        <tr>
-                                            <th>Date</th>
-                                            <th>Événement</th>
-                                            <th>Détails</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {% for event in donation.events.all %}
-                                        <tr>
-                                            <td>{{ event.created_at|date:"d/m/Y H:i" }}</td>
-                                            <td>
-                                                <span class="badge badge-dim bg-outline-secondary">{{ event.event_type }}</span>
-                                            </td>
-                                            <td>{{ event.message|default:"-" }}</td>
-                                        </tr>
-                                        {% endfor %}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                    {% endif %}
+                    <span class="font-mono text-xs opacity-80">{{ donation.reference|default:donation.pk }}</span>
                 </div>
             </div>
         </div>
+
+        <dl class="p-5 lg:p-6 grid grid-cols-1 sm:grid-cols-2 gap-5">
+            <div>
+                <dt class="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">Donateur</dt>
+                <dd class="text-sm text-slate-700 dark:text-slate-200 mt-1">{{ donation.donor_name|default:donation.user.get_full_name|default:"Anonyme" }}</dd>
+            </div>
+            <div>
+                <dt class="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">Email</dt>
+                <dd class="text-sm text-slate-700 dark:text-slate-200 mt-1 break-all">{{ donation.email|default:"—" }}</dd>
+            </div>
+            <div>
+                <dt class="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">Type de don</dt>
+                <dd class="text-sm text-slate-700 dark:text-slate-200 mt-1">{{ donation.donation_type|default:"—" }}</dd>
+            </div>
+            <div>
+                <dt class="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">Méthode</dt>
+                <dd class="text-sm text-slate-700 dark:text-slate-200 mt-1">{{ donation.payment_method|default:"—" }}</dd>
+            </div>
+            <div>
+                <dt class="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">Date</dt>
+                <dd class="text-sm text-slate-700 dark:text-slate-200 mt-1">{{ donation.created_at|date:"d M Y H:i"|default:"—" }}</dd>
+            </div>
+            {% if donation.message %}
+            <div class="sm:col-span-2">
+                <dt class="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">Message</dt>
+                <dd class="text-sm text-slate-700 dark:text-slate-200 mt-1 whitespace-pre-line">{{ donation.message }}</dd>
+            </div>
+            {% endif %}
+        </dl>
+
+        {% if donation.status == 'pending' and donation.authorization_url %}
+        <div class="px-5 lg:px-6 py-4 border-t border-slate-200 dark:border-slate-700/60 bg-amber-50 dark:bg-amber-900/10">
+            <a href="{{ donation.authorization_url }}" target="_blank" rel="noopener" class="inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-sm font-semibold shadow-soft transition">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                <span>Reprendre le paiement</span>
+            </a>
+        </div>
+        {% endif %}
     </div>
 </div>
-
-<style>
-    .user-avatar {
-        width: 40px;
-        height: 40px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: 600;
-    }
-
-    .user-card {
-        display: flex;
-        align-items: center;
-    }
-
-    .user-info {
-        margin-left: 10px;
-    }
-
-    .user-info .tb-lead {
-        display: block;
-        font-weight: 500;
-    }
-
-    .font-mono {
-        font-family: 'Fira Code', 'Monaco', 'Consolas', 'Ubuntu Mono', monospace;
-    }
-
-    .timeline {
-        position: relative;
-        padding-left: 40px;
-    }
-
-    .timeline-item {
-        position: relative;
-        padding-bottom: 20px;
-    }
-
-    .timeline-item:last-child {
-        padding-bottom: 0;
-    }
-
-    .timeline-time {
-        position: absolute;
-        left: -40px;
-        top: 0;
-        font-size: 12px;
-        color: #8392a5;
-    }
-
-    .timeline-dot {
-        position: absolute;
-        left: -48px;
-        top: 4px;
-        width: 16px;
-        height: 16px;
-        border-radius: 50%;
-        background-color: #e5e9f2;
-        border: 3px solid #fff;
-    }
-
-    .timeline-dot.bg-success {
-        background-color: #2dce89;
-    }
-
-    .timeline-dot.bg-warning {
-        background-color: #fb6340;
-    }
-
-    .timeline-item.active .timeline-dot {
-        background-color: #6576ff;
-    }
-
-    .timeline-content {
-        margin-left: 0;
-    }
-
-    pre {
-        background: #f8f9fa;
-        border-radius: 4px;
-        padding: 1rem;
-        font-size: 0.875rem;
-        line-height: 1.5;
-    }
-</style>
-
-<script>
-    function downloadReceipt() {
-        // Implémentation du téléchargement du reçu
-        alert('Téléchargement du reçu en cours de développement');
-    }
-
-    function shareDonation() {
-        if (navigator.share) {
-            navigator.share({
-                title: 'Mon don - {{ donation.reference }}',
-                text: 'J\'ai fait un don de {{ donation.amount }} {{ donation.currency }} pour {{ donation.category.name }}',
-                url: window.location.href
-            })
-            .catch(console.error);
-        } else {
-            alert('Partage non supporté sur ce navigateur');
-        }
-    }
-
-    // Copier la référence du don
-    function copyReference() {
-        navigator.clipboard.writeText('{{ donation.reference }}')
-            .then(() => {
-                alert('Référence copiée !');
-            })
-            .catch(err => {
-                console.error('Erreur lors de la copie: ', err);
-            });
-    }
-</script>
 {% endblock %}

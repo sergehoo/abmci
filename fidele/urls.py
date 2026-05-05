@@ -1,7 +1,9 @@
 import notifications
 from django.conf import settings
 from django.conf.urls.static import static
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.urls import path, include
+from django.views.generic import TemplateView
 
 
 from . import views
@@ -9,6 +11,20 @@ from .views import FideleListView, permanencecreate, FideleDetailView, VieDeLEgl
     StatutSocialListView, MessagerieListView, DirectionDetailView, FideleUpdateView, SuivieFideleListView, \
     FideleDeleteView, FideleTransferView, FideleCreateView, complete_profile, profile_complete, Politique, \
     SaftyChildren, ProblemTreatView, ProblemTreatPostView
+
+
+# ============================================================================
+# Vues simples pour Pastorale et Formations (templates uniquement, à brancher
+# sur des modèles métiers ultérieurement).
+# ============================================================================
+class _AuthTemplate(LoginRequiredMixin, TemplateView):
+    """TemplateView authentifiée."""
+    pass
+
+
+def _tv(template, name):
+    """Helper pour fabriquer une URL → TemplateView authentifiée."""
+    return path(name, _AuthTemplate.as_view(template_name=template), name=name)
 
 urlpatterns = [
                   path('membres/', FideleListView.as_view(), name='membres'),
@@ -50,6 +66,19 @@ urlpatterns = [
 
                   path('stats/', views.ProblemReportStatsView.as_view(), name='problemreport_stats'),
                   path("tinymce/", include("tinymce.urls")),
+
+                  # ============================================================
+                  # Pastorale (gestion des permanences, RDV, visites)
+                  # ============================================================
+                  path('pastorale/',                _AuthTemplate.as_view(template_name='pastorale/index.html'),       name='pastorale_index'),
+                  path('pastorale/permanences/',    _AuthTemplate.as_view(template_name='pastorale/permanences.html'), name='pastorale_permanences'),
+                  path('pastorale/rdv/',            _AuthTemplate.as_view(template_name='pastorale/rdv.html'),         name='pastorale_rdv'),
+                  path('pastorale/rdv/nouveau/',    _AuthTemplate.as_view(template_name='pastorale/rdv_create.html'),  name='pastorale_rdv_create'),
+                  path('pastorale/visites/',        _AuthTemplate.as_view(template_name='pastorale/visites.html'),     name='pastorale_visites'),
+
+                  # ============================================================
+                  # Formations → maintenant dans l'app `formation` (cf. abmci/urls.py)
+                  # ============================================================
 
               ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
 if settings.DEBUG:
