@@ -1,0 +1,31 @@
+# Secrets et environnements locaux : jamais dans l'image
+.env
+.env.*
+**/*firebase*.json
+**/*service-account*.json
+static/google-services.json
+
+# Historique git et outillage local
+.git
+.gitignore
+.idea
+.vscode
+**/.DS_Store
+
+# Environnement virtuel local (l'image construit son propre venv)
+env/
+venv/
+.venv/
+
+# Données et artefacts : servis par des volumes en production (/var/www/abmci/...)
+media/
+staticfiles/
+*.sql
+*.dump
+
+# Bytecode Python
+**/__pycache__
+**/*.pyc
+
+# Monitoring local
+monitoring/

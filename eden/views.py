@@ -1,5 +1,6 @@
 from django.contrib import messages
-from django.contrib.auth.mixins import LoginRequiredMixin
+
+from abmci.access import StaffRequiredMixin
 from django.shortcuts import render
 from django.urls import reverse_lazy
 from django.views.generic import UpdateView, DeleteView, CreateView, DetailView, ListView
@@ -12,7 +13,7 @@ from django.utils.translation import gettext_lazy as _
 # Create your views here.
 
 # ---------- Fiançailles ----------
-class FiancaillesListView(LoginRequiredMixin, ListView):
+class FiancaillesListView(StaffRequiredMixin, ListView):
     model = Fiancailles
     template_name = "eden/fiancailles_list.html"
     context_object_name = "fiancailles_list"
@@ -27,13 +28,13 @@ class FiancaillesListView(LoginRequiredMixin, ListView):
         return qs.order_by("-date_demande")
 
 
-class FiancaillesDetailView(LoginRequiredMixin, DetailView):
+class FiancaillesDetailView(StaffRequiredMixin, DetailView):
     model = Fiancailles
     template_name = "eden/fiancailles_detail.html"
     context_object_name = "fiancailles"
 
 
-class FiancaillesCreateView(LoginRequiredMixin, CreateView):
+class FiancaillesCreateView(StaffRequiredMixin, CreateView):
     model = Fiancailles
     form_class = FiancaillesForm
     template_name = "eden/fiancailles_form.html"
@@ -44,7 +45,7 @@ class FiancaillesCreateView(LoginRequiredMixin, CreateView):
         return super().form_valid(form)
 
 
-class FiancaillesUpdateView(LoginRequiredMixin, UpdateView):
+class FiancaillesUpdateView(StaffRequiredMixin, UpdateView):
     model = Fiancailles
     form_class = FiancaillesForm
     template_name = "eden/fiancailles_form.html"
@@ -55,17 +56,17 @@ class FiancaillesUpdateView(LoginRequiredMixin, UpdateView):
         return super().form_valid(form)
 
 
-class FiancaillesDeleteView(LoginRequiredMixin, DeleteView):
+class FiancaillesDeleteView(StaffRequiredMixin, DeleteView):
     model = Fiancailles
     template_name = "eden/confirm_delete.html"
     success_url = reverse_lazy("fiancailles-list")
 
-    def delete(self, request, *args, **kwargs):
+    def form_valid(self, form):  # Django ≥ 4 : delete() n'est plus appelée sur POST
         messages.success(self.request, _("Fiançailles supprimées."))
-        return super().delete(request, *args, **kwargs)
+        return super().form_valid(form)
 
 # ---------- Mariage ----------
-class MariageListView(LoginRequiredMixin, ListView):
+class MariageListView(StaffRequiredMixin, ListView):
     model = Mariage
     template_name = "eden/mariage_list.html"
     context_object_name = "mariage_list"
@@ -79,13 +80,13 @@ class MariageListView(LoginRequiredMixin, ListView):
         return qs.order_by("-date_mariage")
 
 
-class MariageDetailView(LoginRequiredMixin, DetailView):
+class MariageDetailView(StaffRequiredMixin, DetailView):
     model = Mariage
     template_name = "eden/mariage_detail.html"
     context_object_name = "mariage"
 
 
-class MariageCreateView(LoginRequiredMixin, CreateView):
+class MariageCreateView(StaffRequiredMixin, CreateView):
     model = Mariage
     form_class = MariageForm
     template_name = "eden/mariage_form.html"
@@ -98,7 +99,7 @@ class MariageCreateView(LoginRequiredMixin, CreateView):
         return response
 
 
-class MariageUpdateView(LoginRequiredMixin, UpdateView):
+class MariageUpdateView(StaffRequiredMixin, UpdateView):
     model = Mariage
     form_class = MariageForm
     template_name = "eden/mariage_form.html"
@@ -110,11 +111,11 @@ class MariageUpdateView(LoginRequiredMixin, UpdateView):
         return response
 
 
-class MariageDeleteView(LoginRequiredMixin, DeleteView):
+class MariageDeleteView(StaffRequiredMixin, DeleteView):
     model = Mariage
     template_name = "eden/confirm_delete.html"
     success_url = reverse_lazy("mariage-list")
 
-    def delete(self, request, *args, **kwargs):
+    def form_valid(self, form):  # Django ≥ 4 : delete() n'est plus appelée sur POST
         messages.success(self.request, _("Mariage supprimé."))
-        return super().delete(request, *args, **kwargs)
+        return super().form_valid(form)

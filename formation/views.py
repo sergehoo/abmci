@@ -3,6 +3,8 @@ from __future__ import annotations
 
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
+
+from abmci.access import StaffRequiredMixin
 from django.db import transaction
 from django.db.models import Count, Q, Sum
 from django.http import JsonResponse, HttpResponseBadRequest
@@ -29,7 +31,7 @@ from formation.models import (
 # Catalogue (parcours)
 # ============================================================================
 
-class FormationCatalogView(LoginRequiredMixin, ListView):
+class FormationCatalogView(StaffRequiredMixin, ListView):
     """Catalogue des parcours actifs avec stats globales."""
     template_name = 'formations/index.html'
     model = Formation
@@ -59,7 +61,7 @@ class FormationCatalogView(LoginRequiredMixin, ListView):
         return ctx
 
 
-class FormationDetailView(LoginRequiredMixin, DetailView):
+class FormationDetailView(StaffRequiredMixin, DetailView):
     """Détail d'un parcours + ses sessions."""
     template_name = 'formations/formation_detail.html'
     model = Formation
@@ -77,13 +79,13 @@ class FormationDetailView(LoginRequiredMixin, DetailView):
         return ctx
 
 
-class FormationCreateView(LoginRequiredMixin, CreateView):
+class FormationCreateView(StaffRequiredMixin, CreateView):
     template_name = 'formations/formation_form.html'
     form_class    = FormationForm
     success_url   = reverse_lazy('formations_index')
 
 
-class FormationUpdateView(LoginRequiredMixin, UpdateView):
+class FormationUpdateView(StaffRequiredMixin, UpdateView):
     template_name = 'formations/formation_form.html'
     form_class    = FormationForm
     model         = Formation
@@ -93,7 +95,7 @@ class FormationUpdateView(LoginRequiredMixin, UpdateView):
 # Sessions
 # ============================================================================
 
-class FormationSessionDetailView(LoginRequiredMixin, DetailView):
+class FormationSessionDetailView(StaffRequiredMixin, DetailView):
     """Détail d'une session : modules, inscrits, présences."""
     template_name = 'formations/session_detail.html'
     model = FormationSession
@@ -120,7 +122,7 @@ class FormationSessionDetailView(LoginRequiredMixin, DetailView):
         return ctx
 
 
-class FormationSessionCreateView(LoginRequiredMixin, CreateView):
+class FormationSessionCreateView(StaffRequiredMixin, CreateView):
     template_name = 'formations/session_form.html'
     form_class    = FormationSessionForm
 
@@ -143,7 +145,7 @@ class FormationSessionCreateView(LoginRequiredMixin, CreateView):
         return reverse_lazy('formation_session_detail', args=[self.object.pk])
 
 
-class FormationSessionUpdateView(LoginRequiredMixin, UpdateView):
+class FormationSessionUpdateView(StaffRequiredMixin, UpdateView):
     template_name = 'formations/session_form.html'
     form_class    = FormationSessionForm
     model         = FormationSession
@@ -152,7 +154,7 @@ class FormationSessionUpdateView(LoginRequiredMixin, UpdateView):
         return reverse_lazy('formation_session_detail', args=[self.object.pk])
 
 
-class FormationSessionDeleteView(LoginRequiredMixin, DeleteView):
+class FormationSessionDeleteView(StaffRequiredMixin, DeleteView):
     template_name = 'formations/session_confirm_delete.html'
     model         = FormationSession
     success_url   = reverse_lazy('formations_index')
@@ -162,7 +164,7 @@ class FormationSessionDeleteView(LoginRequiredMixin, DeleteView):
 # Modules (séances)
 # ============================================================================
 
-class FormationModuleCreateView(LoginRequiredMixin, CreateView):
+class FormationModuleCreateView(StaffRequiredMixin, CreateView):
     template_name = 'formations/module_form.html'
     form_class    = FormationModuleForm
 
@@ -190,7 +192,7 @@ class FormationModuleCreateView(LoginRequiredMixin, CreateView):
 # Inscriptions
 # ============================================================================
 
-class FormationInscrireView(LoginRequiredMixin, CreateView):
+class FormationInscrireView(StaffRequiredMixin, CreateView):
     template_name = 'formations/inscription_form.html'
     form_class    = FormationInscriptionForm
 
@@ -243,7 +245,7 @@ class MesInscriptionsView(LoginRequiredMixin, ListView):
 # ============================================================================
 
 @method_decorator(require_POST, name='dispatch')
-class TogglePresenceView(LoginRequiredMixin, TemplateView):
+class TogglePresenceView(StaffRequiredMixin, TemplateView):
     """
     POST /formations/sessions/<session_pk>/presence/toggle/
         body: inscription=<id>&module=<id>&present=true|false

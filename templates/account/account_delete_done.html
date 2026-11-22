@@ -1,0 +1,36 @@
+{% load static %}
+<!doctype html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="description" content="Demande de suppression de compte enregistrée - Alliance Connect">
+    <link rel="shortcut icon" href="{% static 'images/favicon.png'%}">
+    <title>Demande enregistrée - Alliance Connect</title>
+    <link rel="stylesheet" href="{% static 'assets/css/dashlite.css'%}">
+    <link id="skin-default" rel="stylesheet" href="{% static 'assets/css/theme.css' %}">
+    <style>
+        .delete-done-container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+            padding: 2.5rem;
+            max-width: 640px;
+            margin: 3rem auto;
+            text-align: center;
+        }
+    </style>
+</head>
+<body class="nk-body bg-lighter">
+<div class="delete-done-container">
+    <h3 class="mb-3">Votre demande de suppression a bien été enregistrée</h3>
+    <p class="mb-2">
+        Votre compte et les données associées seront supprimés par notre équipe dans les meilleurs délais.
+    </p>
+    <p class="text-soft mb-4">
+        Pour toute question, contactez l'équipe Alliance Connect.
+    </p>
+    <a href="{% url 'politique' %}" class="btn btn-outline-primary">Politique de confidentialité</a>
+</div>
+</body>
+</html>

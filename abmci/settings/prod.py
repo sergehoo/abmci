@@ -36,6 +36,7 @@ LOGGING = {
 
 
 SECURE_SSL_REDIRECT = True
+SECURE_REDIRECT_EXEMPT = [r"^healthz$"]  # sonde HTTP interne du conteneur (sinon 301 = faux positif)
 SECURE_HSTS_SECONDS = 31536000         # 1 an
 SECURE_HSTS_INCLUDE_SUBDOMAINS = True  # uniquement si tous les sous-domaines sont HTTPS
 SECURE_HSTS_PRELOAD = True             # si tu soumets au preload HSTS

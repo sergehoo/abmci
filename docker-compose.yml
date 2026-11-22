@@ -176,14 +176,18 @@ services:
     cpus: "0.30"
     mem_limit: "512m"
 
-  # Adminer on-demand, sous SOUS-DOMAINE dédié (évite le conflit Host)
+  # Adminer à la demande uniquement (profil "tools") et derrière une authentification Traefik :
+  #   docker compose --profile tools up -d adminer   # démarrer
+  #   docker compose --profile tools stop adminer    # arrêter après usage
+  # ADMINER_BASIC_AUTH (dans .env, entre apostrophes) : sortie de `htpasswd -nbB <utilisateur> <mot_de_passe>`
   adminer:
     image: adminer
     container_name: abmci-adminer
+    profiles: ["tools"]
     networks:
       - abmci-network
       - proxy
-    restart: always
+    restart: "no"
     cpus: "0.10"
     mem_limit: "128m"
     labels:
@@ -193,6 +197,8 @@ services:
       - traefik.http.routers.abmci-adminer.entrypoints=websecure
       - traefik.http.routers.abmci-adminer.tls=true
       - traefik.http.routers.abmci-adminer.tls.certresolver=lets
+      - traefik.http.routers.abmci-adminer.middlewares=abmci-adminer-auth
+      - traefik.http.middlewares.abmci-adminer-auth.basicauth.users=${ADMINER_BASIC_AUTH:-}
       - traefik.http.services.abmci-adminer.loadbalancer.server.port=8080
 #      - traefik.http.services.adminer.loadbalancer.server.scheme=http
 

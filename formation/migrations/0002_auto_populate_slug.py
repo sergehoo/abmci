@@ -8,7 +8,10 @@ def populate_slugs(apps, schema_editor):
     used = set(Formation.objects.exclude(slug__isnull=True)
                                 .exclude(slug='')
                                 .values_list('slug', flat=True))
-    for f in Formation.objects.filter(slug__in=['', None]) | Formation.objects.filter(slug__isnull=True):
+    # .only() : ne lit pas la colonne "format", qui peut encore s'appeler "format_" si cette migration
+    # s'exécute avant 0002_rename_format__… (les deux 0002 sont parallèles).
+    missing = Formation.objects.filter(slug__in=['', None]) | Formation.objects.filter(slug__isnull=True)
+    for f in missing.only('pk', 'nom', 'slug'):
         base = slugify(f.nom or 'formation') or f"formation-{f.pk}"
         slug = base
         n = 2

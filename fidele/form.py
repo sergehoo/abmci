@@ -1,5 +1,8 @@
 from allauth.account.forms import SignupForm, LoginForm
+import copy
+
 from django import forms
+from django.forms.models import model_to_dict
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.forms import ModelForm
@@ -56,15 +59,14 @@ class FideleSignupForm(SignupForm):
         # ✅ Si aucune église sélectionnée → utiliser la valeur par défaut
         eglise = self.cleaned_data.get('eglise') or Eglise.objects.first()
 
-        if not hasattr(user, 'fidele'):
-            Fidele.objects.create(
-                user=user,
-                phone=self.cleaned_data.get('phone'),
-                birthdate=self.cleaned_data.get('birthdate'),
-                eglise=eglise,
-                qlook_id=get_random_string(12),
-                date_entree=timezone.now().date(),
-            )
+        # La fiche existe déjà (signal post_save create_fidele) : l'ancien « if not hasattr(user, 'fidele') »
+        # ne créait donc jamais rien et le téléphone, la date de naissance et l'église étaient perdus.
+        fidele, _ = Fidele.objects.get_or_create(user=user)
+        fidele.phone = self.cleaned_data.get('phone') or fidele.phone
+        fidele.birthdate = self.cleaned_data.get('birthdate') or fidele.birthdate
+        fidele.eglise = eglise or fidele.eglise
+        fidele.date_entree = fidele.date_entree or timezone.now().date()
+        fidele.save()
         return user
 
 
@@ -231,6 +233,10 @@ class ProfileCompletionForm(forms.ModelForm):
 
     def __init__(self, *args, step=1, **kwargs):
         super().__init__(*args, **kwargs)
+        try:
+            step = int(step)  # ?step= arrive en chaîne depuis l'URL
+        except (TypeError, ValueError):
+            step = 1
         self.step = step
 
         # Champs par étapes
@@ -284,12 +290,10 @@ class ProfileCompletionForm(forms.ModelForm):
             5: {
                 'title': 'Engagement dans l’église',
                 'description': 'Votre implication actuelle',
+                # type_membre, membre, departement et fonction sont attribués par l'église (back-office) :
+                # un fidèle ne peut pas se les attribuer lui-même
                 'fields': [
-                    ('type_membre', 'Type de membre'),
-                    ('membre', 'Statut de membre'),
                     ('location', 'Localisation'),
-                    ('departement', 'Département'),
-                    ('fonction', 'Fonction'),
                     ('eglise', 'Église locale'),
                     ('photo', 'Photo de profil'),
                     ('signe', 'Signe distinctif')
@@ -302,12 +306,21 @@ class ProfileCompletionForm(forms.ModelForm):
         self.step_title = current_step_data.get('title', '')
         self.step_description = current_step_data.get('description', '')
 
+        # Copie propre à l'instance : modifier self._meta (partagé par la classe) mélangeait les étapes
+        # entre requêtes concurrentes
+        self._meta = copy.copy(self._meta)
         self._meta.fields = [field for field, _ in current_step_data.get('fields', [])]
+
+        # Valeurs actuelles de la fiche : sans valeur initiale, chaque étape réaffichée vide
+        # effaçait à l'enregistrement les données déjà saisies
+        current = model_to_dict(self.instance, fields=self._meta.fields) if self.instance.pk else {}
 
         # Construire les champs
         for field_name, label in current_step_data.get('fields', []):
             model_field = self._meta.model._meta.get_field(field_name)
             self.fields[field_name] = self.build_field(model_field, label)
+            if field_name in current and field_name not in self.initial:
+                self.initial[field_name] = current[field_name]
 
     def build_field(self, field, label):
         common_attrs = {
@@ -347,7 +360,7 @@ class ProfileCompletionForm(forms.ModelForm):
                 label=label,
                 queryset=field.related_model.objects.all(),
                 widget=Select2Widget(attrs={**common_attrs, 'class': 'form-control select2'}),
-                required=False
+                required=not field.null  # ex. location (non nullable) : une valeur vide ferait échouer l'enregistrement
             )
         elif isinstance(field, models.ManyToManyField):
             return forms.ModelMultipleChoiceField(

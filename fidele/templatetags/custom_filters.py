@@ -1,6 +1,6 @@
 from django import template
 
-from fidele.models import Notification
+from fidele.models import NotificationUser
 
 register = template.Library()
 
@@ -26,14 +26,14 @@ def subtract(value, arg):
 @register.simple_tag
 def unread_notifs_count(user):
     if user.is_authenticated:
-        return Notification.objects.filter(recipient=user, is_read=False).count()
+        return NotificationUser.objects.filter(user=user, is_read=False).count()
     return 0
 
 
 @register.simple_tag
 def user_notifs(user):
     if user.is_authenticated:
-        return Notification.objects.filter(recipient=user).order_by('-timestamp')
+        return NotificationUser.objects.filter(user=user).select_related('notification').order_by('-created_at')
     return []
 
 

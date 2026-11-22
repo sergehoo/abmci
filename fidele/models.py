@@ -95,7 +95,7 @@ class OuvrierPermanence(models.Model):
 class Department(models.Model):
     name = models.CharField(max_length=200, blank=True, null=True)
     description = models.TextField(blank=True, null=True)
-    responsable = models.ForeignKey('fidele', related_name="responsable", on_delete=models.CASCADE, blank=True,
+    responsable = models.ForeignKey('fidele', related_name="responsable", on_delete=models.SET_NULL, blank=True,
                                     null=True)
 
     def __str__(self):
@@ -444,18 +444,20 @@ class Fidele(models.Model):
     mensual_revenue = models.DecimalField(max_digits=10, decimal_places=3, blank=True, null=True, )
     salary_currency = models.CharField(null=True, blank=True, max_length=20)
 
-    marie_a = models.ForeignKey('self', on_delete=models.CASCADE, related_name='partenair', blank=True, null=True)
-    pere = models.ForeignKey('self', on_delete=models.CASCADE, related_name='paternelle', blank=True, null=True)
-    mere = models.ForeignKey('self', on_delete=models.CASCADE, related_name='maternelle', blank=True, null=True)
+    # Liens familiaux et références : supprimer un fidèle (ou une donnée de référence) ne doit jamais
+    # supprimer en cascade d'autres fidèles. SET_NULL pour les liens, PROTECT pour l'église et la localisation.
+    marie_a = models.ForeignKey('self', on_delete=models.SET_NULL, related_name='partenair', blank=True, null=True)
+    pere = models.ForeignKey('self', on_delete=models.SET_NULL, related_name='paternelle', blank=True, null=True)
+    mere = models.ForeignKey('self', on_delete=models.SET_NULL, related_name='maternelle', blank=True, null=True)
     frere = models.ManyToManyField('self', blank=True, symmetrical=True)
     soeur = models.ManyToManyField('self', blank=True, symmetrical=True)
-    type_membre = models.ForeignKey('MembreType', on_delete=models.CASCADE, blank=True, null=True)
+    type_membre = models.ForeignKey('MembreType', on_delete=models.SET_NULL, blank=True, null=True)
     membre = models.SmallIntegerField(blank=True, null=True, default=0)
-    location = models.ForeignKey(Location, on_delete=models.CASCADE, default=1, blank=True)
-    departement = models.ForeignKey('Department', on_delete=models.CASCADE, blank=True, null=True)
-    fonction = models.ForeignKey('Fonction', on_delete=models.CASCADE, blank=True, null=True)
-    eglise = models.ForeignKey('Eglise', on_delete=models.CASCADE, null=True, blank=True)
-    famille_alliance = models.ForeignKey('Familles', on_delete=models.CASCADE, null=True, blank=True)
+    location = models.ForeignKey(Location, on_delete=models.PROTECT, default=1, blank=True)
+    departement = models.ForeignKey('Department', on_delete=models.SET_NULL, blank=True, null=True)
+    fonction = models.ForeignKey('Fonction', on_delete=models.SET_NULL, blank=True, null=True)
+    eglise = models.ForeignKey('Eglise', on_delete=models.PROTECT, null=True, blank=True)
+    famille_alliance = models.ForeignKey('Familles', on_delete=models.SET_NULL, null=True, blank=True)
     photo = models.ImageField(null=True, blank=True, default='abmci/users/7.png', upload_to='abmci/fideles')
     sortie = models.SmallIntegerField(null=True, blank=True, default=0)
     is_deleted = models.SmallIntegerField(null=True, blank=True, default=0)
@@ -494,6 +496,8 @@ class Fidele(models.Model):
 
     @property
     def est_nouveau(self):
+        if not self.date_entree:  # date d'entrée inconnue : TypeError dans les templates auparavant
+            return False
         # Calcule la différence entre la date d'entrée et la date actuelle
         difference = timezone.now().date() - self.date_entree
 
@@ -605,7 +609,8 @@ class NotePastorale(models.Model):
         CONFIDENTIEL = 'CON', 'Confidentiel'
 
     fidele = models.ForeignKey('Fidele', on_delete=models.CASCADE, related_name='notes_pastorales')
-    auteur = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notes_redigees')
+    # SET_NULL : supprimer le compte d'un auteur ne doit pas effacer les notes rédigées sur d'autres fidèles
+    auteur = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='notes_redigees')
     date = models.DateTimeField(auto_now_add=True)
     titre = models.CharField(max_length=200)
     contenu = models.TextField()
@@ -1072,7 +1077,9 @@ class AccountDeletionRequest(models.Model):
         ("canceled", "Canceled"),
         ("failed", "Failed"),
     ]
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="deletion_requests")
+    # SET_NULL : la demande est conservée (trace de traitement) après la suppression du compte
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+                             related_name="deletion_requests")
     requested_at = models.DateTimeField(auto_now_add=True)
     processed_at = models.DateTimeField(null=True, blank=True)
     status = models.CharField(max_length=16, choices=STATUS_CHOICES, default="requested")

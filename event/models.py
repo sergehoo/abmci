@@ -55,13 +55,14 @@ class Evenement(models.Model):
     # 🎯 clé de “série” pour grouper les occurrences et assurer l’idempotence
     series_id = models.UUIDField(default=uuid.uuid4, db_index=True, editable=False)
 
-    eglise = models.ForeignKey('fidele.Eglise', on_delete=models.CASCADE, null=True, blank=True)
+    # PROTECT : supprimer une église ou un type ne doit pas effacer les événements et leurs présences
+    eglise = models.ForeignKey('fidele.Eglise', on_delete=models.PROTECT, null=True, blank=True)
     titre = models.CharField(max_length=200)
     date_debut = models.DateTimeField(default=timezone.now)
     date_fin= models.DateTimeField(default=timezone.now)
     lieu = models.CharField(max_length=100)
     description = models.TextField()
-    type = models.ForeignKey('TypeEvent', on_delete=models.CASCADE, null=True, blank=True)
+    type = models.ForeignKey('TypeEvent', on_delete=models.PROTECT, null=True, blank=True)
     banner = models.ImageField(upload_to='event/banner/', null=True, blank=True)
     qr_code = models.ImageField(upload_to='qrcodes/', null=True, blank=True, editable=True)
 

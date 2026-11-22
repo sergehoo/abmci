@@ -18,7 +18,7 @@ from django.core.mail import send_mail
 from django.template.loader import render_to_string
 from django.core.files.base import ContentFile
 from django.utils.text import Truncator
-from notifications.models import Notification
+from abmci.services.notifications import push_inapp_notification
 from phonenumber_field.phonenumber import to_python
 
 from event.models import Evenement, ParticipationEvenement
@@ -420,15 +420,8 @@ def remind_stale_problems(self, delay_hours: int = 48):
             title = "Rappel traitement"
             body = f"Aucune action récente pour: {pr.title}"
             data = {"type": "PROBLEM_REMINDER", "problem_id": str(pr.id)}
-            for f in targets:
-                try:
-                    uid = f.user_id if hasattr(f, "user_id") else f.id
-                    Notification.objects.create(user_id=uid, type="PROBLEM_REMINDER", title=title, body=body, data=data)
-                    class _U: pass
-                    u = _U(); u.id = uid
-                    send_to_user(u, title=title, body=body, data=data)
-                except Exception:
-                    pass
+            uids = [f.user_id if hasattr(f, "user_id") else f.id for f in targets]
+            push_inapp_notification(uids, type="PROBLEM_REMINDER", title=title, body=body, data=data)
             count += 1
     return {"reminded": count, "delay_hours": delay_hours}
 

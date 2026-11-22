@@ -3,6 +3,21 @@
 from django.db import migrations
 
 
+def rename_format_column_if_needed(apps, schema_editor):
+    """
+    0001_initial a été réécrite à la main : elle crée désormais directement la colonne "format".
+    Une base créée avec l'ancienne 0001 possède encore "format_" : on la renomme seulement dans ce cas
+    (aucune donnée supprimée, opération sans effet sur une base récente).
+    """
+    connection = schema_editor.connection
+    table = 'formation_formation'
+    with connection.cursor() as cursor:
+        columns = {c.name for c in connection.introspection.get_table_description(cursor, table)}
+    if 'format_' in columns and 'format' not in columns:
+        qn = schema_editor.quote_name
+        schema_editor.execute(f"ALTER TABLE {qn(table)} RENAME COLUMN {qn('format_')} TO {qn('format')}")
+
+
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -10,11 +25,9 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RenameField(
-            model_name='formation',
-            old_name='format_',
-            new_name='format',
-        ),
+        # L'ancien RenameField('format_' → 'format') échouait : le champ "format_" n'existe plus dans 0001.
+        # L'état des modèles n'a donc rien à renommer ; seule la base peut encore porter l'ancienne colonne.
+        migrations.RunPython(rename_format_column_if_needed, migrations.RunPython.noop),
         migrations.RenameIndex(
             model_name='formationmodule',
             new_name='formation_f_session_380750_idx',

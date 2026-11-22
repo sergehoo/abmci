@@ -17,11 +17,12 @@ def to_base_units(amount_int: int) -> int:
 
 def verify_webhook_signature(raw_body: bytes, signature: str | None) -> bool:
     # Paystack docs: HMAC-SHA512 du body JSON avec la SECRET_KEY
-    if not signature:
+    key = getattr(settings, "PAYSTACK_SECRET_KEY", None)
+    # Sans clé configurée, une signature calculée avec une clé vide serait forgeable : on refuse.
+    if not signature or not key:
         return False
-    key = settings.PAYSTACK_SECRET_KEY or ""
     mac = hmac.new(key.encode("utf-8"), msg=raw_body, digestmod=hashlib.sha512).hexdigest()
-    return hmac.compare_digest(mac, signature)
+    return hmac.compare_digest(mac, signature.strip().lower())
 
 
 def ps_headers():

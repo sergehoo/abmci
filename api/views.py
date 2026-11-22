@@ -4,7 +4,9 @@ import base64
 import hashlib
 import hmac
 import json
+import logging
 import os
+import re
 import uuid
 from datetime import timedelta
 from urllib.parse import urlencode
@@ -20,7 +22,6 @@ from django.db import IntegrityError, transaction, models
 from django.db.models import Q, Prefetch
 from django.http import JsonResponse, HttpRequest, HttpResponseRedirect, HttpResponse, response
 from django.shortcuts import get_object_or_404, render
-from django.template.defaulttags import comment
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from django.utils.decorators import method_decorator
@@ -38,14 +39,14 @@ from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly, AllowAny
 from rest_framework.response import Response
 from django.contrib.auth import get_user_model
-from allauth.account.models import EmailAddress
+from allauth.account.models import EmailAddress, EmailConfirmation, EmailConfirmationHMAC
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
 from rest_framework.views import APIView
 from django.contrib.gis.db.models.functions import Distance
 
 from abmci.services.notifications import notify_new_comment
-from abmci.services.paystack import ps_verify
+from abmci.services.paystack import ps_verify, verify_webhook_signature
 from api.serializers import UserSerializer, FideleSerializer, FideleCreateUpdateSerializer, \
     UserProfileCompletionSerializer, ParticipationEvenementSerializer, VerseDuJourSerializer, EvenementListSerializer, \
     PrayerCommentSerializer, PrayerCategorySerializer, PrayerRequestSerializer, NotificationSerializer, \
@@ -68,6 +69,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 # )
 
 User = get_user_model()
+logger = logging.getLogger(__name__)
 
 schema_view = get_schema_view(
     openapi.Info(
@@ -87,14 +89,22 @@ schema_view = get_schema_view(
 #         return self.request.user
 
 
-class FideleListView(generics.ListAPIView):
-    queryset = Fidele.objects.all()
+class FideleScopedQuerysetMixin:
+    """Le staff voit tous les fidèles ; un utilisateur standard ne voit que sa propre fiche."""
+
+    def get_queryset(self):
+        qs = Fidele.objects.select_related('user')
+        if self.request.user.is_staff:
+            return qs.all()
+        return qs.filter(user=self.request.user)
+
+
+class FideleListView(FideleScopedQuerysetMixin, generics.ListAPIView):
     serializer_class = FideleSerializer
     permission_classes = [permissions.IsAuthenticated]
 
 
-class FideleDetailView(generics.RetrieveUpdateAPIView):
-    queryset = Fidele.objects.all()
+class FideleDetailView(FideleScopedQuerysetMixin, generics.RetrieveUpdateAPIView):
     serializer_class = FideleSerializer
     permission_classes = [permissions.IsAuthenticated]
 
@@ -102,12 +112,12 @@ class FideleDetailView(generics.RetrieveUpdateAPIView):
 class FideleCreateView(generics.CreateAPIView):
     queryset = Fidele.objects.all()
     serializer_class = FideleCreateUpdateSerializer
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [permissions.IsAdminUser]
 
     def perform_create(self, serializer):
         fidele = serializer.save()
         # Créer un profil de complétion pour le nouvel utilisateur
-        UserProfileCompletion.objects.create(user=fidele.user)
+        UserProfileCompletion.objects.get_or_create(user=fidele.user)
 
 
 class ProfileCompletionView(generics.RetrieveUpdateAPIView):
@@ -124,12 +134,13 @@ class VerifyEmailView(generics.GenericAPIView):
     permission_classes = [permissions.AllowAny]
 
     def get(self, request, *args, **kwargs):
-        key = kwargs.get('key')
-        email = EmailAddress.objects.filter(key=key).first()
+        key = kwargs.get('key') or ''
+        # EmailAddress n'a pas de champ « key » : la clé est celle d'une confirmation allauth (HMAC ou en base)
+        confirmation = (EmailConfirmationHMAC.from_key(key)
+                        or EmailConfirmation.from_key(key))
 
-        if email:
-            email.verified = True
-            email.save()
+        # confirm() renvoie None si l'adresse était déjà vérifiée : c'est aussi un succès
+        if confirmation and (confirmation.confirm(request) or confirmation.email_address.verified):
             return Response({'detail': 'Email vérifié avec succès.'}, status=status.HTTP_200_OK)
         return Response({'detail': 'Lien de vérification invalide.'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -141,12 +152,20 @@ class PasswordResetConfirmRedirectView(View):
     - redirige vers le deeplink mobile (app links) sinon fallback web
     """
 
+    # uidb64 : base64 url-safe ; token Django : "<horodatage base36>-<hash>"
+    UID_RE = re.compile(r"^[0-9A-Za-z_\-]{1,64}$")
+    TOKEN_RE = re.compile(r"^[0-9A-Za-z]{1,13}-[0-9A-Za-z]{1,128}$")
+
     def get(self, request, uidb64, token):
+        if not (self.UID_RE.match(uidb64) and self.TOKEN_RE.match(token)):
+            return HttpResponse("Lien de réinitialisation invalide.", status=400, content_type="text/plain; charset=utf-8")
+
+        query = urlencode({"uid": uidb64, "token": token})
         # Deep link mobile (schéma custom ou app links)
-        mobile_deeplink = f"allianceconnect://reset-password?uid={uidb64}&token={token}"
+        mobile_deeplink = f"allianceconnect://reset-password?{query}"
 
         # Fallback web (peut être ta page React/Vue/Template ou une route Flutter Web)
-        web_fallback = f"https://administration.abmci.com/app/reset-password?uid={uidb64}&token={token}"
+        web_fallback = f"https://administration.abmci.com/app/reset-password?{query}"
 
         html = f"""
 <!DOCTYPE html>
@@ -154,14 +173,14 @@ class PasswordResetConfirmRedirectView(View):
 <head>
   <meta charset="utf-8">
   <title>Réinitialisation du mot de passe</title>
-  <meta http-equiv="refresh" content="0; url={mobile_deeplink}">
+  <meta http-equiv="refresh" content="0; url={escape(mobile_deeplink)}">
   <script>
     // Tentative immédiate vers l'app, puis fallback web si rien n’ouvre
-    setTimeout(function(){{ window.location = "{web_fallback}"; }}, 600);
+    setTimeout(function(){{ window.location = {json.dumps(web_fallback)}; }}, 600);
   </script>
 </head>
 <body>
-  <p>Redirection en cours… Si rien ne se passe, <a href="{web_fallback}">cliquez ici</a>.</p>
+  <p>Redirection en cours… Si rien ne se passe, <a href="{escape(web_fallback)}">cliquez ici</a>.</p>
 </body>
 </html>
 """
@@ -376,7 +395,7 @@ class PrayerCategoryViewSet(viewsets.ReadOnlyModelViewSet):
 
 class PrayerRequestViewSet(viewsets.ModelViewSet):
     serializer_class = PrayerRequestSerializer
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly, IsOwnerOrReadOnly]
+    permission_classes = [permissions.IsAuthenticated, IsOwnerOrReadOnly]
     parser_classes = [MultiPartParser, FormParser]  # pour audio
 
     def get_queryset(self):
@@ -405,7 +424,7 @@ class PrayerRequestViewSet(viewsets.ModelViewSet):
     # action comments
     @action(
         detail=True, methods=['get', 'post'],
-        permission_classes=[permissions.IsAuthenticatedOrReadOnly],
+        permission_classes=[permissions.IsAuthenticated],
         parser_classes=[JSONParser, FormParser, MultiPartParser],
     )
     def comments(self, request, pk=None):
@@ -463,8 +482,8 @@ class PrayerCommentViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         prayer = get_object_or_404(PrayerRequest, pk=self.request.data.get('prayer'))
+        # La notification est envoyée par le signal post_save de PrayerComment
         serializer.save(user=self.request.user, prayer=prayer)
-        notify_new_comment(comment.prayer, comment)
 
 
 class DeviceViewSet(viewsets.ModelViewSet):
@@ -834,13 +853,19 @@ class CreateIntentView(generics.GenericAPIView):
 
 
 class PaystackWebhookView(generics.GenericAPIView):
-    authentication_classes = []  # tu peux vérifier la signature Paystack (x-paystack-signature)
+    # Pas d'auth utilisateur : l'authenticité est garantie par la signature HMAC x-paystack-signature
+    authentication_classes = []
     permission_classes = [permissions.AllowAny]
 
     def post(self, request):
+        # La signature porte sur le corps brut : à lire avant request.data
+        if not verify_webhook_signature(request.body, request.headers.get('X-Paystack-Signature')):
+            logger.warning("Webhook Paystack rejeté : signature absente ou invalide")
+            return Response({'detail': 'Signature invalide'}, status=status.HTTP_401_UNAUTHORIZED)
+
         event = request.data
         event_type = event.get('event')
-        data = event.get('data', {})
+        data = event.get('data') or {}
 
         reference = data.get('reference')
         status_ps = data.get('status')
@@ -853,7 +878,14 @@ class PaystackWebhookView(generics.GenericAPIView):
         except Donation.DoesNotExist:
             return Response(status=200)
 
-        if event_type == 'charge.success' or status_ps == 'success':
+        if d.status == 'success':
+            return Response(status=200)
+
+        if event_type == 'charge.success' and status_ps == 'success':
+            # Le montant payé (unités de base ×100) doit correspondre à l'intention créée
+            if str(data.get('amount')) != str(int(d.amount) * 100):
+                logger.warning("Webhook Paystack : montant incohérent pour la donation %s", d.pk)
+                return Response(status=200)
             d.status = 'success'
             d.paid_at = timezone.now()
             d.save(update_fields=['status', 'paid_at'])
@@ -996,16 +1028,13 @@ class FideleViewSet(viewsets.ModelViewSet):
     ordering = ['user__last_name']
 
 
-class AccountDeletePerformWebhook(View):
-    """API minimale: POST authentifié (via session/cookie ou DRF/JWT si tu utilises DRF).
-       Ici, on suppose une session déjà authentifiée (web). Adapte à DRF si besoin.
+class AccountDeletePerformWebhook(APIView):
+    """POST authentifié par JWT (app mobile) : enregistre la demande de suppression du compte.
+       En vue Django simple, le JWT n'était pas lu et la protection CSRF bloquait l'app (403).
     """
+    permission_classes = [permissions.IsAuthenticated]
 
-    @method_decorator(csrf_exempt)  # si tu gères token différemment ; sinon garde CSRF
     def post(self, request, *args, **kwargs):
-        if not request.user.is_authenticated:
-            return JsonResponse({"detail": "Authentication required"}, status=401)
-
         AccountDeletionRequest.objects.create(user=request.user, status="requested")
         try:
             send_mail(
@@ -1041,14 +1070,17 @@ class DonationVerifyAPIView(APIView):
         except Exception:
             payload = {"status": False, "message": r.text}
 
-        if r.status_code == 200 and payload.get("status") and payload.get("data", {}).get("status") == "success":
+        ps_data = payload.get("data") or {}
+        if (r.status_code == 200 and payload.get("status") and ps_data.get("status") == "success"
+                and str(ps_data.get("amount")) == str(int(donation.amount) * 100)):
             donation.mark_success()
             return Response({'status': 'success'})
 
-        if payload.get("data", {}).get("status") in ("failed", "abandoned"):
-            donation.mark_failed(payload["data"]["status"])
+        if ps_data.get("status") in ("failed", "abandoned"):
+            donation.mark_failed(ps_data["status"])
 
-        return Response({'status': donation.status, 'paystack': payload}, status=400)
+        # La réponse brute de Paystack n'est pas renvoyée au client (fuite d'informations)
+        return Response({'status': donation.status}, status=400)
 
 
 class UserDetailView(generics.RetrieveUpdateAPIView):

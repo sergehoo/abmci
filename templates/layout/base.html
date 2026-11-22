@@ -178,7 +178,8 @@
      class="fixed bottom-4 right-4 z-[100] flex flex-col gap-2 max-w-sm w-[calc(100%-2rem)] sm:w-auto">
     {% if messages %}
         {% for message in messages %}
-            <template x-init="push({ kind: '{{ message.tags|default:'info' }}', text: `{{ message|escapejs }}` })"></template>
+            {# Chaîne JS entre apostrophes : escapejs n'échappe pas « ${ », un template literal resterait injectable #}
+            <template x-init="push({ kind: '{{ message.tags|default:'info'|escapejs }}', text: '{{ message|escapejs }}' })"></template>
         {% endfor %}
     {% endif %}
 

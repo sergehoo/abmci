@@ -19,6 +19,7 @@ from allauth.account.views import SignupView, LoginView, LogoutView
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
+from django.http import HttpResponse
 from django.template.defaulttags import url
 from django.urls import path, include
 from django.views.generic import TemplateView
@@ -27,7 +28,13 @@ from api.views import schema_view, AccountDeletePerformWebhook
 from fidele.views import HomePageView, FideleListView, mark_all_read, mark_read, all_notifications, \
     AccountDeleteRequestView, AccountDeleteDoneView
 
+def healthz(request):
+    """Sonde du healthcheck Docker (docker-compose.yml) : répond 200 sans dépendance externe."""
+    return HttpResponse("ok", content_type="text/plain")
+
+
 urlpatterns = [
+                  path('healthz', healthz, name='healthz'),
                   path('admin/', admin.site.urls),
                   path('api/', include('api.urls')),
                   path('accounts/', include('allauth.urls')),

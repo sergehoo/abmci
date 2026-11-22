@@ -164,8 +164,8 @@
     </div>
 </div>
 
-{# Données injectées par la vue (avec fallback []) #}
-<script id="events-json" type="application/json">{{ events_json|default:"[]"|safe }}</script>
+{# Données injectées par la vue : json_script échappe <, > et & (pas de sortie de balise <script>) #}
+{{ events|json_script:"events-json" }}
 {% endblock %}
 
 {% block extra_js %}

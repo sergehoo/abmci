@@ -514,7 +514,8 @@ class ProblemCategoryAdmin(admin.ModelAdmin):
     list_display = ["name", "slug", "is_active"]
     list_filter = ["is_active"]
     search_fields = ["name"]
-    prepopulated_fields = {"slug": ["name"]}
+    # Le slug est généré dans ProblemCategory.save() (editable=False) : prepopulated_fields levait une KeyError
+    readonly_fields = ["slug"]
 
 
 @admin.register(ProblemReport)
@@ -764,6 +765,23 @@ class AccountDeletionRequestAdmin(admin.ModelAdmin):
     list_display = ["user", "status", "requested_at", "processed_at"]
     list_filter = ["status", "requested_at"]
     search_fields = ["user__username"]
+    actions = ["traiter_demandes"]
+
+    @admin.action(description="Supprimer définitivement les comptes des demandes sélectionnées")
+    def traiter_demandes(self, request, queryset):
+        from fidele.views import process_account_deletion_request  # import local : évite un import circulaire
+
+        done = failed = 0
+        for req in queryset.filter(status__in=("requested", "failed")):
+            try:
+                process_account_deletion_request(req.pk)
+                done += 1
+            except Exception:
+                failed += 1
+        if done:
+            self.message_user(request, f"{done} compte(s) supprimé(s).", messages.SUCCESS)
+        if failed:
+            self.message_user(request, f"{failed} demande(s) en échec (voir le champ notes).", messages.ERROR)
 
 
 # ---------------------------------------------------------------------------

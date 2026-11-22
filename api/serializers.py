@@ -1,4 +1,8 @@
+import os
+
+from allauth.utils import generate_unique_username
 from dj_rest_auth.registration.serializers import RegisterSerializer
+from django_countries.serializers import CountryFieldMixin
 from django.contrib.gis.geos import Point
 # from django.contrib.gis.measure import Distance, D
 from django.contrib.gis.measure import D
@@ -13,7 +17,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.gis.db.models.functions import Distance as DistanceFunc
 
 from abmci.utils.church_positions import calculate_distance
-from abmci.utils.notifications import send_fcm_multicast
+from abmci.services.notifications import push_inapp_notification
 from event.models import ParticipationEvenement, TypeEvent, Evenement
 from fidele.models import Fidele, UserProfileCompletion, Eglise, SEXE_CHOICES, MARITAL_CHOICES, Location, \
     FidelePosition, PrayerComment, PrayerLike, PrayerCategory, PrayerRequest, Device, Notification, BibleVersion, \
@@ -230,7 +234,8 @@ class CustomUserDetailsSerializer(serializers.ModelSerializer):
             return None
 
 
-class FideleSerializer(serializers.ModelSerializer):
+# CountryFieldMixin : sans lui, le champ « contry » (django-countries) n'est pas sérialisable en JSON (erreur 500)
+class FideleSerializer(CountryFieldMixin, serializers.ModelSerializer):
     user = UserSerializer()
     age = serializers.SerializerMethodField()
     statut = serializers.SerializerMethodField()
@@ -240,6 +245,8 @@ class FideleSerializer(serializers.ModelSerializer):
         model = Fidele
         fields = '__all__'
         depth = 1
+        # Champs d'administration : non modifiables via l'API (un fidèle ne peut pas changer son statut)
+        read_only_fields = ('firebase_uid', 'membre', 'sortie', 'is_deleted')
 
     def get_age(self, obj):
         return obj.age()
@@ -251,7 +258,7 @@ class FideleSerializer(serializers.ModelSerializer):
         return obj.anciennete
 
 
-class FideleCreateUpdateSerializer(serializers.ModelSerializer):
+class FideleCreateUpdateSerializer(CountryFieldMixin, serializers.ModelSerializer):
     email = serializers.EmailField(write_only=True)
     first_name = serializers.CharField(write_only=True)
     last_name = serializers.CharField(write_only=True)
@@ -269,14 +276,24 @@ class FideleCreateUpdateSerializer(serializers.ModelSerializer):
             'password': validated_data.pop('password'),
         }
 
+        many_to_many = {f: validated_data.pop(f) for f in ('frere', 'soeur', 'roles') if f in validated_data}
+
         user = User.objects.create_user(
+            username=generate_unique_username(
+                [user_data['first_name'], user_data['last_name'], user_data['email'], 'user']),
             email=user_data['email'],
             first_name=user_data['first_name'],
             last_name=user_data['last_name'],
             password=user_data['password']
         )
 
-        fidele = Fidele.objects.create(user=user, **validated_data)
+        # La fiche Fidele est déjà créée par le signal post_save create_fidele : on la complète
+        fidele, _ = Fidele.objects.get_or_create(user=user)
+        for attr, value in validated_data.items():
+            setattr(fidele, attr, value)
+        fidele.save()
+        for attr, value in many_to_many.items():
+            getattr(fidele, attr).set(value)
         return fidele
 
 
@@ -367,10 +384,18 @@ class UserSerializer(serializers.ModelSerializer):
 
 class UserLiteSerializer(serializers.ModelSerializer):
     avatar = serializers.SerializerMethodField()
+    email = serializers.SerializerMethodField()
 
     class Meta:
         model = User
         fields = ['id', 'username', 'first_name', 'last_name', 'email', 'avatar']
+
+    def get_email(self, obj):
+        # L'e-mail n'est visible que par son titulaire et par le staff
+        user = getattr(self.context.get('request'), 'user', None)
+        if user is not None and (user.pk == obj.pk or user.is_staff):
+            return obj.email
+        return ""
 
     def get_avatar(self, obj):
         # Adapte selon ton modèle User (ex: profile.avatar.url)
@@ -407,6 +432,24 @@ class PrayerRequestSerializer(serializers.ModelSerializer):
             'created_at', 'updated_at'
         ]
         read_only_fields = ['user', 'likes_count', 'comments_count', 'has_liked', 'audio_note_url']
+
+    # Le fichier est servi sous /media/ (même domaine que le back-office) : audio uniquement, taille bornée
+    AUDIO_EXTENSIONS = {'m4a', 'aac', 'mp3', 'mp4', 'wav', 'ogg', 'oga', 'opus', 'webm', '3gp', 'amr'}
+    AUDIO_MAX_BYTES = 15 * 1024 * 1024
+
+    def validate_audio_note(self, value):
+        if not value:
+            return value
+        ext = os.path.splitext(value.name)[1].lower().lstrip('.')
+        if ext not in self.AUDIO_EXTENSIONS:
+            raise serializers.ValidationError("Format audio non supporté.")
+        if value.size > self.AUDIO_MAX_BYTES:
+            raise serializers.ValidationError("Fichier audio trop volumineux (15 Mo maximum).")
+        content_type = (getattr(value, 'content_type', '') or '').lower()
+        if content_type and not (content_type.startswith('audio/') or content_type in (
+                'video/mp4', 'video/3gpp', 'video/webm', 'application/octet-stream')):
+            raise serializers.ValidationError("Format audio non supporté.")
+        return value
 
     def get_has_liked(self, obj):
         req = self.context.get('request')
@@ -531,23 +574,21 @@ class BibleTagCreateSerializer(serializers.ModelSerializer):
 
         tag = BibleTag.objects.create(sender=sender, recipient=user, **validated)
 
-        # Notif FCM (selon ton modèle Device)
-        from fidele.models import Device
-        tokens = list(Device.objects.filter(user=user).values_list('token', flat=True))
-        if tokens:
-            # from utils import send_fcm_multicast  # à implémenter
-            send_fcm_multicast(
-                tokens,
-                title='On vous a tagué dans un verset',
-                body=f'{sender.get_full_name() or sender.username} — {tag.book} {tag.chapter}:{tag.verse} ({tag.version})',
-                data={
-                    'type': 'verse',
-                    'version': tag.version,
-                    'book': tag.book,
-                    'chapter': str(tag.chapter),
-                    'verse': str(tag.verse),
-                }
-            )
+        # Notification in-app + push (topic user_{id}). L'ancien envoi par l'API FCM « legacy »
+        # (FCM_SERVER_KEY, jamais définie et API arrêtée par Google) provoquait une erreur 500.
+        push_inapp_notification(
+            [user.id],
+            type='VERSE_TAG',
+            title='On vous a tagué dans un verset',
+            body=f'{sender.get_full_name() or sender.username} — {tag.book} {tag.chapter}:{tag.verse} ({tag.version})',
+            data={
+                'type': 'verse',
+                'version': str(tag.version),
+                'book': str(tag.book),
+                'chapter': str(tag.chapter),
+                'verse': str(tag.verse),
+            },
+        )
 
         return tag
 

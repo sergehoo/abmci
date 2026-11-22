@@ -1,9 +1,10 @@
 import notifications
 from django.conf import settings
 from django.conf.urls.static import static
-from django.contrib.auth.mixins import LoginRequiredMixin
 from django.urls import path, include
 from django.views.generic import TemplateView
+
+from abmci.access import StaffRequiredMixin
 
 
 from . import views
@@ -17,8 +18,8 @@ from .views import FideleListView, permanencecreate, FideleDetailView, VieDeLEgl
 # Vues simples pour Pastorale et Formations (templates uniquement, à brancher
 # sur des modèles métiers ultérieurement).
 # ============================================================================
-class _AuthTemplate(LoginRequiredMixin, TemplateView):
-    """TemplateView authentifiée."""
+class _AuthTemplate(StaffRequiredMixin, TemplateView):
+    """TemplateView réservée au back-office (staff)."""
     pass
 
 

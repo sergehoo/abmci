@@ -9,6 +9,9 @@ error() { printf "\033[1;31m[ERR ]\033[0m %s\n" "$*" >&2; }
 
 # Defaults
 : "${DJANGO_SETTINGS_MODULE:=abmci.settings.prod}"
+: "${DJANGO_ENV:=prod}"
+# Sans export, la valeur par défaut ci-dessus ne serait pas transmise aux processus Python
+export DJANGO_SETTINGS_MODULE DJANGO_ENV
 : "${DEBUG:=False}"
 : "${DB_HOST:=}"
 : "${DB_PORT:=5432}"
@@ -141,8 +144,11 @@ django.setup()
 User=get_user_model()
 username=os.getenv("DJANGO_SUPERUSER_USERNAME","admin")
 email=os.getenv("DJANGO_SUPERUSER_EMAIL","admin@example.com")
-password=os.getenv("DJANGO_SUPERUSER_PASSWORD","admin")
-if not User.objects.filter(username=username).exists():
+password=os.getenv("DJANGO_SUPERUSER_PASSWORD")
+if not password:
+    # Pas de mot de passe par défaut (admin/admin) : création ignorée
+    print("DJANGO_SUPERUSER_PASSWORD absent : création du superuser ignorée")
+elif not User.objects.filter(username=username).exists():
     User.objects.create_superuser(username=username, email=email, password=password)
     print(f"Superuser créé: {username}")
 else:

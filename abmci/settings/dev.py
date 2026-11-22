@@ -1,6 +1,6 @@
 # abmci/settings/dev.py
 from .base import *
-SECRET_KEY = 'django-insecure-+qv9un1&5@8q&yl5*^-jl_iw066p2o%7hdxsom0fqyn1^^cr@x'
+SECRET_KEY = os.environ["SECRET_KEY"]  # à définir dans .env (jamais en dur)
 
 DEBUG = True
 ALLOWED_HOSTS = ["localhost", "127.0.0.1", "10.0.2.2"]
@@ -9,11 +9,11 @@ ALLOWED_HOSTS = ["localhost", "127.0.0.1", "10.0.2.2"]
 DATABASES = {
     "default": {
         "ENGINE": "django.contrib.gis.db.backends.postgis",
-        "NAME": "abmci2",
-        "USER": "postgres",
-        "PASSWORD": "weddingLIFE18",
-        "HOST": "localhost",
-        "PORT": "5433",
+        "NAME": os.environ.get("DB_NAME", "abmci2"),
+        "USER": os.environ.get("DB_USER", "postgres"),
+        "PASSWORD": os.environ.get("DB_PASSWORD", ""),
+        "HOST": os.environ.get("DB_HOST", "localhost"),
+        "PORT": os.environ.get("DB_PORT", "5433"),
     }
 }
 

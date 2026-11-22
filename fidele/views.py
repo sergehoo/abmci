@@ -5,10 +5,16 @@ from datetime import timedelta, date
 from io import BytesIO
 
 from allauth.account.forms import LoginForm
+from allauth.utils import generate_unique_username
+from django import forms
 from django.conf import settings
+from django.contrib.auth import get_user_model
+from django.forms.models import construct_instance
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
+
+from abmci.access import StaffRequiredMixin, staff_required
 from django.core.mail import send_mail
 from django.db import transaction
 from django.db.models import Count, Q, Case, When, IntegerField, Sum
@@ -17,37 +23,47 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from django.utils.dateparse import parse_date
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.views import View
 from django.views.generic import TemplateView, ListView, DetailView, UpdateView, FormView, DeleteView, CreateView
 from reportlab.pdfgen import canvas
 
-from abmci.notifications.fcm import send_to_user
+from abmci.services.notifications import push_inapp_notification
 from fidele.models import Fidele, Department, Permanence, Eglise, ProblemeParticulier, Fonction, MembreType, \
     TransferHistory, Notification, UserProfileCompletion, AccountDeletionRequest, Donation, DonationCategory, \
-    ProblemCategory, ProblemReport, ProblemAction
+    ProblemCategory, ProblemReport, ProblemAction, NotificationUser
 from fidele.form import PermanenceForm, FideleUpdateForm, FideleTransferForm, ProfileCompletionForm, ConfirmDeleteForm, \
     ProblemReminderForm, ProblemStatusForm, ProblemAssignForm, ProblemCommentForm
 from event.models import ParticipationEvenement
 from django.utils.translation import gettext_lazy as _
 from django.db.models import Q, Count, Case, When, BooleanField, Value, DateField, F
+# Notifications in-app : l'état lu/non lu est porté par NotificationUser (Notification n'a pas de champ user)
 @login_required
 def all_notifications(request):
-    notifications = Notification.objects.filter(recipient=request.user)
+    notifications = (NotificationUser.objects.filter(user=request.user)
+                     .select_related('notification').order_by('-created_at')[:200])
     return render(request, 'notifications/all.html', {'notifications': notifications})
 
 
 @login_required
 def mark_read(request, pk):
-    notif = get_object_or_404(Notification, pk=pk, recipient=request.user)
-    notif.is_read = True
-    notif.save()
-    return redirect(request.GET.get('next') or 'notifs:all')
+    entry = get_object_or_404(NotificationUser, pk=pk, user=request.user)
+    if not entry.is_read:
+        entry.is_read = True
+        entry.read_at = timezone.now()
+        entry.save(update_fields=['is_read', 'read_at'])
+    next_url = request.GET.get('next')
+    # Pas de redirection ouverte vers un domaine externe
+    if next_url and url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()},
+                                                    require_https=request.is_secure()):
+        return redirect(next_url)
+    return redirect('all')
 
 
 @login_required
 def mark_all_read(request):
-    Notification.objects.filter(recipient=request.user, is_read=False).update(is_read=True)
-    return redirect('notifs:all')
+    NotificationUser.objects.filter(user=request.user, is_read=False).update(is_read=True, read_at=timezone.now())
+    return redirect('all')
 
 
 class Politique(TemplateView):
@@ -60,7 +76,7 @@ class SaftyChildren(TemplateView):
     template_name = 'landing/safety-policy.html'
 
 
-class HomePageView(LoginRequiredMixin, TemplateView):
+class HomePageView(StaffRequiredMixin, TemplateView):
     """
     Dashboard analytique d'Alliance Connect.
     - Filtres de période (semaine/mois/trimestre/semestre/année/personnalisé)
@@ -95,7 +111,7 @@ class HomePageView(LoginRequiredMixin, TemplateView):
         return context
 
 
-class _LegacyHomePageView_DEPRECATED(LoginRequiredMixin, TemplateView):
+class _LegacyHomePageView_DEPRECATED(StaffRequiredMixin, TemplateView):
     """Conservé temporairement pour référence — ne plus utiliser."""
     template_name = "home/index.html"
 
@@ -284,7 +300,7 @@ class _LegacyHomePageView_DEPRECATED(LoginRequiredMixin, TemplateView):
         return context
 
 
-class DirectionDetailView(LoginRequiredMixin, DetailView):
+class DirectionDetailView(StaffRequiredMixin, DetailView):
     """
     Vue détail d'une direction avec tabs : Membres / Réunions / Présences services.
     """
@@ -351,6 +367,7 @@ class DirectionDetailView(LoginRequiredMixin, DetailView):
         return context
 
 
+@staff_required
 def permanencecreate(request, pk):
     if request.method == 'POST':
         form = PermanenceForm(request.POST)
@@ -384,7 +401,7 @@ def permanencecreate(request, pk):
         return redirect('direction', pk=pk)
 
 
-class SuivieFideleListView(LoginRequiredMixin, ListView):
+class SuivieFideleListView(StaffRequiredMixin, ListView):
     model = Fidele
     template_name = "fidele/suivie_fidele.html"
     context_object_name = "membres"
@@ -450,7 +467,7 @@ class SuivieFideleListView(LoginRequiredMixin, ListView):
                 Q(user__first_name__icontains=search_query) |
                 Q(user__last_name__icontains=search_query) |
                 Q(phone__icontains=search_query) |
-                Q(personal_mail__icontains=search_query)
+                Q(user__email__icontains=search_query)
             )
 
         return queryset
@@ -482,7 +499,7 @@ class SuivieFideleListView(LoginRequiredMixin, ListView):
         return context
 
 
-class FideleListView(LoginRequiredMixin, ListView):
+class FideleListView(StaffRequiredMixin, ListView):
     model = Fidele
     template_name = "fidele/fidele_list.html"
     context_object_name = "membres"
@@ -526,8 +543,8 @@ class FideleListView(LoginRequiredMixin, ListView):
         """Prépare les données pour les graphiques statistiques."""
         # Statistiques démographiques
         context['stats'] = {
-            'hommes': queryset.filter(sexe='M').count(),
-            'femmes': queryset.filter(sexe='F').count(),
+            'hommes': queryset.filter(sexe='Homme').count(),  # valeurs de SEXE_CHOICES
+            'femmes': queryset.filter(sexe='Femme').count(),
             'nouveaux': queryset.filter(date_entree__gte=timezone.now() - timedelta(days=21)).count(),
             'baptises': queryset.exclude(date_bapteme=None).count(),
             'visiteurs': queryset.filter(membre=0).count(),
@@ -598,14 +615,14 @@ class FideleListView(LoginRequiredMixin, ListView):
             queryset = queryset.filter(
                 Q(user__first_name__icontains=search_query) |
                 Q(user__last_name__icontains=search_query) |
-                Q(personal_mail__icontains=search_query) |
+                Q(user__email__icontains=search_query) |
                 Q(phone__icontains=search_query)
             )
 
         return queryset.order_by('user__last_name', 'user__first_name')
 
 
-class FideleCreateView(LoginRequiredMixin, CreateView):
+class FideleCreateView(StaffRequiredMixin, CreateView):
     model = Fidele
     template_name = "fidele/fidele_form.html"
     fields = [
@@ -616,14 +633,41 @@ class FideleCreateView(LoginRequiredMixin, CreateView):
         'type_membre', 'membre', 'location', 'departement', 'fonction', 'eglise',
         'famille_alliance', 'photo'
     ]
-    # permission_required = 'home.can_edit_employee'
-    success_url = reverse_lazy('fidele_list')
+    # permission_required = 'fidele.can_edit_employee'
+    success_url = reverse_lazy('membres')
+
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class)
+        # Fidele.user est obligatoire : on collecte l'identité pour créer le compte associé
+        identity = {
+            'first_name': forms.CharField(label="Prénom", max_length=150),
+            'last_name': forms.CharField(label="Nom", max_length=150),
+            'email': forms.EmailField(label="E-mail"),
+        }
+        form.fields = {**identity, **form.fields}
+        return form
 
     def form_valid(self, form):
-        form.instance.created_by = self.request.user
-        response = super().form_valid(form)
+        User = get_user_model()
+        data = form.cleaned_data
+        if User.objects.filter(email__iexact=data['email']).exists():
+            form.add_error('email', "Un compte existe déjà avec cet e-mail.")
+            return self.form_invalid(form)
+
+        with transaction.atomic():
+            user = User.objects.create_user(
+                username=generate_unique_username([data['first_name'], data['last_name'], data['email'], 'user']),
+                email=data['email'], first_name=data['first_name'], last_name=data['last_name'],
+            )
+            user.set_unusable_password()
+            user.save(update_fields=['password'])
+            # La fiche est créée par le signal post_save create_fidele : on la complète avec le formulaire
+            fidele, _ = Fidele.objects.get_or_create(user=user)
+            construct_instance(form, fidele, fields=self.fields)
+            fidele.save()
+        self.object = fidele
         messages.success(self.request, f"Fidèle {self.object} créé avec succès!")
-        return response
+        return redirect(self.get_success_url())
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -631,22 +675,23 @@ class FideleCreateView(LoginRequiredMixin, CreateView):
         return context
 
 
-class FideleDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
+class FideleDeleteView(StaffRequiredMixin, PermissionRequiredMixin, DeleteView):
     model = Fidele
     template_name = "fidele/fidele_confirm_delete.html"
-    permission_required = 'home.can_edit_employee'
-    success_url = reverse_lazy('fidele_list')
+    permission_required = 'fidele.can_edit_employee'
+    success_url = reverse_lazy('membres')
 
-    def delete(self, request, *args, **kwargs):
+    def form_valid(self, form):
+        # Django ≥ 4 : DeleteView passe par form_valid (delete() n'est plus appelée sur POST)
         messages.success(self.request, "Fidèle supprimé avec succès!")
-        return super().delete(request, *args, **kwargs)
+        return super().form_valid(form)
 
 
-class FideleTransferView(LoginRequiredMixin, PermissionRequiredMixin, FormView):
+class FideleTransferView(StaffRequiredMixin, PermissionRequiredMixin, FormView):
     template_name = "fidele/fidele_transfer.html"
     form_class = FideleTransferForm
-    permission_required = 'home.can_edit_employee'
-    success_url = reverse_lazy('fidele_list')
+    permission_required = 'fidele.can_edit_employee'
+    success_url = reverse_lazy('membres')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -660,11 +705,12 @@ class FideleTransferView(LoginRequiredMixin, PermissionRequiredMixin, FormView):
         nouvelle_eglise = form.cleaned_data['nouvelle_eglise']
         motif = form.cleaned_data['motif']
 
+        ancienne_eglise = fidele.eglise
         with transaction.atomic():
             # Historique avant transfert
             TransferHistory.objects.create(
                 fidele=fidele,
-                ancienne_eglise=fidele.eglise,
+                ancienne_eglise=ancienne_eglise,
                 nouvelle_eglise=nouvelle_eglise,
                 effectue_par=self.request.user,
                 motif=motif
@@ -674,33 +720,39 @@ class FideleTransferView(LoginRequiredMixin, PermissionRequiredMixin, FormView):
             fidele.eglise = nouvelle_eglise
             fidele.save()
 
-            # Notification
-            self.send_transfer_notification(fidele, nouvelle_eglise, motif)
+            # Notification (l'ancienne église est capturée avant la mise à jour)
+            self.send_transfer_notification(fidele, ancienne_eglise, nouvelle_eglise, motif)
 
         messages.success(self.request, f"{fidele} a été transféré à {nouvelle_eglise} avec succès!")
         return super().form_valid(form)
 
-    def send_transfer_notification(self, fidele, nouvelle_eglise, motif):
+    @staticmethod
+    def _emails_responsables(eglise):
+        # Eglise n'a pas de relation « responsables » : on cible les fidèles de l'église ayant le rôle PASTEUR
+        if eglise is None:
+            return []
+        return list(Fidele.objects.filter(eglise=eglise, roles__code="PASTEUR")
+                    .exclude(user__email="").values_list("user__email", flat=True).distinct())
+
+    def send_transfer_notification(self, fidele, ancienne_eglise, nouvelle_eglise, motif):
+        from_email = getattr(settings, "DEFAULT_FROM_EMAIL", None) or None
         # Notification à l'ancienne église
-        if fidele.eglise:
-            anciens_responsables = fidele.eglise.responsables.all()
-            for responsable in anciens_responsables:
-                send_mail(
-                    subject=f"Transfert de {fidele}",
-                    message=f"{fidele} a été transféré à {nouvelle_eglise}. Motif: {motif}",
-                    from_email="noreply@votredomaine.com",
-                    recipient_list=[responsable.email],
-                    fail_silently=True,
-                )
+        for email in self._emails_responsables(ancienne_eglise):
+            send_mail(
+                subject=f"Transfert de {fidele}",
+                message=f"{fidele} a été transféré à {nouvelle_eglise}. Motif: {motif}",
+                from_email=from_email,
+                recipient_list=[email],
+                fail_silently=True,
+            )
 
         # Notification à la nouvelle église
-        nouveaux_responsables = nouvelle_eglise.responsables.all()
-        for responsable in nouveaux_responsables:
+        for email in self._emails_responsables(nouvelle_eglise):
             send_mail(
                 subject=f"Nouveau fidèle transféré: {fidele}",
                 message=f"{fidele} a été transféré dans votre église. Motif: {motif}",
-                from_email="noreply@votredomaine.com",
-                recipient_list=[responsable.email],
+                from_email=from_email,
+                recipient_list=[email],
                 fail_silently=True,
             )
 
@@ -709,19 +761,19 @@ class FideleTransferView(LoginRequiredMixin, PermissionRequiredMixin, FormView):
             send_mail(
                 subject=f"Votre transfert à {nouvelle_eglise}",
                 message=f"Vous avez été transféré à {nouvelle_eglise}. Motif: {motif}",
-                from_email="noreply@votredomaine.com",
+                from_email=from_email,
                 recipient_list=[fidele.user.email],
                 fail_silently=True,
             )
 
 
-class VieDeLEgliseListView(LoginRequiredMixin, ListView):
+class VieDeLEgliseListView(StaffRequiredMixin, ListView):
     model = Fidele
     template_name = "home/vie_eglise.html"
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        f = Fidele.objects.get(pk=self.kwargs["pk"])
+        f = get_object_or_404(Fidele, pk=self.kwargs["pk"])
         context["fidele_detail"] = f
         context["fidele"] = f  # alias pour les nouveaux templates
         return context
@@ -733,25 +785,33 @@ class VieDeLEgliseListView(LoginRequiredMixin, ListView):
         return evenements_participes
 
 
-class EngagementListView(LoginRequiredMixin, ListView):
+class EngagementListView(StaffRequiredMixin, ListView):
     model = Fidele
     template_name = "home/engagement.html"
 
+    def get_queryset(self):
+        # Sans surcharge, la ListView renvoyait tous les fidèles de la base dans l'onglet
+        return Fidele.objects.filter(pk=self.kwargs["pk"])
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        f = Fidele.objects.get(pk=self.kwargs["pk"])
+        f = get_object_or_404(Fidele, pk=self.kwargs["pk"])
         context["fidele_detail"] = f
         context["fidele"] = f  # alias pour les nouveaux templates
         return context
 
 
-class StatutSocialListView(LoginRequiredMixin, ListView):
+class StatutSocialListView(StaffRequiredMixin, ListView):
     model = Fidele
     template_name = "home/statutsocia.html"
 
+    def get_queryset(self):
+        # Sans surcharge, la ListView renvoyait tous les fidèles de la base dans l'onglet
+        return Fidele.objects.filter(pk=self.kwargs["pk"])
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        f = Fidele.objects.get(pk=self.kwargs["pk"])
+        f = get_object_or_404(Fidele, pk=self.kwargs["pk"])
         context["fidele_detail"] = f
         context["fidele"] = f  # alias pour les nouveaux templates
         fidele_instance = get_object_or_404(Fidele, pk=self.kwargs["pk"])
@@ -773,19 +833,23 @@ class StatutSocialListView(LoginRequiredMixin, ListView):
     #     return freres, soeur
 
 
-class MessagerieListView(LoginRequiredMixin, ListView):
+class MessagerieListView(StaffRequiredMixin, ListView):
     model = Fidele
     template_name = "home/messagerie.html"
 
+    def get_queryset(self):
+        # Sans surcharge, la ListView renvoyait tous les fidèles de la base dans l'onglet
+        return Fidele.objects.filter(pk=self.kwargs["pk"])
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        f = Fidele.objects.get(pk=self.kwargs["pk"])
+        f = get_object_or_404(Fidele, pk=self.kwargs["pk"])
         context["fidele_detail"] = f
         context["fidele"] = f  # alias pour les nouveaux templates
         return context
 
 
-class FideleDetailView(LoginRequiredMixin, DetailView):
+class FideleDetailView(StaffRequiredMixin, DetailView):
     model = Fidele
     template_name = "fidele/fidele_detail.html"
     context_object_name = "fidele_detail"
@@ -805,7 +869,7 @@ class FideleDetailView(LoginRequiredMixin, DetailView):
         return context
 
 
-class FideleUpdateView(LoginRequiredMixin, UpdateView):
+class FideleUpdateView(StaffRequiredMixin, UpdateView):
     model = Fidele
     template_name = "fidele/fidele_update.html"
     form_class = FideleUpdateForm
@@ -916,12 +980,22 @@ def process_account_deletion_request(req_id):
     req.status = "processing"
     req.save(update_fields=["status"])
 
-    try:
-        with transaction.atomic():
-            perform_user_full_deletion(req.user)
+    if req.user is None:  # compte déjà supprimé par ailleurs
         req.status = "done"
         req.processed_at = timezone.now()
         req.save(update_fields=["status", "processed_at"])
+        return
+
+    user_pk = req.user.pk
+    try:
+        with transaction.atomic():
+            perform_user_full_deletion(req.user)
+        # La demande survit à la suppression (user → NULL) : on garde l'identifiant pour la traçabilité
+        req.user = None
+        req.status = "done"
+        req.processed_at = timezone.now()
+        req.notes = f"Compte utilisateur #{user_pk} supprimé."
+        req.save(update_fields=["user", "status", "processed_at", "notes"])
     except Exception as e:
         req.status = "failed"
         req.notes = str(e)
@@ -967,7 +1041,7 @@ class AccountDeleteDoneView(View):
         return render(request, self.template_name)
 
 
-class DonationListView(LoginRequiredMixin, ListView):
+class DonationListView(StaffRequiredMixin, ListView):
     model = Donation
     template_name = 'donations/donation_list.html'
     context_object_name = 'donations'
@@ -1059,7 +1133,7 @@ class DonationListView(LoginRequiredMixin, ListView):
         return ctx
 
 
-class DonationDetailView(LoginRequiredMixin, DetailView):
+class DonationDetailView(StaffRequiredMixin, DetailView):
     model = Donation
     template_name = 'donations/donation_detail.html'
     context_object_name = 'donation'
@@ -1109,22 +1183,11 @@ def notify_parties(problem: ProblemReport, title: str, body: str, data: dict):
         user_ids.add(problem.reporter.user_id if hasattr(problem.reporter, "user_id") else problem.reporter.id)
     if problem.assignee_id:
         user_ids.add(problem.assignee.user_id if hasattr(problem.assignee, "user_id") else problem.assignee.id)
-    for f in problem.watchers.all().only("id"):
+    for f in problem.watchers.all().only("id", "user_id"):
         user_ids.add(f.user_id if hasattr(f, "user_id") else f.id)
 
-    for uid in user_ids:
-        try:
-            Notification.objects.create(user_id=uid, type=data.get("type", "PROBLEM"), title=title, body=body,
-                                        data=data)
-
-            class _U:
-                pass
-
-            u = _U();
-            u.id = uid
-            send_to_user(u, title=title, body=body, data=data)  # data-only recommandé côté app
-        except Exception:
-            pass
+    # Notification in-app + push (le modèle Notification n'a pas de champ user : voir NotificationUser)
+    push_inapp_notification(user_ids, type=data.get("type", "PROBLEM"), title=title, body=body, data=data)
 
 
 def build_pdf_report(problem: ProblemReport) -> bytes:
@@ -1161,9 +1224,9 @@ def pdf_response(problem: ProblemReport) -> FileResponse:
     return FileResponse(BytesIO(content), as_attachment=True, filename=f"rapport-probleme-{problem.pk}.pdf")
 
 
-class ProblemTreatView(LoginRequiredMixin, PermissionRequiredMixin, DetailView):
+class ProblemTreatView(StaffRequiredMixin, PermissionRequiredMixin, DetailView):
     """Affiche le signalement + formulaires d’action"""
-    permission_required = "problems.can_view_all_problems"  # ou logique personnalisée
+    permission_required = "fidele.can_view_all_problems"  # ou logique personnalisée
     model = ProblemReport
     template_name = "fidele/problems/problem_treat.html"
     context_object_name = "problem"
@@ -1177,9 +1240,9 @@ class ProblemTreatView(LoginRequiredMixin, PermissionRequiredMixin, DetailView):
         return ctx
 
 
-class ProblemTreatPostView(LoginRequiredMixin, PermissionRequiredMixin, View):
+class ProblemTreatPostView(StaffRequiredMixin, PermissionRequiredMixin, View):
     """Traite les POST (comment, assign, status, rapport)"""
-    permission_required = "problems.can_view_all_problems"
+    permission_required = "fidele.can_view_all_problems"
 
     def post(self, request: HttpRequest, pk: int) -> HttpResponse:
         problem = get_object_or_404(ProblemReport, pk=pk, is_deleted=False)
@@ -1255,9 +1318,9 @@ class ProblemTreatPostView(LoginRequiredMixin, PermissionRequiredMixin, View):
         return redirect(reverse("treat", args=[problem.pk]))
 
 
-class ProblemReportListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
+class ProblemReportListView(StaffRequiredMixin, PermissionRequiredMixin, ListView):
     model = ProblemReport
-    permission_required = 'problems.view_problemreport'
+    permission_required = 'fidele.view_problemreport'
     template_name = 'fidele/problems/problem_list.html'
     context_object_name = 'problems'
     paginate_by = 25
@@ -1266,7 +1329,7 @@ class ProblemReportListView(LoginRequiredMixin, PermissionRequiredMixin, ListVie
         qs = ProblemReport.objects.filter(is_deleted=False)
 
         # Limitation par église si l'utilisateur n'a pas le droit "voir tout"
-        if not self.request.user.has_perm('problems.can_view_all_problems'):
+        if not self.request.user.has_perm('fidele.can_view_all_problems'):
             # éviter AttributeError si pas de fidèle lié
             fid = getattr(self.request.user, 'fidele', None)
             if fid and fid.eglise_id:
@@ -1363,9 +1426,9 @@ class ProblemReportListView(LoginRequiredMixin, PermissionRequiredMixin, ListVie
 
         return context
 
-class ProblemReportCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
+class ProblemReportCreateView(StaffRequiredMixin, PermissionRequiredMixin, CreateView):
     model = ProblemReport
-    permission_required = 'problems.add_problemreport'
+    permission_required = 'fidele.add_problemreport'
     template_name = 'fidele/problems/problem_form.html'
     fields = ['title', 'description', 'category', 'severity', 'due_date']
 
@@ -1385,15 +1448,15 @@ class ProblemReportCreateView(LoginRequiredMixin, PermissionRequiredMixin, Creat
         return reverse_lazy('problemreport_detail', kwargs={'pk': self.object.pk})
 
 
-class ProblemReportDetailView(LoginRequiredMixin, PermissionRequiredMixin, DetailView):
+class ProblemReportDetailView(StaffRequiredMixin, PermissionRequiredMixin, DetailView):
     model = ProblemReport
-    permission_required = 'problems.view_problemreport'
+    permission_required = 'fidele.view_problemreport'
     template_name = 'fidele/problems/problem_detail.html'
     context_object_name = 'problem'
 
     def get_queryset(self):
         queryset = ProblemReport.objects.filter(is_deleted=False)
-        if not self.request.user.has_perm('problems.can_view_all_problems'):
+        if not self.request.user.has_perm('fidele.can_view_all_problems'):
             queryset = queryset.filter(eglise=self.request.user.fidele.eglise)
         return queryset.select_related('eglise', 'reporter', 'assignee', 'category')
 
@@ -1416,15 +1479,15 @@ class ProblemReportDetailView(LoginRequiredMixin, PermissionRequiredMixin, Detai
         return context
 
 
-class ProblemReportUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
+class ProblemReportUpdateView(StaffRequiredMixin, PermissionRequiredMixin, UpdateView):
     model = ProblemReport
-    permission_required = 'problems.change_problemreport'
+    permission_required = 'fidele.change_problemreport'
     template_name = 'problems/problem_form.html'
     fields = ['title', 'description', 'category', 'severity', 'status', 'due_date', 'resolution_notes']
 
     def get_queryset(self):
         queryset = ProblemReport.objects.filter(is_deleted=False)
-        if not self.request.user.has_perm('problems.can_view_all_problems'):
+        if not self.request.user.has_perm('fidele.can_view_all_problems'):
             queryset = queryset.filter(eglise=self.request.user.fidele.eglise)
         return queryset
 
@@ -1434,7 +1497,7 @@ class ProblemReportUpdateView(LoginRequiredMixin, PermissionRequiredMixin, Updat
         form.fields['category'].queryset = ProblemCategory.objects.filter(is_active=True)
 
         # Pour les non-administrateurs, limiter les champs modifiables
-        if not self.request.user.has_perm('problems.can_assign_problem'):
+        if not self.request.user.has_perm('fidele.can_assign_problem'):
             del form.fields['status']
             del form.fields['resolution_notes']
 
@@ -1452,23 +1515,23 @@ class ProblemReportUpdateView(LoginRequiredMixin, PermissionRequiredMixin, Updat
         return reverse_lazy('problemreport_detail', kwargs={'pk': self.object.pk})
 
 
-class ProblemReportDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
+class ProblemReportDeleteView(StaffRequiredMixin, PermissionRequiredMixin, DeleteView):
     model = ProblemReport
-    permission_required = 'problems.delete_problemreport'
+    permission_required = 'fidele.delete_problemreport'
     template_name = 'problems/problem_confirm_delete.html'
 
     def get_queryset(self):
         queryset = ProblemReport.objects.filter(is_deleted=False)
-        if not self.request.user.has_perm('problems.can_view_all_problems'):
+        if not self.request.user.has_perm('fidele.can_view_all_problems'):
             queryset = queryset.filter(eglise=self.request.user.fidele.eglise)
         return queryset
 
-    def delete(self, request, *args, **kwargs):
-        # Soft delete au lieu de suppression physique
-        self.object = self.get_object()
+    def form_valid(self, form):
+        # Soft delete au lieu de suppression physique. Depuis Django 4, DeleteView traite le POST dans
+        # form_valid : l'ancienne surcharge de delete() n'était plus appelée et la ligne était supprimée.
         self.object.is_deleted = True
-        self.object.save()
-        messages.success(request, 'Signalement supprimé avec succès.')
+        self.object.save(update_fields=['is_deleted'])
+        messages.success(self.request, 'Signalement supprimé avec succès.')
         return HttpResponseRedirect(self.get_success_url())
 
     def get_success_url(self):
@@ -1476,9 +1539,9 @@ class ProblemReportDeleteView(LoginRequiredMixin, PermissionRequiredMixin, Delet
 
 
 # Vues spéciales pour l'assignation et le changement de statut
-class ProblemReportAssignView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
+class ProblemReportAssignView(StaffRequiredMixin, PermissionRequiredMixin, UpdateView):
     model = ProblemReport
-    permission_required = 'problems.can_assign_problem'
+    permission_required = 'fidele.can_assign_problem'
     template_name = 'problems/problem_assign.html'
     fields = ['assignee']
 
@@ -1503,8 +1566,8 @@ class ProblemReportAssignView(LoginRequiredMixin, PermissionRequiredMixin, Updat
 
 
 # Vue pour les rapports et statistiques
-class ProblemReportStatsView(LoginRequiredMixin, PermissionRequiredMixin, TemplateView):
-    permission_required = 'problems.view_problemreport'
+class ProblemReportStatsView(StaffRequiredMixin, PermissionRequiredMixin, TemplateView):
+    permission_required = 'fidele.view_problemreport'
     template_name = 'fidele/problems/problem_stats.html'
 
     def get_context_data(self, **kwargs):
@@ -1512,7 +1575,7 @@ class ProblemReportStatsView(LoginRequiredMixin, PermissionRequiredMixin, Templa
 
         # Base queryset
         queryset = ProblemReport.objects.filter(is_deleted=False)
-        if not self.request.user.has_perm('problems.can_view_all_problems'):
+        if not self.request.user.has_perm('fidele.can_view_all_problems'):
             queryset = queryset.filter(eglise=self.request.user.fidele.eglise)
 
         # Statistiques générales
@@ -1572,9 +1635,9 @@ class ProblemReportStatsView(LoginRequiredMixin, PermissionRequiredMixin, Templa
         ).order_by('month')[:12]
 
 
-class ProblemReportChangeStatusView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
+class ProblemReportChangeStatusView(StaffRequiredMixin, PermissionRequiredMixin, UpdateView):
     model = ProblemReport
-    permission_required = 'problems.can_assign_problem'
+    permission_required = 'fidele.can_assign_problem'
     template_name = 'problems/problem_change_status.html'
     fields = ['status', 'resolution_notes']
 

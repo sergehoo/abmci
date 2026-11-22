@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import json
+import logging
 from datetime import timedelta, datetime
 
 from django.contrib import messages
-from django.contrib.auth.mixins import LoginRequiredMixin
+
+from abmci.access import StaffRequiredMixin
 from django.contrib.auth.models import User
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db.models import Q
@@ -34,6 +36,11 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from firebase_admin import auth as fb_auth, _auth_utils
 import phonenumbers
 from abmci.tasks import generate_recurrences_task
+from abmci.notifications.fcm import _ensure_initialized as _ensure_firebase_initialized
+from allauth.utils import generate_unique_username
+from fidele.models import Fidele
+
+logger = logging.getLogger(__name__)
 
 def generate_qr_code(data):
     qr = qrcode.QRCode(
@@ -73,66 +80,45 @@ class FirebaseLoginView(APIView):
             return Response({"detail": "id_token manquant."}, status=400)
 
         try:
+            _ensure_firebase_initialized()  # sans app Firebase par défaut, verify_id_token échouait toujours
             decoded = fb_auth.verify_id_token(id_token)
-        except _auth_utils.InvalidIdTokenError:
-            return Response({"detail": "ID token invalide."}, status=401)
         except _auth_utils.ExpiredIdTokenError:
             return Response({"detail": "ID token expiré."}, status=401)
-        except Exception as e:
-            return Response({"detail": f"Vérification échouée: {e}"}, status=401)
+        except _auth_utils.InvalidIdTokenError:
+            return Response({"detail": "ID token invalide."}, status=401)
+        except Exception:
+            logger.exception("Connexion Firebase : vérification du jeton impossible")
+            return Response({"detail": "Vérification échouée."}, status=401)
 
         uid = decoded.get("uid")
-        email = decoded.get("email")
-        email_verified = decoded.get("email_verified", False)
-        phone = normalize_phone(decoded.get("phone_number"))
-        provider = decoded.get("firebase", {}).get("sign_in_provider")  # 'password' | 'phone' | 'google.com'...
+        email = (decoded.get("email") or "").strip()
+        email_verified = bool(decoded.get("email_verified", False))
 
         if not uid:
             return Response({"detail": "UID Firebase manquant."}, status=400)
-
-        # Reconciliation
-        user = None
-        # 1) par firebase_uid
-        try:
-            user = User.objects.get(firebase_uid=uid)
-        except User.DoesNotExist:
-            pass
-        # 2) par email
-        if user is None and email:
-            try:
-                user = User.objects.get(email__iexact=email)
-            except User.DoesNotExist:
-                pass
-        # 3) par phone
-        if user is None and phone:
-            try:
-                user = User.objects.get(phone_number=phone)
-            except User.DoesNotExist:
-                pass
-        # 4) créer sinon
-        if user is None:
-            username = email or f"user_{uid[:8]}"
-            user = User.objects.create(
-                username=username,
-                email=email or "",
-                firebase_uid=uid,
-                phone_number=phone,
-                is_active=True,
-            )
-        else:
-            changed = False
-            if not getattr(user, "firebase_uid", None):
-                user.firebase_uid = uid; changed = True
-            if email and user.email != email:
-                user.email = email; changed = True
-            if phone and getattr(user, "phone_number", None) != phone:
-                user.phone_number = phone; changed = True
-            if changed:
-                user.save(update_fields=["firebase_uid","email","phone_number"])
-
-        # Politique : pour provider "password", refuser si e-mail non vérifié
-        if provider == "password" and email and not email_verified:
+        # Politique : une adresse non vérifiée ne sert ni à créer ni à rapprocher un compte
+        if email and not email_verified:
             return Response({"detail": "E-mail non vérifié."}, status=403)
+
+        # Rapprochement : firebase_uid est porté par Fidele (auth.User n'a ni firebase_uid ni phone_number)
+        fidele = Fidele.objects.select_related("user").filter(firebase_uid=uid).first()
+        user = fidele.user if fidele else None
+        if user is None and email:
+            # Sûr uniquement parce que Firebase garantit ici la possession de l'adresse (email_verified)
+            user = User.objects.filter(email__iexact=email).first()
+        if user is None:
+            if not email:
+                return Response({"detail": "Un e-mail vérifié est requis pour créer un compte."}, status=400)
+            user = User.objects.create_user(username=generate_unique_username([email, "user"]), email=email)
+            user.set_unusable_password()
+            user.save(update_fields=["password"])
+
+        fidele, _ = Fidele.objects.get_or_create(user=user)  # normalement créé par le signal create_fidele
+        if fidele.firebase_uid and fidele.firebase_uid != uid:
+            return Response({"detail": "Ce compte est lié à un autre identifiant Firebase."}, status=403)
+        if not fidele.firebase_uid:
+            fidele.firebase_uid = uid
+            fidele.save(update_fields=["firebase_uid"])
 
         # Émettre un JWT pour consommer ton API
         refresh = RefreshToken.for_user(user)
@@ -142,10 +128,10 @@ class FirebaseLoginView(APIView):
             "user": {
                 "id": user.pk,
                 "email": user.email,
-                "phone_number": getattr(user, "phone_number", None),
+                "phone_number": str(fidele.phone) if fidele.phone else None,
             }
         }, status=200)
-class EventCalendarView(TemplateView):
+class EventCalendarView(StaffRequiredMixin, TemplateView):
     template_name = "event/calendar_view.html"
 
     def get_context_data(self, **kwargs):
@@ -177,7 +163,8 @@ class EventCalendarView(TemplateView):
                 },
             })
 
-        ctx["events_json"] = json.dumps(events, cls=DjangoJSONEncoder)
+        # Sérialisé dans le template via |json_script (échappement HTML sûr)
+        ctx["events"] = events
         return ctx
 
     @staticmethod
@@ -199,7 +186,7 @@ class EventCalendarView(TemplateView):
         return palette.get(key, "#6576ff")
 
 
-class EventListView(LoginRequiredMixin, ListView):
+class EventListView(StaffRequiredMixin, ListView):
     model = Evenement
     template_name = "event/eventview.html"
     context_object_name = "ivent"
@@ -272,7 +259,7 @@ class EventListView(LoginRequiredMixin, ListView):
         qd.pop("page", None)
         ctx["querystring_no_page"] = urlencode(qd)  # ex: "search=...&type=1"
         return ctx
-class EventDetailView(LoginRequiredMixin, DetailView):
+class EventDetailView(StaffRequiredMixin, DetailView):
     model = Evenement
     template_name = "event/event-detail.html"
     context_object_name = "event_detail"
@@ -378,7 +365,7 @@ END:VCALENDAR
         return super().get(request, *args, **kwargs)
 
 
-class EvenementCreateView(CreateView):
+class EvenementCreateView(StaffRequiredMixin, CreateView):
     model = Evenement
     template_name = 'event/evenement_create.html'
     form_class = EvenementForm
@@ -405,14 +392,14 @@ class EvenementCreateView(CreateView):
 
         return response
 
-class EvenementUpdateView(UpdateView):
+class EvenementUpdateView(StaffRequiredMixin, UpdateView):
     model = Evenement
-    template_name = 'evenement_update.html'
+    template_name = 'event/evenement_create.html'  # evenement_update.html n'existe pas : même formulaire
     fields = ['titre', 'date_debut', 'date_fin', 'lieu', 'description',
               'type', 'banner', 'is_recurrent', 'recurrence_rule', 'end_recurrence']
 
     def get_success_url(self):
-        return reverse_lazy('evenement_detail', kwargs={'pk': self.object.pk})
+        return reverse_lazy('event-detail', kwargs={'pk': self.object.pk})
 
     def form_valid(self, form):
         # Si on passe d'un événement non récurrent à récurrent
@@ -423,37 +410,26 @@ class EvenementUpdateView(UpdateView):
 
         # Si l'événement est maintenant récurrent, créer les occurrences
         if form.instance.is_recurrent and form.instance.recurrence_rule and not was_recurrent:
-            try:
-                with transaction.atomic():
-                    events = form.instance.generate_events()
-                    # Sauvegarder toutes les occurrences
-                    for event in events:
-                        event.save()
-                messages.success(self.request, f"Événement modifié et occurrences créées: {len(events)} occurrences.")
-            except Exception as e:
-                messages.error(self.request, f"Erreur lors de la création des occurrences: {str(e)}")
+            # Même mécanisme que la création : génération idempotente en arrière-plan
+            generate_recurrences_task.delay(self.object.id)
+            messages.success(self.request, "Événement modifié. Génération des occurrences en cours…")
 
         return response
 
 
-class EvenementDeleteView(DeleteView):
+class EvenementDeleteView(StaffRequiredMixin, DeleteView):
     model = Evenement
-    template_name = 'evenement_confirm_delete.html'
-    success_url = reverse_lazy('evenement_list')
+    template_name = 'eden/confirm_delete.html'  # confirmation générique existante
+    success_url = reverse_lazy('event-list')
 
-    def delete(self, request, *args, **kwargs):
-        event = self.get_object()
-        # Supprimer également les occurrences si c'est un événement récurrent
-        if event.is_recurrent:
-            # Ici, vous pourriez ajouter une logique pour supprimer toutes les occurrences
-            pass
-
-        messages.success(request, f"L'événement '{event.titre}' a été supprimé.")
-        return super().delete(request, *args, **kwargs)
+    def form_valid(self, form):
+        # Django ≥ 4 : DeleteView passe par form_valid (delete() n'est plus appelée sur POST)
+        messages.success(self.request, f"L'événement '{self.object.titre}' a été supprimé.")
+        return super().form_valid(form)
 
 
 # Vue pour gérer les occurrences d'un événement récurrent
-class EvenementOccurrencesView(DetailView):
+class EvenementOccurrencesView(StaffRequiredMixin, DetailView):
     model = Evenement
     template_name = 'evenement_occurrences.html'
     context_object_name = 'event'
@@ -461,5 +437,6 @@ class EvenementOccurrencesView(DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         if self.object.is_recurrent:
-            context['occurrences'] = self.object.generate_events()
+            # Occurrences réellement enregistrées (generate_events() n'existait pas)
+            context['occurrences'] = self.object.children.order_by('date_debut')
         return context

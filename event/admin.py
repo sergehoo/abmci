@@ -49,20 +49,14 @@ class ParticipationInline(admin.TabularInline):
 @admin.action(description="Générer les occurrences pour les événements récurrents sélectionnés")
 def action_generer_occurrences(modeladmin, request, queryset):
     """Crée des instances pour les séries (sans modèle supplémentaire)."""
+    # generate_events() n'existait pas : on réutilise le générateur idempotent (pas de doublons)
+    from event.services.events import generate_recurrences_for_parent
+
     created = 0
     for event in queryset:
         if not event.is_recurrent:
             continue
-        for occ in event.generate_events():
-            # sauter l'événement source si la même date
-            if occ.date_debut == event.date_debut and occ.date_fin == event.date_fin:
-                continue
-            # recopier les champs manquants (le default de code se régénère tout seul à save)
-            occ.eglise = event.eglise
-            occ.lieu = event.lieu
-            occ.banner = event.banner  # réutilise le fichier si souhaité
-            occ.save()
-            created += 1
+        created += len(generate_recurrences_for_parent(event))
     modeladmin.message_user(request, f"{created} occurrence(s) créée(s).")
 
 

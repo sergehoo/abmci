@@ -420,9 +420,9 @@ def send_to_user(user_or_fidele, *, title: str, body: str, data: Mapping[str, An
     Envoi “direct” en s’appuyant sur un topic par utilisateur.
     Accepte un User OU un Fidele.
     """
-    user_id = getattr(user_or_fidele, "id", None)
-    if user_id is None and hasattr(user_or_fidele, "user"):
-        user_id = user_or_fidele.user.id
+    # Un Fidele a son propre id : le topic côté app est user_{auth_user.id}, on prend donc fidele.user.id
+    linked_user = getattr(user_or_fidele, "user", None)
+    user_id = getattr(linked_user, "id", None) if linked_user is not None else getattr(user_or_fidele, "id", None)
     if not user_id:
         # pas d’ID exploitable → on ne peut pas router
         return

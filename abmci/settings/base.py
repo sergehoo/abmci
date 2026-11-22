@@ -20,6 +20,14 @@ def env_int(key: str, default: int) -> int:
         return default
 
 
+def env_bool(key: str, default: bool = False) -> bool:
+    # os.getenv renvoie une chaîne : "False" serait évalué comme vrai sans conversion
+    val = os.getenv(key)
+    if val is None:
+        return default
+    return val.strip().lower() in ("1", "true", "yes", "on")
+
+
 def _split_csv_env(name: str) -> list[str]:
     raw = os.getenv(name, "")
     return [x.strip() for x in raw.split(",") if x.strip()]
@@ -37,9 +45,8 @@ def _with_scheme(origin: str) -> str:
 
 
 
-# SECRET_KEY = 'django-insecure-+qv9un1&5@8q&yl5*^-jl_iw066p2o%7hdxsom0fqyn1^^cr@x'
 
-DEBUG = os.environ.get("DEBUG")
+DEBUG = env_bool("DEBUG", False)
 
 
 INSTALLED_APPS = [
@@ -144,15 +151,22 @@ USE_I18N = True
 USE_TZ = True
 
 REST_FRAMEWORK = {
+    # BasicAuthentication retirée : elle permettait de tester des mots de passe sur n'importe quel endpoint
+    # sans limitation (le client mobile n'utilise que le JWT Bearer).
     "DEFAULT_AUTHENTICATION_CLASSES": [
-        "rest_framework.authentication.BasicAuthentication",
         # "rest_framework.authentication.SessionAuthentication",
         "dj_rest_auth.jwt_auth.JWTCookieAuthentication",
     ],
     "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.IsAuthenticated"],
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 100,
-
+    # Limitation par portée : seules les vues qui déclarent un throttle_scope sont concernées
+    # (dj_rest_auth : login, logout, reset/changement de mot de passe, inscription ; qr-scan).
+    "DEFAULT_THROTTLE_CLASSES": ["rest_framework.throttling.ScopedRateThrottle"],
+    "DEFAULT_THROTTLE_RATES": {
+        "dj_rest_auth": os.getenv("THROTTLE_AUTH_RATE", "20/min"),
+        "qr-scan": os.getenv("THROTTLE_QR_SCAN_RATE", "30/min"),
+    },
 }
 REST_AUTH = {
     "USE_JWT": True,
@@ -193,9 +207,9 @@ SITE_ORIGIN = "https://administration.abmci.com"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 EMAIL_HOST = os.environ.get("EMAIL_HOST", default="")
-EMAIL_PORT = os.environ.get("EMAIL_PORT")
+EMAIL_PORT = env_int("EMAIL_PORT", 25)
 # EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS")
-EMAIL_USE_SSL = os.environ.get("EMAIL_USE_SSL")
+EMAIL_USE_SSL = env_bool("EMAIL_USE_SSL", False)
 EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", default="")
 EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", default="")
 DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", default="")
@@ -236,8 +250,8 @@ CHANNEL_LAYERS = {
 }
 
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
-CSRF_COOKIE_SECURE = os.environ.get("CSRF_COOKIE_SECURE")
-SESSION_COOKIE_SECURE = os.environ.get("SESSION_COOKIE_SECURE")
+CSRF_COOKIE_SECURE = env_bool("CSRF_COOKIE_SECURE", True)
+SESSION_COOKIE_SECURE = env_bool("SESSION_COOKIE_SECURE", True)
 
 # ====== ORANGE SMS ======
 ORANGE_TOKEN_URL = os.environ.get("ORANGE_TOKEN_URL", default="https://api.orange.com/oauth/v3/token")
@@ -260,14 +274,13 @@ LOGGING = {
     "root": {"handlers": ["console"], "level": "INFO"},
 }
 
+# Noms de tâches = noms enregistrés par Celery (les anciens « abmci.task_push.* » et « problems.tasks.* »
+# n'existaient pas : ces entrées ne s'exécutaient jamais). Le push du verset du jour est assuré par
+# send_daily_vod ; l'ancienne entrée push_vod_daily (doublon) est retirée.
 CELERY_BEAT_SCHEDULE = {
-    "push_verse_of_day_daily": {
-        "task": "abmci.task_push.push_vod_daily",
-        "schedule": crontab(minute=0, hour=6),  # 06:00 (UTC ou TZ de ton worker)
-    },
-    "remind-stale-problems-every-hour": {
-        "task": "problems.tasks.remind_stale_problems",
-        "schedule": crontab(minute=0),  # chaque heure
+    "remind-stale-problems-daily": {
+        "task": "abmci.tasks.remind_stale_problems",
+        "schedule": crontab(minute=0, hour=8),  # 1 rappel par jour (un rappel horaire spammerait les assignés)
         "args": (),  # ou fixe 48
     },
     "send-daily-vod-0730": {
