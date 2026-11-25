@@ -172,6 +172,9 @@ REST_AUTH = {
     "USE_JWT": True,
     "JWT_AUTH_COOKIE": None,  # pas de cookie JWT en mobile
     "JWT_AUTH_REFRESH_COOKIE": None,
+    # Le refresh token doit figurer dans la réponse JSON : l'app mobile n'utilise pas de cookie.
+    # (Défaut dj-rest-auth : True → refresh vide → session perdue à l'expiration de l'access token.)
+    "JWT_AUTH_HTTPONLY": False,
     "PASSWORD_RESET_USE_SITES_DOMAIN": True,
     "PASSWORD_RESET_CONFIRM_URL": "auth/password/reset/confirm/{uid}/{token}/",
 

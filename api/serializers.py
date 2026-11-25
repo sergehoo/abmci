@@ -19,6 +19,7 @@ from django.contrib.gis.db.models.functions import Distance as DistanceFunc
 from abmci.utils.church_positions import calculate_distance
 from abmci.services.notifications import push_inapp_notification
 from event.models import ParticipationEvenement, TypeEvent, Evenement
+from formation.models import Formation, FormationInscription, FormationSession
 from fidele.models import Fidele, UserProfileCompletion, Eglise, SEXE_CHOICES, MARITAL_CHOICES, Location, \
     FidelePosition, PrayerComment, PrayerLike, PrayerCategory, PrayerRequest, Device, Notification, BibleVersion, \
     BibleVerse, BibleTag, Banner, DonationCategory, VerseOfDay, ProblemCategory, ProblemReport, NotificationUser
@@ -347,6 +348,7 @@ class EvenementListSerializer(serializers.ModelSerializer):
     banner_url = serializers.SerializerMethodField()
     is_same_day = serializers.SerializerMethodField()
     participants_count = serializers.IntegerField(source="nombre_participants", read_only=True)
+    is_participating = serializers.SerializerMethodField()
 
     class Meta:
         model = Evenement
@@ -364,6 +366,7 @@ class EvenementListSerializer(serializers.ModelSerializer):
             "type",
             "banner_url",
             "participants_count",
+            "is_participating",
         )
 
     def get_banner_url(self, obj):
@@ -374,6 +377,12 @@ class EvenementListSerializer(serializers.ModelSerializer):
 
     def get_is_same_day(self, obj):
         return obj.is_same_date()
+
+    def get_is_participating(self, obj):
+        # Lu par l'app (badge « Vous participez ») ; faux si pas de fiche fidèle
+        user = getattr(self.context.get("request"), "user", None)
+        fidele = getattr(user, "fidele", None) if user and user.is_authenticated else None
+        return bool(fidele) and ParticipationEvenement.objects.filter(evenement=obj, fidele=fidele).exists()
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -826,3 +835,123 @@ class ProblemReportSerializer(serializers.ModelSerializer):
         validated["reporter"] = fid
         validated["eglise"] = fid.eglise
         return super().create(validated)
+
+
+
+# ---------------------------------------------------------------------------
+# Profil du fidèle connecté : GET/PATCH /api/user/ (contrat de l'app : objet « fidele » imbriqué)
+# ---------------------------------------------------------------------------
+class FideleSelfSerializer(CountryFieldMixin, serializers.ModelSerializer):
+    PHOTO_MAX_BYTES = 5 * 1024 * 1024
+
+    class Meta:
+        model = Fidele
+        fields = [
+            'id', 'photo', 'sexe', 'situation_matrimoniale', 'signe', 'nbr_enfants', 'contry', 'phone',
+            'nationalite', 'birthdate', 'date_entree', 'date_bapteme', 'eglise_origine', 'type_bapteme',
+            'lieu_bapteme', 'profession', 'entreprise', 'mensual_revenue', 'salary_currency',
+            'marie_a', 'pere', 'mere', 'frere', 'soeur', 'type_membre', 'membre', 'location',
+            'departement', 'fonction', 'eglise', 'famille_alliance', 'roles',
+        ]
+        # Attribués par l'église (back-office) : un fidèle ne peut pas se les attribuer
+        read_only_fields = ['id', 'type_membre', 'membre', 'departement', 'fonction', 'roles']
+
+    def validate_photo(self, value):
+        if value and value.size > self.PHOTO_MAX_BYTES:
+            raise serializers.ValidationError("Photo trop volumineuse (5 Mo maximum).")
+        return value
+
+
+class UserProfileSerializer(serializers.ModelSerializer):
+    fidele = FideleSelfSerializer(required=False)
+
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'fidele']
+        # L'e-mail (identifiant de connexion) ne se change pas sans vérification
+        read_only_fields = ['id', 'username', 'email']
+
+    def update(self, instance, validated_data):
+        fidele_data = validated_data.pop('fidele', None)
+        instance = super().update(instance, validated_data)
+        if fidele_data:
+            fidele, _ = Fidele.objects.get_or_create(user=instance)
+            many = {k: fidele_data.pop(k) for k in ('frere', 'soeur') if k in fidele_data}
+            for attr, value in fidele_data.items():
+                setattr(fidele, attr, value)
+            fidele.save()
+            for attr, value in many.items():
+                getattr(fidele, attr).set(value)
+            instance.fidele = fidele
+        return instance
+
+
+# ---------------------------------------------------------------------------
+# Annuaire : informations publiques uniquement (ni téléphone, ni e-mail, ni données sociales)
+# ---------------------------------------------------------------------------
+class AnnuaireSerializer(serializers.ModelSerializer):
+    nom = serializers.SerializerMethodField()
+    photo = serializers.ImageField(read_only=True)
+    fonction = serializers.CharField(source='fonction.name', default=None, read_only=True)
+    departement = serializers.CharField(source='departement.name', default=None, read_only=True)
+    eglise = serializers.CharField(source='eglise.name', default=None, read_only=True)
+    roles = serializers.SlugRelatedField(slug_field='name', many=True, read_only=True)
+
+    class Meta:
+        model = Fidele
+        fields = ['id', 'nom', 'photo', 'fonction', 'departement', 'eglise', 'roles']
+
+    def get_nom(self, obj):
+        return f"{obj.user.first_name} {obj.user.last_name}".strip() or obj.user.username
+
+
+# ---------------------------------------------------------------------------
+# Formations (lecture) : catalogue, sessions, inscriptions du fidèle
+# ---------------------------------------------------------------------------
+class FormationSessionSerializer(serializers.ModelSerializer):
+    statut_label = serializers.CharField(source='get_statut_display', read_only=True)
+    places_restantes = serializers.IntegerField(read_only=True)
+    formateur = serializers.SerializerMethodField()
+
+    class Meta:
+        model = FormationSession
+        fields = ['id', 'nom', 'date_debut', 'date_fin', 'lieu', 'capacite_max', 'places_restantes',
+                  'statut', 'statut_label', 'formateur']
+
+    def get_formateur(self, obj):
+        u = obj.formateur
+        return (u.get_full_name() or u.username) if u else None
+
+
+class FormationSerializer(serializers.ModelSerializer):
+    theme_label = serializers.CharField(source='get_theme_display', read_only=True)
+    sessions_count = serializers.IntegerField(source='sessions.count', read_only=True)
+
+    class Meta:
+        model = Formation
+        fields = ['id', 'slug', 'nom', 'theme', 'theme_label', 'description', 'duree_mois', 'format',
+                  'sessions_count']
+
+
+class FormationDetailSerializer(FormationSerializer):
+    sessions = serializers.SerializerMethodField()
+
+    class Meta(FormationSerializer.Meta):
+        fields = FormationSerializer.Meta.fields + ['sessions']
+
+    def get_sessions(self, obj):
+        qs = obj.sessions.select_related('formateur').order_by('-date_debut')
+        return FormationSessionSerializer(qs, many=True).data
+
+
+class MesInscriptionsSerializer(serializers.ModelSerializer):
+    session = FormationSessionSerializer(read_only=True)
+    formation = serializers.CharField(source='session.formation.nom', read_only=True)
+    formation_slug = serializers.CharField(source='session.formation.slug', read_only=True)
+    statut_label = serializers.CharField(source='get_statut_display', read_only=True)
+    taux_presence = serializers.IntegerField(read_only=True)
+
+    class Meta:
+        model = FormationInscription
+        fields = ['id', 'formation', 'formation_slug', 'session', 'statut', 'statut_label', 'date_inscription',
+                  'taux_presence', 'note_finale']

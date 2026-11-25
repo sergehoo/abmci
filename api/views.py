@@ -52,9 +52,12 @@ from api.serializers import UserSerializer, FideleSerializer, FideleCreateUpdate
     PrayerCommentSerializer, PrayerCategorySerializer, PrayerRequestSerializer, NotificationSerializer, \
     DeviceSerializer, BibleVersionSerializer, BibleVerseSerializer, BibleTagCreateSerializer, BannerSerializer, \
     CreateIntentSerializer, DonationCategorySerializer, EgliseSerializer, EgliseListSerializer, ProblemReportSerializer, \
-    ProblemCategorySerializer, UserNotificationSerializer
+    ProblemCategorySerializer, UserNotificationSerializer, UserProfileSerializer, AnnuaireSerializer, \
+    FormationSerializer, FormationDetailSerializer, MesInscriptionsSerializer
+from formation.models import Formation, FormationInscription
 from event.models import ParticipationEvenement, Evenement
 from fidele.care.permissions import IsReporterOrStaffSameChurch
+from fidele.models import Department, Fonction, Location, MembreType, Role
 from fidele.models import Fidele, UserProfileCompletion, Eglise, PrayerComment, PrayerRequest, PrayerLike, \
     PrayerCategory, Notification, Device, BibleVersion, BibleVerse, BibleTag, Banner, Donation, DonationCategory, \
     AccountDeletionRequest, VerseOfDay, ProblemReport, ProblemCategory, NotificationUser
@@ -336,27 +339,32 @@ DEFAULT_HORIZON_DAYS = 60
 class UpcomingEventsView(generics.ListAPIView):
     serializer_class = EvenementListSerializer
     permission_classes = [permissions.IsAuthenticated]  # on filtre par l’église du fidèle
+    scope = "upcoming"  # "upcoming" | "past" | "all"
 
     def get_queryset(self):
         user = self.request.user
         fidele = getattr(user, "fidele", None)
 
+        # Sans église rattachée : liste vide (auparavant ValidationError Django non gérée → 500)
         if not fidele or not fidele.eglise_id:
-            raise ValidationError("Aucune église associée à l'utilisateur.")
+            return Evenement.objects.none()
 
         now = timezone.now()
-        days = int(self.request.query_params.get("days", DEFAULT_HORIZON_DAYS))
-        until = now + timezone.timedelta(days=days)
-
-        qs = (
-            Evenement.objects.select_related("eglise", "type")
-            .filter(
-                eglise_id=fidele.eglise_id,
+        qs = Evenement.objects.select_related("eglise", "type").filter(eglise_id=fidele.eglise_id)
+        if self.scope == "upcoming":
+            try:
+                days = int(self.request.query_params.get("days", DEFAULT_HORIZON_DAYS))
+            except (TypeError, ValueError):
+                days = DEFAULT_HORIZON_DAYS
+            until = now + timezone.timedelta(days=days)
+            qs = qs.filter(
                 date_fin__gte=now,  # pas encore fini
                 date_debut__lte=until,  # dans l’horizon
-            )
-            .order_by("date_debut", "id")
-        )
+            ).order_by("date_debut", "id")
+        elif self.scope == "past":
+            qs = qs.filter(date_fin__lt=now).order_by("-date_debut", "-id")
+        else:
+            qs = qs.order_by("-date_debut", "-id")
 
         # Filtres optionnels
         type_id = self.request.query_params.get("type_id")
@@ -368,6 +376,16 @@ class UpcomingEventsView(generics.ListAPIView):
             qs = qs.filter(Q(titre__icontains=q) | Q(lieu__icontains=q))
 
         return qs
+
+
+class PastEventsView(UpcomingEventsView):
+    """Événements terminés de l'église du fidèle (plus récents d'abord)."""
+    scope = "past"
+
+
+class AllEventsView(UpcomingEventsView):
+    """Tous les événements de l'église du fidèle."""
+    scope = "all"
 
 
 class UpcomingEventsHomeView(UpcomingEventsView):
@@ -493,20 +511,19 @@ class DeviceViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         return Device.objects.filter(user=self.request.user)
 
-    def perform_create(self, serializer):
-        # upsert par token
-        instance, _ = Device.objects.update_or_create(
-            token=serializer.validated_data['token'],
-            defaults={
-                'user': self.request.user,
-                'platform': serializer.validated_data.get('platform', 'android')
-            }
-        )
-        self.instance = instance
-
     def create(self, request, *args, **kwargs):
-        resp = super().create(request, *args, **kwargs)
-        return resp
+        # Upsert par token : le validateur d'unicité du serializer renvoyait 400 quand l'app
+        # réenregistrait un token déjà connu (réinstallation, changement de compte sur l'appareil).
+        token = str(request.data.get('token') or '').strip()
+        platform = request.data.get('platform') or 'android'
+        if not token:
+            return Response({'token': ['Ce champ est obligatoire.']}, status=status.HTTP_400_BAD_REQUEST)
+        if platform not in ('android', 'ios'):
+            return Response({'platform': ['Valeur invalide.']}, status=status.HTTP_400_BAD_REQUEST)
+        device, created = Device.objects.update_or_create(
+            token=token, defaults={'user': request.user, 'platform': platform})
+        return Response(DeviceSerializer(device).data,
+                        status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
 
 
 class NotificationPagination(PageNumberPagination):
@@ -1084,7 +1101,8 @@ class DonationVerifyAPIView(APIView):
 
 
 class UserDetailView(generics.RetrieveUpdateAPIView):
-    serializer_class = UserSerializer
+    # Profil complet (compte + fiche fidèle imbriquée) : l'app lit et modifie « fidele » ici.
+    serializer_class = UserProfileSerializer
     permission_classes = [permissions.IsAuthenticated]
     parser_classes = [JSONParser, MultiPartParser, FormParser]
 
@@ -1269,3 +1287,125 @@ class ProblemReportViewSet(viewsets.ModelViewSet):
                 return qs.filter(eglise_id=eglise_id, is_deleted=False)
         # Assigné: ce qui lui est imputé
         return qs.filter(assignee=user, is_deleted=False)
+
+
+# ---------------------------------------------------------------------------
+# Listes de choix pour les formulaires de l'app : GET /choices/<type>/?q=… → [{id, label}],
+# GET /choices/<type>/<id>/ → {id, label}
+# ---------------------------------------------------------------------------
+def _fidele_label(f):
+    return f"{f.user.first_name} {f.user.last_name}".strip() or f.user.username
+
+
+CHOICE_SOURCES = {
+    "departements": (lambda req: Department.objects.all(), "name", lambda o: o.name or ""),
+    "fonctions": (lambda req: Fonction.objects.all(), "name", lambda o: o.name or ""),
+    "locations": (lambda req: Location.objects.all(), "name", lambda o: o.name or ""),
+    "membretypes": (lambda req: MembreType.objects.all(), "name", lambda o: o.name or ""),
+    "roles": (lambda req: Role.objects.all(), "name", lambda o: o.name or ""),
+    "eglises": (lambda req: Eglise.objects.all(), "name", lambda o: o.name or ""),
+    # Fidèles : uniquement ceux de l'église de l'utilisateur (liens familiaux), jamais d'e-mail
+    "fideles": (
+        lambda req: Fidele.objects.select_related("user").filter(
+            eglise_id=getattr(getattr(req.user, "fidele", None), "eglise_id", None) or -1,
+            is_deleted=0),
+        None, _fidele_label),
+}
+CHOICES_LIMIT = 30
+
+
+class ChoicesView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, kind, pk=None):
+        source = CHOICE_SOURCES.get(kind)
+        if source is None:
+            raise NotFound("Type de liste inconnu.")
+        get_qs, search_field, label = source
+        qs = get_qs(request)
+        if pk is not None:
+            obj = get_object_or_404(qs, pk=pk)
+            return Response({"id": obj.pk, "label": label(obj)})
+        q = (request.query_params.get("q") or "").strip()
+        if q:
+            if search_field:
+                qs = qs.filter(**{f"{search_field}__icontains": q})
+            else:
+                qs = qs.filter(Q(user__first_name__icontains=q) | Q(user__last_name__icontains=q))
+        elif kind == "fideles":
+            return Response([])  # pas d'annuaire complet sans recherche
+        order = search_field or "user__last_name"
+        return Response([{"id": o.pk, "label": label(o)} for o in qs.order_by(order)[:CHOICES_LIMIT]])
+
+
+class UserSearchView(APIView):
+    """GET /users/search/?q=… → [{id, name, avatar}] (2 caractères minimum, sans e-mail)."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        q = (request.query_params.get("q") or "").strip()
+        if len(q) < 2:
+            return Response([])
+        users = (User.objects.filter(is_active=True)
+                 .filter(Q(first_name__icontains=q) | Q(last_name__icontains=q) | Q(username__icontains=q))
+                 .exclude(pk=request.user.pk)
+                 .order_by("last_name", "first_name")[:20])
+        return Response([{"id": u.pk, "name": (u.get_full_name() or u.username), "avatar": None} for u in users])
+
+
+
+# ---------------------------------------------------------------------------
+# Annuaire de l'église (GET /annuaire/?q=&departement=&fonction=) — staff : toutes les églises
+# ---------------------------------------------------------------------------
+class AnnuaireViewSet(viewsets.ReadOnlyModelViewSet):
+    serializer_class = AnnuaireSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    pagination_class = StandardResultsSetPagination
+
+    def get_queryset(self):
+        qs = (Fidele.objects.filter(is_deleted=0, user__is_active=True)
+              .select_related('user', 'fonction', 'departement', 'eglise').prefetch_related('roles'))
+        user = self.request.user
+        if not user.is_staff:
+            eglise_id = getattr(getattr(user, 'fidele', None), 'eglise_id', None)
+            if not eglise_id:
+                return Fidele.objects.none()
+            qs = qs.filter(eglise_id=eglise_id)
+        params = self.request.query_params
+        q = (params.get('q') or '').strip()
+        if q:
+            qs = qs.filter(Q(user__first_name__icontains=q) | Q(user__last_name__icontains=q))
+        for key in ('departement', 'fonction'):
+            value = params.get(key)
+            if value and value.isdigit():
+                qs = qs.filter(**{f'{key}_id': int(value)})
+        return qs.order_by('user__last_name', 'user__first_name')
+
+
+# ---------------------------------------------------------------------------
+# Formations (lecture) — GET /formations/, /formations/<slug>/, /formations/mes-inscriptions/
+# ---------------------------------------------------------------------------
+class FormationViewSet(viewsets.ReadOnlyModelViewSet):
+    permission_classes = [permissions.IsAuthenticated]
+    lookup_field = 'slug'
+
+    def get_queryset(self):
+        qs = Formation.objects.filter(actif=True).order_by('theme', 'nom')
+        theme = self.request.query_params.get('theme')
+        if theme:
+            qs = qs.filter(theme=theme)
+        q = (self.request.query_params.get('q') or '').strip()
+        if q:
+            qs = qs.filter(Q(nom__icontains=q) | Q(description__icontains=q))
+        return qs
+
+    def get_serializer_class(self):
+        return FormationDetailSerializer if self.action == 'retrieve' else FormationSerializer
+
+    @action(detail=False, methods=['get'], url_path='mes-inscriptions')
+    def mes_inscriptions(self, request):
+        fidele = getattr(request.user, 'fidele', None)
+        qs = (FormationInscription.objects.filter(fidele=fidele)
+              .select_related('session__formation', 'session__formateur')
+              .order_by('-date_inscription')) if fidele else FormationInscription.objects.none()
+        return Response(MesInscriptionsSerializer(qs, many=True).data)

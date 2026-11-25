@@ -9,7 +9,8 @@ from api.views import VerifyEmailView, UserDetailView, FideleDetailView, FideleL
     BibleVersionViewSet, BibleVerseViewSet, BibleTagViewSet, BannerListView, CategoryListView, \
     CreateIntentView, PaystackWebhookView, DonationVerifyAPIView, EgliseListView, EgliseDetailView, \
     EgliseProcheListView, eglises_avec_verset_du_jour, paystack_return_view, PasswordResetConfirmRedirectView, \
-    ProblemCategoryViewSet, ProblemReportViewSet, UserNotificationViewSet
+    ProblemCategoryViewSet, ProblemReportViewSet, UserNotificationViewSet, PastEventsView, AllEventsView, \
+    ChoicesView, UserSearchView, AnnuaireViewSet, FormationViewSet
 from event.views import FirebaseLoginView
 
 router = DefaultRouter()
@@ -23,6 +24,8 @@ router.register(r'bible/tags', BibleTagViewSet, basename='bible-tag')
 router.register(r"user-notifications", UserNotificationViewSet, basename="user-notifications")
 router.register(r"problems/categories", ProblemCategoryViewSet, basename="problem-category")
 router.register(r"problems/reports", ProblemReportViewSet, basename="problem-report")
+router.register(r"annuaire", AnnuaireViewSet, basename="annuaire")
+router.register(r"formations", FormationViewSet, basename="formation")
 
 
 urlpatterns = [
@@ -60,6 +63,12 @@ urlpatterns = [
     path('eglise/verse-du-jour/', VerseDuJourView.as_view(), name='verse-du-jour'),
     path("events/upcoming/", UpcomingEventsView.as_view(), name="events-upcoming"),
     path("events/home/", UpcomingEventsHomeView.as_view(), name="events-home"),
+    path("events/past/", PastEventsView.as_view(), name="events-past"),
+    path("events/", AllEventsView.as_view(), name="events-all"),
+
+    path("choices/<str:kind>/", ChoicesView.as_view(), name="choices"),
+    path("choices/<str:kind>/<int:pk>/", ChoicesView.as_view(), name="choice-detail"),
+    path("users/search/", UserSearchView.as_view(), name="users-search"),
 
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
