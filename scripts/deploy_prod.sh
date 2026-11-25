@@ -64,6 +64,17 @@ fi
 
 step "5. Code"
 git fetch --all --prune
+# Migrations générées sur le serveur (non suivies par git) que le dépôt apporte sous le même nom :
+# elles sont mises de côté (la base les a déjà appliquées ; Django se fie aux noms, vérifié à l'étape 8).
+MIG_BACKUP="$BACKUP_DIR/migrations_serveur_$STAMP"
+CONFLITS="$(comm -12 <(git ls-files --others --exclude-standard | sort) <(git ls-tree -r --name-only "$TARGET" | sort) || true)"
+if [ -n "$CONFLITS" ]; then
+  echo "Fichiers non suivis qui seraient écrasés :"; echo "$CONFLITS" | sed 's/^/  - /'
+  confirm "Les déplacer dans $MIG_BACKUP (restaurables) ?"
+  mkdir -p "$MIG_BACKUP"
+  while IFS= read -r f; do mkdir -p "$MIG_BACKUP/$(dirname "$f")" && mv "$f" "$MIG_BACKUP/$f"; done <<< "$CONFLITS"
+  ok "Fichiers déplacés dans $MIG_BACKUP"
+fi
 git checkout --detach "$TARGET"
 ok "Code positionné sur $(git log --oneline -1)"
 
@@ -78,10 +89,21 @@ for u in User.objects.filter(is_staff=True).order_by('username'):
 echo "Pour ajouter un opérateur : ${MANAGE[*]} shell -c \"from django.contrib.auth.models import User; User.objects.filter(username='NOM').update(is_staff=True)\""
 confirm "Tous les opérateurs du back-office figurent-ils dans cette liste ?"
 
-step "8. Migrations"
-"${MANAGE[@]}" showmigrations formation fidele event | tail -n 25
-"${MANAGE[@]}" migrate --plan
-echo "Attendu : formation 0002 ×2 + 0003_merge, fidele 0002_securiser_suppressions_cascade, event 0003 (aucune suppression de données)."
+step "8. Migrations (contrôle du schéma réel puis du plan)"
+SCHEMA="$("${MANAGE[@]}" shell < scripts/verif_schema.py 2>&1 | tail -n 40)"
+echo "$SCHEMA"
+echo "$SCHEMA" | grep -q "^SCHEMA_OK" || { echo "Écart entre les modèles et la base : arrêt avant toute migration (rollback : étape ROLLBACK ci-dessous)."; exit 1; }
+ok "Modèles fidele/event/eden conformes au schéma de production"
+PLAN="$("${MANAGE[@]}" migrate --plan 2>&1)"
+echo "$PLAN"
+ATTENDUES='^(event\.0003_proteger_eglise_type_evenement|fidele\.0002_securiser_suppressions_cascade|formation\.0001_initial|formation\.0002_auto_populate_slug|formation\.0002_rename_format__formation_format_and_more|formation\.0003_merge_20261023)$'
+INATTENDUES="$(echo "$PLAN" | grep -oE '^[a-z_]+\.[0-9]{4}_[A-Za-z0-9_]+' | grep -vE "$ATTENDUES" || true)"
+if [ -n "$INATTENDUES" ]; then
+  warn "Migrations non prévues dans le plan :"; echo "$INATTENDUES" | sed 's/^/  - /'
+  confirm "Les examiner a été fait et vous voulez quand même continuer ?"
+else
+  ok "Plan conforme : uniquement les migrations attendues (aucune suppression de données)"
+fi
 confirm "Appliquer ces migrations et redémarrer les services ?"
 
 step "9. Redémarrage (l'entrypoint de abmciweb applique les migrations)"
@@ -119,7 +141,7 @@ cat <<EOF
 Tests manuels : connexion d'un opérateur au back-office, puis app mobile (connexion, prières, profil, annuaire).
 
 ROLLBACK si nécessaire :
-  git checkout --detach $PREV_COMMIT && docker compose build abmciweb celery celery-beat && docker compose up -d abmciweb celery celery-beat
+  git checkout --detach $PREV_COMMIT && cp -r $BACKUP_DIR/migrations_serveur_$STAMP/. . 2>/dev/null; docker compose build abmciweb celery celery-beat && docker compose up -d abmciweb celery celery-beat
   (migrations compatibles avec l'ancien code ; en dernier recours :
    docker exec -i abmcidb sh -c 'pg_restore --clean -U "\$POSTGRES_USER" -d "\$POSTGRES_DB"' < $BACKUP_DIR/abmci_$STAMP.dump)
   Ne jamais remettre les anciens secrets (compromis).
