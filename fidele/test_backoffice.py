@@ -189,3 +189,18 @@ class ProfileCompletionFormTests(TestCase):
         form = ProfileCompletionForm(instance=f, step=5)
         for champ in ("membre", "type_membre", "fonction", "departement"):
             self.assertNotIn(champ, form.fields)
+
+
+class SuperuserSansStaffTests(TestCase):
+    def test_superuser_non_staff_accede_et_page_403_explicite(self):
+        su = make_user("super_sans_staff")
+        su.is_superuser = True
+        su.is_staff = False
+        su.save()
+        self.client.force_login(su)
+        self.assertEqual(self.client.get(reverse("membres")).status_code, 200)
+
+        self.client.force_login(make_user("simple_fidele"))
+        r = self.client.get(reverse("membres"))
+        self.assertEqual(r.status_code, 403)
+        self.assertContains(r, "Accès réservé à l'équipe de gestion", status_code=403)

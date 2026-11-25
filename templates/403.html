@@ -1,0 +1,37 @@
+{% load static %}
+<!doctype html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Accès réservé - Alliance Connect</title>
+    <link rel="shortcut icon" href="{% static 'images/favicon.png' %}">
+    <style>
+        :root { --brand: #3730A3; --text: #1e293b; --muted: #64748b; --bg: #F7F7FB; --card: #fff; }
+        @media (prefers-color-scheme: dark) { :root { --text: #e2e8f0; --muted: #94a3b8; --bg: #0f172a; --card: #1e293b; } }
+        body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: var(--bg);
+               font-family: Inter, system-ui, -apple-system, "Segoe UI", sans-serif; color: var(--text); padding: 16px; }
+        .card { background: var(--card); border-radius: 16px; padding: 32px; max-width: 460px; text-align: center;
+                box-shadow: 0 4px 24px rgba(15, 23, 42, .08); }
+        h1 { font-size: 1.35rem; margin: 0 0 8px; }
+        p { color: var(--muted); line-height: 1.5; margin: 0 0 20px; }
+        a.btn { display: inline-block; background: var(--brand); color: #fff; text-decoration: none; padding: 10px 18px;
+                border-radius: 10px; font-weight: 600; margin: 4px; }
+        a.link { color: var(--brand); display: inline-block; margin: 4px; }
+    </style>
+</head>
+<body>
+<div class="card">
+    <h1>Accès réservé à l'équipe de gestion</h1>
+    {% if user.is_authenticated %}
+        <p>Votre compte ({{ user.email|default:user.username }}) n'a pas accès au back-office.
+            Si vous êtes responsable dans votre église, demandez à un administrateur d'activer votre accès.</p>
+        <a class="btn" href="{% url 'account_logout' %}">Changer de compte</a>
+    {% else %}
+        <p>Cette page nécessite une connexion avec un compte autorisé.</p>
+        <a class="btn" href="{% url 'account_login' %}">Se connecter</a>
+    {% endif %}
+    <a class="link" href="{% url 'account_delete' %}">Gérer mon compte</a>
+</div>
+</body>
+</html>

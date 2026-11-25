@@ -12,7 +12,8 @@ from django.core.exceptions import PermissionDenied
 
 
 def is_backoffice_user(user) -> bool:
-    return bool(user and user.is_authenticated and user.is_staff)
+    # Superuser accepté même sans is_staff (comptes promus via shell/SQL sans cocher « statut équipe »)
+    return bool(user and user.is_authenticated and (user.is_staff or user.is_superuser))
 
 
 class StaffRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):
