@@ -192,7 +192,9 @@ def pick_smart_daily_verse_for_eglise(
               .order_by('date_debut')[:3])
 
     for ev in events:
-        for tag in (ev.tags or []):
+        # Evenement n'a pas de champ « tags » : l'AttributeError faisait échouer (en silence) le verset
+        # du jour de toute église ayant un événement dans les 7 jours.
+        for tag in (getattr(ev, 'tags', None) or []):
             tag = str(tag).lower().strip()
             if tag in THEME_KEYWORDS:
                 ctx = f"EVENT:{tag}"

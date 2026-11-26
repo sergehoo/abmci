@@ -14,6 +14,8 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
+import re
+
 import notifications
 from allauth.account.views import SignupView, LoginView, LogoutView
 from django.conf import settings
@@ -21,7 +23,8 @@ from django.conf.urls.static import static
 from django.contrib import admin
 from django.http import HttpResponse
 from django.template.defaulttags import url
-from django.urls import path, include
+from django.urls import path, include, re_path
+from django.views.static import serve
 from django.views.generic import TemplateView
 
 from api.views import schema_view, AccountDeletePerformWebhook
@@ -61,6 +64,14 @@ urlpatterns = [
                   path("account/delete/done/", AccountDeleteDoneView.as_view(), name="account_delete_done"),
                   # API (pour app mobile) : POST auth → crée la demande de suppression
                   path("api/account/delete/", AccountDeletePerformWebhook.as_view(), name="api_account_delete"),
-              ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
-if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+              ]
+
+# Fichiers statiques et media : la stack n'a pas de serveur de fichiers (nginx) devant Django.
+# Le helper static() ne fait rien quand DEBUG=False : en prod, images (bannières, photos, QR),
+# CSS et JS renvoyaient 404. Django les sert donc directement (volumes /var/www/abmci/...).
+urlpatterns += [
+    re_path(r"^%s(?P<path>.*)$" % re.escape(settings.STATIC_URL.lstrip("/")), serve,
+            {"document_root": settings.STATIC_ROOT}),
+    re_path(r"^%s(?P<path>.*)$" % re.escape(settings.MEDIA_URL.lstrip("/")), serve,
+            {"document_root": settings.MEDIA_ROOT}),
+]

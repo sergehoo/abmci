@@ -204,3 +204,52 @@ class SuperuserSansStaffTests(TestCase):
         r = self.client.get(reverse("membres"))
         self.assertEqual(r.status_code, 403)
         self.assertContains(r, "Accès réservé à l'équipe de gestion", status_code=403)
+
+
+class FichiersServisEnProdTests(TestCase):
+    """Sans nginx devant Django, /media/ et /static/ doivent répondre même avec DEBUG=False."""
+
+    def test_media_et_static_servis_sans_debug(self):
+        import os
+        media = tempfile.mkdtemp(prefix="abmci-test-media-")
+        static_root = tempfile.mkdtemp(prefix="abmci-test-static-")
+        try:
+            os.makedirs(os.path.join(media, "banners"))
+            with open(os.path.join(media, "banners", "a.png"), "wb") as f:
+                f.write(b"\x89PNG\r\n")
+            with open(os.path.join(static_root, "app.css"), "w") as f:
+                f.write("body{}")
+            with self.settings(DEBUG=False, MEDIA_ROOT=media, STATIC_ROOT=static_root):
+                from django.urls import clear_url_caches
+                import importlib, abmci.urls
+                clear_url_caches()
+                importlib.reload(abmci.urls)
+                self.assertEqual(self.client.get("/media/banners/a.png").status_code, 200)
+                self.assertEqual(self.client.get("/static/app.css").status_code, 200)
+                self.assertIn(self.client.get("/media/../settings.py").status_code, (400, 404))  # traversée refusée
+        finally:
+            shutil.rmtree(media, ignore_errors=True)
+            shutil.rmtree(static_root, ignore_errors=True)
+            from django.urls import clear_url_caches
+            import importlib, abmci.urls
+            clear_url_caches()
+            importlib.reload(abmci.urls)
+
+
+class VersetDuJourTests(TestCase):
+    @mock.patch("abmci.tasks.send_verse_to_eglise_topic", create=True)
+    def test_verset_genere_meme_avec_un_evenement_recent(self, _push):
+        from abmci.tasks import update_daily_verses_for_all_eglisess
+        from fidele.models import BibleVerse, BibleVersion, VerseOfDay
+        version = BibleVersion.objects.create(code="LSG", name="Louis Segond 1910")
+        for v in range(1, 6):
+            BibleVerse.objects.create(version=version, book="Jean", chapter=3, verse=v,  # 40 à 240 caractères requis
+                                      text=f"Car Dieu a tant aimé le monde qu’il a donné son Fils unique ({v}).")
+        eglise = make_eglise("Cathédrale")
+        now = timezone.now()
+        with override_settings(MEDIA_ROOT=TEST_MEDIA_ROOT):
+            Evenement.objects.create(titre="Culte", lieu="T", description="d", eglise=eglise,
+                                     date_debut=now - timezone.timedelta(days=1),
+                                     date_fin=now - timezone.timedelta(hours=20))
+        self.assertEqual(update_daily_verses_for_all_eglisess(), 1)
+        self.assertTrue(VerseOfDay.objects.filter(eglise=eglise, date=timezone.localdate()).exists())

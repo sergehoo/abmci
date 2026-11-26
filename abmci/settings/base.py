@@ -281,6 +281,11 @@ LOGGING = {
 # n'existaient pas : ces entrées ne s'exécutaient jamais). Le push du verset du jour est assuré par
 # send_daily_vod ; l'ancienne entrée push_vod_daily (doublon) est retirée.
 CELERY_BEAT_SCHEDULE = {
+    # Génère le verset du jour de chaque église (aucun producteur n'était planifié : verset figé)
+    "update-daily-verses-0600": {
+        "task": "abmci.tasks.update_daily_verses_for_all_eglisess",
+        "schedule": crontab(minute=0, hour=6),  # avant l'envoi de 06:30
+    },
     "remind-stale-problems-daily": {
         "task": "abmci.tasks.remind_stale_problems",
         "schedule": crontab(minute=0, hour=8),  # 1 rappel par jour (un rappel horaire spammerait les assignés)
