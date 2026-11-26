@@ -253,3 +253,42 @@ class VersetDuJourTests(TestCase):
                                      date_fin=now - timezone.timedelta(hours=20))
         self.assertEqual(update_daily_verses_for_all_eglisess(), 1)
         self.assertTrue(VerseOfDay.objects.filter(eglise=eglise, date=timezone.localdate()).exists())
+
+
+class PhotoParDefautTests(TestCase):
+    """Plus d'image par défaut : sans photo, le web et l'app affichent les initiales."""
+
+    def test_nouveau_fidele_sans_photo_et_api_renvoie_null(self):
+        from api.serializers import AnnuaireSerializer
+        f = fidele_of(make_user("sans_photo"))
+        self.assertFalse(f.photo)
+        self.assertIsNone(AnnuaireSerializer(f).data["photo"])
+
+    def test_migration_retire_l_image_par_defaut_et_ses_copies(self):
+        import os
+        from importlib import import_module
+        from django.apps import apps
+        from django.conf import settings as dj_settings
+        mig = import_module("fidele.migrations.0003_retirer_photo_par_defaut")
+        logo = open(os.path.join(dj_settings.BASE_DIR, "media", "abmci", "users", "7.png"), "rb").read()
+        media = tempfile.mkdtemp(prefix="abmci-test-media-")
+        try:
+            os.makedirs(os.path.join(media, "abmci", "fideles"))
+            fichiers = {"abmci/fideles/7_Ab12Cd3.png": logo,       # copie du logo → retirée
+                        "abmci/fideles/7.png": b"\x89PNG vraie photo",  # même nom, autre contenu → gardée
+                        "abmci/fideles/portrait.jpg": b"jpeg"}          # vraie photo → gardée
+            for nom, contenu in fichiers.items():
+                with open(os.path.join(media, nom), "wb") as fh:
+                    fh.write(contenu)
+            photos = ["abmci/users/7.png", *fichiers, "abmci/users/7.png"]
+            fideles = []
+            for i, photo in enumerate(photos):
+                f = fidele_of(make_user(f"photo{i}"))
+                Fidele.objects.filter(pk=f.pk).update(photo=photo)
+                fideles.append(f)
+            with self.settings(MEDIA_ROOT=media):
+                mig.retirer_photo_par_defaut(apps, None)
+            restantes = [Fidele.objects.get(pk=f.pk).photo.name or None for f in fideles]
+            self.assertEqual(restantes, [None, None, "abmci/fideles/7.png", "abmci/fideles/portrait.jpg", None])
+        finally:
+            shutil.rmtree(media, ignore_errors=True)

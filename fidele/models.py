@@ -458,7 +458,8 @@ class Fidele(models.Model):
     fonction = models.ForeignKey('Fonction', on_delete=models.SET_NULL, blank=True, null=True)
     eglise = models.ForeignKey('Eglise', on_delete=models.PROTECT, null=True, blank=True)
     famille_alliance = models.ForeignKey('Familles', on_delete=models.SET_NULL, null=True, blank=True)
-    photo = models.ImageField(null=True, blank=True, default='abmci/users/7.png', upload_to='abmci/fideles')
+    # Pas d'image par défaut : sans photo, le web et l'app affichent les initiales
+    photo = models.ImageField(null=True, blank=True, upload_to='abmci/fideles')
     sortie = models.SmallIntegerField(null=True, blank=True, default=0)
     is_deleted = models.SmallIntegerField(null=True, blank=True, default=0)
     slug = models.SlugField(null=True, blank=True, help_text="slug field", verbose_name="slug ", unique=True,

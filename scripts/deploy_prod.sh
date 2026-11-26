@@ -96,7 +96,7 @@ echo "$SCHEMA" | grep -q "^SCHEMA_OK" || { echo "Écart entre les modèles et la
 ok "Modèles fidele/event/eden conformes au schéma de production"
 PLAN="$("${MANAGE[@]}" migrate --plan 2>&1)"
 echo "$PLAN"
-ATTENDUES='^(event\.0003_proteger_eglise_type_evenement|fidele\.0002_securiser_suppressions_cascade|formation\.0001_initial|formation\.0002_auto_populate_slug|formation\.0002_rename_format__formation_format_and_more|formation\.0003_merge_20261023)$'
+ATTENDUES='^(event\.0003_proteger_eglise_type_evenement|fidele\.0002_securiser_suppressions_cascade|fidele\.0003_retirer_photo_par_defaut|formation\.0001_initial|formation\.0002_auto_populate_slug|formation\.0002_rename_format__formation_format_and_more|formation\.0003_merge_20261023)$'
 INATTENDUES="$(echo "$PLAN" | grep -oE '^[a-z_]+\.[0-9]{4}_[A-Za-z0-9_]+' | grep -vE "$ATTENDUES" || true)"
 if [ -n "$INATTENDUES" ]; then
   warn "Migrations non prévues dans le plan :"; echo "$INATTENDUES" | sed 's/^/  - /'
